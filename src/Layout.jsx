@@ -11,27 +11,15 @@ import {
   X,
   Settings,
   LogOut,
-  AlertTriangle,
-  Trash2
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -49,16 +37,6 @@ export default function Layout({ children }) {
 
   const handleLogout = () => {
     base44.auth.logout();
-  };
-
-  const handleDeleteAccount = async () => {
-    try {
-      const user = await base44.auth.me();
-      await base44.entities.User.delete(user.id);
-      base44.auth.logout();
-    } catch (error) {
-      console.error('Error deleting account:', error);
-    }
   };
 
   const isActive = (path) => {
@@ -143,14 +121,6 @@ export default function Layout({ children }) {
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
-          <Button
-            onClick={() => setDeleteAccountOpen(true)}
-            variant="ghost"
-            className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 select-none min-h-[44px]"
-          >
-            <Trash2 className="w-5 h-5" />
-            <span className="font-medium">Deletar Conta</span>
-          </Button>
           <div className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20">
             <p className="text-xs font-medium text-gray-500">Grupo Agion</p>
             <p className="text-sm font-bold mt-1 text-white">Governança N1</p>
@@ -198,26 +168,6 @@ export default function Layout({ children }) {
         </div>
       </main>
 
-      {/* Delete Account Dialog */}
-      <AlertDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
-        <AlertDialogContent className="bg-[#242424] border-gray-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Deletar Conta</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Esta ação é irreversível. Todos os seus dados serão permanentemente removidos. Tem certeza que deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700 select-none">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAccount}
-              className="bg-red-600 hover:bg-red-700 select-none"
-            >
-              Deletar Conta
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       </div>
   );
 }
