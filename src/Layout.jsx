@@ -10,15 +10,31 @@ import {
   Menu,
   X,
   Settings,
-  LogOut
+  LogOut,
+  AlertTriangle,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard' },
@@ -26,6 +42,7 @@ export default function Layout({ children }) {
     { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal' },
     { name: 'Supervisores', icon: Users, path: 'Supervisores' },
     { name: 'Analistas', icon: UserCircle, path: 'Analistas' },
+    { name: 'War Room', icon: AlertTriangle, path: 'WarRoom' },
     { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios' },
   ];
 
@@ -38,9 +55,9 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1f35] text-gray-100">
+    <div className={`min-h-screen ${darkMode ? 'bg-[#1a1a1a] text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0a1628] border-b border-[#1e3a5f] z-50 flex items-center justify-between px-4">
+      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 ${darkMode ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'} border-b z-50 flex items-center justify-between px-4`}>
         <div className="flex items-center gap-3">
           <img 
             src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
@@ -68,12 +85,12 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-[#0a1628] border-r border-[#1e3a5f] z-50
+        fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'} border-r z-50
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-6 border-b border-[#1e3a5f]">
+        <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex flex-col items-center gap-2">
             <img 
               src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
@@ -95,8 +112,12 @@ export default function Layout({ children }) {
               className={`
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
                 ${isActive(item.path) 
-                  ? 'bg-[#e74c3c]/10 text-[#e74c3c] border border-[#e74c3c]/20' 
-                  : 'text-gray-400 hover:bg-[#1e3a5f]/50 hover:text-white'
+                  ? darkMode 
+                    ? 'bg-[#ADF802]/10 text-[#ADF802] border border-[#ADF802]/30 font-semibold' 
+                    : 'bg-[#ADF802]/20 text-[#2a2a2a] border border-[#ADF802]/40 font-semibold'
+                  : darkMode
+                    ? 'text-gray-400 hover:bg-gray-700/50 hover:text-white'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }
               `}
             >
@@ -106,18 +127,26 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#1e3a5f] space-y-2">
+        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} space-y-2`}>
+          <Button
+            onClick={() => setDarkMode(!darkMode)}
+            variant="ghost"
+            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+          >
+            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <span className="font-medium">{darkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
+          </Button>
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className="w-full justify-start gap-3 text-gray-400 hover:text-white hover:bg-[#1e3a5f]/50"
+            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
-          <div className="bg-gradient-to-r from-[#e74c3c]/10 to-[#3498db]/10 rounded-xl p-3 border border-[#e74c3c]/20">
-            <p className="text-xs text-gray-400">Grupo Agion</p>
-            <p className="text-sm font-medium text-white mt-1">Governança N1</p>
+          <div className={`rounded-xl p-3 border ${darkMode ? 'bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20' : 'bg-gradient-to-r from-[#ADF802]/20 to-[#ADF802]/30 border-[#ADF802]/40'}`}>
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Grupo Agion</p>
+            <p className={`text-sm font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Governança N1</p>
           </div>
         </div>
       </aside>

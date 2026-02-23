@@ -88,10 +88,10 @@ export default function PerfilAnalista() {
   
   const totalChamados = atividades.filter(a => a.tipo === 'Chamados').length;
   const totalLigacoes = atividades.filter(a => a.tipo === 'Ligações').length;
-  const total1_1 = atividades.filter(a => a.tipo === '1:1').length;
+  const total1_1 = atividades.filter(a => a.tipo === 'Feedback Individual').length;
   const totalMonitorias = atividades.filter(a => a.tipo === 'Monitoria Offline' || a.tipo === 'Monitoria Assistida').length;
 
-  const ultimo1_1 = atividades.find(a => a.tipo === '1:1');
+  const ultimo1_1 = atividades.find(a => a.tipo === 'Feedback Individual');
 
   // Evolução das notas
   const evolucaoNotas = atividades
@@ -166,17 +166,17 @@ export default function PerfilAnalista() {
           variant="amber" 
         />
         <StatCard 
-          title="Reuniões 1:1" 
+          title="Feedbacks Individuais" 
           value={total1_1} 
           icon={MessageSquare} 
           variant="blue" 
         />
       </div>
 
-      {/* Último 1:1 */}
+      {/* Último Feedback */}
       {ultimo1_1 && (
         <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Última Reunião 1:1</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Último Feedback Individual</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-gray-400">
               <Calendar className="w-4 h-4" />

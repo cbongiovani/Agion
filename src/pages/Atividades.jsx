@@ -34,7 +34,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import NotaBadge from '@/components/ui/NotaBadge';
 
-const TIPOS = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', '1:1'];
+const TIPOS = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', 'Feedback Individual'];
 const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
 
 export default function Atividades() {

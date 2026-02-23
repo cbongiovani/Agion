@@ -1,0 +1,352 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Pencil, Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+const SEVERIDADES = ['Crítica', 'Alta', 'Média', 'Baixa'];
+const CATEGORIAS = ['Infraestrutura', 'Aplicação', 'Rede', 'Segurança', 'Banco de Dados', 'Serviço'];
+const STATUS = ['Aberto', 'Em Análise', 'Em Progresso', 'Aguardando Terceiros', 'Resolvido', 'Fechado'];
+
+export default function WarRoom() {
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingIncidente, setEditingIncidente] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [formData, setFormData] = useState({
+    titulo: '',
+    descricao: '',
+    severidade: 'Média',
+    categoria: 'Infraestrutura',
+    status: 'Aberto',
+    impacto: '',
+    acoes_tomadas: '',
+    responsavel: '',
+    data_inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
+    data_resolucao: '',
+  });
+
+  const isDark = document.documentElement.classList.contains('dark');
+
+  const { data: incidentes = [], isLoading } = useQuery({
+    queryKey: ['incidentes'],
+    queryFn: async () => {
+      // Como não temos entidade Incidente, usar array vazio por enquanto
+      // Você pode criar a entidade depois se necessário
+      return [];
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      titulo: '',
+      descricao: '',
+      severidade: 'Média',
+      categoria: 'Infraestrutura',
+      status: 'Aberto',
+      impacto: '',
+      acoes_tomadas: '',
+      responsavel: '',
+      data_inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
+      data_resolucao: '',
+    });
+    setEditingIncidente(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    toast.success('Funcionalidade em desenvolvimento');
+    resetForm();
+  };
+
+  const getSeveridadeColor = (severidade) => {
+    const colors = {
+      'Crítica': isDark ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-red-200 text-red-900 border-red-400',
+      'Alta': isDark ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : 'bg-orange-200 text-orange-900 border-orange-400',
+      'Média': isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-amber-200 text-amber-900 border-amber-400',
+      'Baixa': isDark ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-green-200 text-green-900 border-green-400',
+    };
+    return colors[severidade] || colors['Média'];
+  };
+
+  const getStatusIcon = (status) => {
+    if (status === 'Fechado' || status === 'Resolvido') return <CheckCircle2 className="w-4 h-4" />;
+    if (status === 'Aberto') return <AlertTriangle className="w-4 h-4" />;
+    if (status === 'Em Análise' || status === 'Em Progresso') return <Clock className="w-4 h-4" />;
+    return <XCircle className="w-4 h-4" />;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className={`text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>War Room</h1>
+          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Gestão de Incidentes e Problemas - ITIL v4 / ISO 20000</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+          <DialogTrigger asChild>
+            <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Incidente
+            </Button>
+          </DialogTrigger>
+          <DialogContent className={`${isDark ? 'bg-[#2a2a2a] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
+            <DialogHeader>
+              <DialogTitle>{editingIncidente ? 'Editar Incidente' : 'Registrar Novo Incidente'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label>Título do Incidente *</Label>
+                  <Input
+                    value={formData.titulo}
+                    onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                    className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                    placeholder="Ex: Queda de servidor de produção"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Severidade *</Label>
+                  <Select value={formData.severidade} onValueChange={(value) => setFormData({ ...formData, severidade: value })}>
+                    <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
+                      {SEVERIDADES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Categoria *</Label>
+                  <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
+                    <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
+                      {CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Status *</Label>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                    <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
+                      {STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Responsável</Label>
+                  <Input
+                    value={formData.responsavel}
+                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                    className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                    placeholder="Nome do responsável"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Descrição do Incidente *</Label>
+                  <Textarea
+                    value={formData.descricao}
+                    onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                    className={`${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'} h-24`}
+                    placeholder="Descreva o incidente em detalhes..."
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Impacto nos Serviços</Label>
+                  <Textarea
+                    value={formData.impacto}
+                    onChange={(e) => setFormData({ ...formData, impacto: e.target.value })}
+                    className={`${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'} h-20`}
+                    placeholder="Descreva o impacto nos usuários e serviços..."
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Ações Tomadas</Label>
+                  <Textarea
+                    value={formData.acoes_tomadas}
+                    onChange={(e) => setFormData({ ...formData, acoes_tomadas: e.target.value })}
+                    className={`${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'} h-20`}
+                    placeholder="Liste as ações já realizadas..."
+                  />
+                </div>
+                <div>
+                  <Label>Data/Hora de Início *</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.data_inicio}
+                    onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
+                    className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Data/Hora de Resolução</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.data_resolucao}
+                    onChange={(e) => setFormData({ ...formData, data_resolucao: e.target.value })}
+                    className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                  />
+                </div>
+              </div>
+              <div className={`flex justify-end gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
+                <Button type="button" variant="outline" onClick={resetForm} className={isDark ? 'border-gray-700' : 'border-gray-300'}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
+                  {editingIncidente ? 'Atualizar' : 'Registrar Incidente'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Métricas ITIL */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Incidentes Críticos</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>0</p>
+            </div>
+            <div className={`p-3 rounded-xl ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+              <AlertTriangle className={`w-6 h-6 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+            </div>
+          </div>
+        </div>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Em Andamento</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>0</p>
+            </div>
+            <div className={`p-3 rounded-xl ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+              <Clock className={`w-6 h-6 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+            </div>
+          </div>
+        </div>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Resolvidos Hoje</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>0</p>
+            </div>
+            <div className={`p-3 rounded-xl ${isDark ? 'bg-[#ADF802]/20' : 'bg-green-100'}`}>
+              <CheckCircle2 className={`w-6 h-6 ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`} />
+            </div>
+          </div>
+        </div>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Tempo Médio</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>-</p>
+            </div>
+            <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+              <Clock className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Guia de Boas Práticas */}
+      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Classificação e Priorização
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Avaliar impacto e urgência imediatamente</li>
+              <li>• Definir prioridade baseada em matriz ITIL</li>
+              <li>• Documentar critérios de classificação</li>
+            </ul>
+          </div>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Comunicação
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Manter stakeholders informados</li>
+              <li>• Documentar todas as comunicações</li>
+              <li>• Definir canais de escalação claros</li>
+            </ul>
+          </div>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Resolução e Recuperação
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Focar na restauração rápida do serviço</li>
+              <li>• Aplicar workarounds quando necessário</li>
+              <li>• Validar resolução com usuários</li>
+            </ul>
+          </div>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Pós-Incidente
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Realizar revisão pós-incidente (PIR)</li>
+              <li>• Identificar melhorias de processo</li>
+              <li>• Atualizar base de conhecimento</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Estado vazio */}
+      {incidentes.length === 0 && (
+        <div className={`text-center py-16 rounded-2xl border ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+          <AlertTriangle className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+          <p className={`text-lg font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Nenhum incidente registrado</p>
+          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>A War Room está pronta para gerenciar incidentes críticos</p>
+        </div>
+      )}
+    </div>
+  );
+}

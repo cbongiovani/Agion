@@ -148,7 +148,7 @@ export default function Dashboard() {
           variant="amber" 
         />
         <StatCard 
-          title="Reuniões 1:1" 
+          title="Feedbacks Individuais" 
           value={totais.oneOnOne.toLocaleString()} 
           icon={Users} 
           variant="emerald" 

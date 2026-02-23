@@ -275,7 +275,7 @@ export default function FechamentoSemanal() {
                     />
                   </div>
                   <div>
-                    <Label>Reuniões 1:1</Label>
+                    <Label>Feedbacks Individuais</Label>
                     <Input
                       type="number"
                       value={formData.total_1_1}
@@ -401,7 +401,7 @@ export default function FechamentoSemanal() {
                 </div>
                 <div className="text-center px-4 py-2 bg-[#1a1a1a] rounded-lg">
                   <p className="text-2xl font-bold text-purple-400">{fechamento.total_1_1}</p>
-                  <p className="text-xs text-gray-400">1:1</p>
+                  <p className="text-xs text-gray-400">Feedbacks</p>
                 </div>
               </div>
 

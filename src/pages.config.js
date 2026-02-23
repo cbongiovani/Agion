@@ -55,6 +55,7 @@ import FechamentoSemanal from './pages/FechamentoSemanal';
 import PerfilAnalista from './pages/PerfilAnalista';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import GestaoUsuarios from './pages/GestaoUsuarios';
+import WarRoom from './pages/WarRoom';
 import __Layout from './Layout.jsx';
 
 
@@ -67,6 +68,7 @@ export const PAGES = {
     "PerfilAnalista": PerfilAnalista,
     "RelatorioSemanal": RelatorioSemanal,
     "GestaoUsuarios": GestaoUsuarios,
+    "WarRoom": WarRoom,
 }
 
 export const pagesConfig = {
