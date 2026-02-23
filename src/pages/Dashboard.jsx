@@ -111,18 +111,16 @@ export default function Dashboard() {
     );
   }
 
-  const isDark = document.documentElement.classList.contains('dark');
-
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className={`text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Dashboard Executivo</h1>
-          <p className={`mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Visão consolidada do Suporte N1</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">Dashboard Executivo</h1>
+          <p className="mt-1 text-gray-500">Visão consolidada do Suporte N1</p>
         </div>
         <Link to={createPageUrl('RelatorioSemanal')}>
-          <Button className={isDark ? 'bg-[#e74c3c] hover:bg-[#c0392b] text-white gap-2' : 'bg-[#ADF802] hover:bg-[#9DE002] text-gray-900 font-bold gap-2 shadow-lg'}>
+          <Button className="bg-[#ADF802] hover:bg-[#9DE002] text-[#0a0a0a] font-bold gap-2">
             <FileDown className="w-4 h-4" />
             Exportar Relatório PDF
           </Button>
@@ -172,8 +170,8 @@ export default function Dashboard() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Chamados por Supervisor */}
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
-          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Chamados por Supervisor</h3>
+        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
+          <h3 className="text-lg font-semibold mb-6 text-white">Chamados por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />

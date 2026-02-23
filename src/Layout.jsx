@@ -11,9 +11,7 @@ import {
   X,
   Settings,
   LogOut,
-  AlertTriangle,
-  Moon,
-  Sun
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -22,19 +20,10 @@ import { base44 } from '@/api/base44Client';
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved ? JSON.parse(saved) : true;
-  });
 
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
+    document.documentElement.classList.add('dark');
+  }, []);
 
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard' },
@@ -55,9 +44,9 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#0a0a0a] text-gray-100' : 'bg-[#f5f7fa] text-gray-900'}`}>
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
       {/* Mobile Header */}
-      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} border-b z-50 flex items-center justify-between px-4`}>
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <img 
             src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
@@ -85,12 +74,12 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-sm'} border-r z-50
+        fixed top-0 left-0 h-full w-64 bg-[#0d0d0d] border-gray-800 border-r z-50
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className={`p-6 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+        <div className="p-6 border-b border-gray-800">
           <div className="flex flex-col items-center gap-2">
             <img 
               src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
@@ -112,12 +101,8 @@ export default function Layout({ children }) {
               className={`
                 flex items-center gap-3 px-6 py-4 transition-all duration-200 border-l-4 relative
                 ${isActive(item.path) 
-                  ? darkMode 
-                    ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
-                    : 'bg-gradient-to-r from-[#ADF802]/10 to-transparent text-gray-900 border-l-[#ADF802] font-semibold shadow-sm'
-                  : darkMode
-                    ? 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 border-l-transparent'
+                  ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
+                  : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent'
                 }
               `}
             >
@@ -127,26 +112,18 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'} space-y-2`}>
-          <Button
-            onClick={() => setDarkMode(!darkMode)}
-            variant="ghost"
-            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-[#0a0a0a]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-          >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            <span className="font-medium">{darkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
-          </Button>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 space-y-2">
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-[#0a0a0a]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            className="w-full justify-start gap-3 text-gray-400 hover:text-white hover:bg-[#0a0a0a]"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
-          <div className={`rounded-xl p-3 border ${darkMode ? 'bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20' : 'bg-gradient-to-br from-[#ADF802]/30 via-[#ADF802]/20 to-[#ADF802]/10 border-[#ADF802] shadow-md'}`}>
-            <p className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-700'}`}>Grupo Agion</p>
-            <p className={`text-sm font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Governança N1</p>
+          <div className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20">
+            <p className="text-xs font-medium text-gray-500">Grupo Agion</p>
+            <p className="text-sm font-bold mt-1 text-white">Governança N1</p>
           </div>
         </div>
       </aside>
