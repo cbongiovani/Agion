@@ -127,29 +127,6 @@ export default function GestaoUsuarios() {
 
   return (
     <div className="space-y-6">
-      {/* Danger Zone */}
-      <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-red-400 flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
-              Zona de Perigo
-            </h3>
-            <p className="text-sm text-gray-400 mt-2">
-              Ações irreversíveis que afetam permanentemente sua conta.
-            </p>
-          </div>
-          <Button
-            onClick={() => setDeleteAccountOpen(true)}
-            variant="outline"
-            className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Deletar Minha Conta
-          </Button>
-        </div>
-      </div>
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Gestão de Usuários</h1>
@@ -282,6 +259,35 @@ export default function GestaoUsuarios() {
           <p className="text-gray-400">Nenhum usuário cadastrado</p>
         </div>
       )}
+
+      {/* Gerenciar Conta */}
+      <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-2xl p-6">
+        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+          <Settings className="w-5 h-5" />
+          Gerenciar Conta
+        </h2>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-red-400 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Zona de Perigo
+              </h3>
+              <p className="text-sm text-gray-400 mt-2">
+                Ações irreversíveis que afetam permanentemente sua conta.
+              </p>
+            </div>
+            <Button
+              onClick={() => setDeleteAccountOpen(true)}
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 min-h-[44px]"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Deletar Minha Conta
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
         <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white">
