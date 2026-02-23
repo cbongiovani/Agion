@@ -357,7 +357,7 @@ export default function Supervisores() {
                 Novo Supervisor
               </Button>
             </DialogTrigger>
-          <DialogContent className="bg-[#242424] border-gray-800 text-white">
+            <DialogContent className="bg-[#242424] border-gray-800 text-white">
             <DialogHeader>
               <DialogTitle>{editingSupervisor ? 'Editar Supervisor' : 'Novo Supervisor'}</DialogTitle>
             </DialogHeader>
@@ -391,8 +391,9 @@ export default function Supervisores() {
                 </Button>
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="space-y-4">
