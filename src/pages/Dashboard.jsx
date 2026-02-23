@@ -174,12 +174,12 @@ export default function Dashboard() {
           <h3 className="text-lg font-semibold mb-6 text-white">Chamados por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />
-              <XAxis dataKey="nome" stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151', fontSize: 12 }} />
-              <YAxis stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
+              <YAxis stroke="#888" tick={{ fill: '#888' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
-                labelStyle={{ color: isDark ? '#fff' : '#111827' }}
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                labelStyle={{ color: '#fff' }}
               />
               <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
             </BarChart>
