@@ -47,27 +47,27 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Dashboard from './pages/Dashboard';
-import Supervisores from './pages/Supervisores';
 import Analistas from './pages/Analistas';
 import Atividades from './pages/Atividades';
+import Dashboard from './pages/Dashboard';
 import FechamentoSemanal from './pages/FechamentoSemanal';
+import GestaoUsuarios from './pages/GestaoUsuarios';
 import PerfilAnalista from './pages/PerfilAnalista';
 import RelatorioSemanal from './pages/RelatorioSemanal';
-import GestaoUsuarios from './pages/GestaoUsuarios';
+import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "Supervisores": Supervisores,
     "Analistas": Analistas,
     "Atividades": Atividades,
+    "Dashboard": Dashboard,
     "FechamentoSemanal": FechamentoSemanal,
+    "GestaoUsuarios": GestaoUsuarios,
     "PerfilAnalista": PerfilAnalista,
     "RelatorioSemanal": RelatorioSemanal,
-    "GestaoUsuarios": GestaoUsuarios,
+    "Supervisores": Supervisores,
     "WarRoom": WarRoom,
 }
 

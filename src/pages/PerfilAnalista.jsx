@@ -19,6 +19,8 @@ import { ptBR } from 'date-fns/locale';
 import NotaBadge from '@/components/ui/NotaBadge';
 import PerformanceBadge from '@/components/ui/PerformanceBadge';
 import StatCard from '@/components/ui/StatCard';
+import PlanoAcaoSugestoes from '@/components/PlanoAcaoSugestoes';
+import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import {
   LineChart,
   Line,
@@ -139,6 +141,9 @@ export default function PerfilAnalista() {
         </div>
       </div>
 
+      {/* Plano de Ação */}
+      <PlanoAcaoSugestoes analista={analista} atividades={atividades} />
+
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard 
@@ -232,6 +237,7 @@ export default function PerfilAnalista() {
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                     {atividade.tipo}
                   </span>
+                  <AtividadeInfoTooltip tipo={atividade.tipo} />
                   <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
                     atividade.status === 'Concluído' 
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'

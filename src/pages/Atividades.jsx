@@ -33,6 +33,7 @@ import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X } from 'lucide-
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import NotaBadge from '@/components/ui/NotaBadge';
+import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 
 const TIPOS = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', 'Feedback Individual'];
 const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
@@ -403,9 +404,12 @@ export default function Atividades() {
                     {format(new Date(atividade.data), 'dd/MM/yyyy')}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                      {atividade.tipo}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                        {atividade.tipo}
+                      </span>
+                      <AtividadeInfoTooltip tipo={atividade.tipo} />
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-gray-400">
                     {getSupervisorNome(atividade.supervisor_id)}
