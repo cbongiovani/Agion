@@ -11,7 +11,8 @@ import {
   X,
   Settings,
   LogOut,
-  AlertTriangle
+  AlertTriangle,
+  User as UserIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -20,20 +21,32 @@ import { base44 } from '@/api/base44Client';
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
+    
+    // Load current user
+    base44.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
 
-  const navItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard' },
-    { name: 'Atividades', icon: ClipboardList, path: 'Atividades' },
-    { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal' },
-    { name: 'Supervisores', icon: Users, path: 'Supervisores' },
-    { name: 'Analistas', icon: UserCircle, path: 'Analistas' },
-    { name: 'War Room', icon: AlertTriangle, path: 'WarRoom' },
-    { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios' },
-  ];
+  const getNavItems = () => {
+    const role = currentUser?.role;
+    
+    const baseItems = [
+      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', roles: ['admin', 'supervisor'] },
+      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', roles: ['admin', 'supervisor'] },
+      { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin'] },
+      { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin'] },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
+    ];
+    
+    return baseItems.filter(item => item.roles.includes(role));
+  };
+
+  const navItems = getNavItems();
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -113,6 +126,23 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 space-y-2">
+          <Link
+            to={createPageUrl('MeuPerfil')}
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] transition-colors select-none min-h-[44px]"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden">
+              {currentUser?.foto_url ? (
+                <img src={currentUser.foto_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserIcon className="w-4 h-4 text-[#e74c3c]" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm text-white truncate">{currentUser?.full_name || 'Meu Perfil'}</p>
+              <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+            </div>
+          </Link>
           <Button
             onClick={handleLogout}
             variant="ghost"

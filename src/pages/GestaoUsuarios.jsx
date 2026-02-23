@@ -74,6 +74,7 @@ export default function GestaoUsuarios() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!editingUser) return;
     updateMutation.mutate({ id: editingUser.id, data: formData });
   };
 
@@ -94,6 +95,7 @@ export default function GestaoUsuarios() {
   const getRoleBadge = (role) => {
     const colors = {
       admin: 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30',
+      supervisor: 'bg-[#ADF802]/20 text-[#ADF802] border-[#ADF802]/30',
       user: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     };
     return colors[role] || colors.user;
@@ -102,6 +104,7 @@ export default function GestaoUsuarios() {
   const getRoleLabel = (role) => {
     const labels = {
       admin: 'Coordenador',
+      supervisor: 'Supervisor',
       user: 'Usuário',
     };
     return labels[role] || role;
@@ -168,6 +171,7 @@ export default function GestaoUsuarios() {
                   </SelectTrigger>
                   <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
                     <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="supervisor">Supervisor</SelectItem>
                     <SelectItem value="admin">Coordenador</SelectItem>
                   </SelectContent>
                 </Select>
@@ -315,6 +319,7 @@ export default function GestaoUsuarios() {
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
                   <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="supervisor">Supervisor</SelectItem>
                   <SelectItem value="admin">Coordenador</SelectItem>
                 </SelectContent>
               </Select>
