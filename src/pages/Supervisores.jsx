@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ import {
 import { Plus, Pencil, Trash2, Users, Loader2, TrendingUp, TrendingDown, Award, AlertCircle, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ExportPDFButton from '@/components/ExportPDFButton';
+import { format } from 'date-fns';
 
 export default function Supervisores() {
   const queryClient = useQueryClient();
@@ -33,6 +35,11 @@ export default function Supervisores() {
   const [deleteId, setDeleteId] = useState(null);
   const [expandedSupervisor, setExpandedSupervisor] = useState(null);
   const [formData, setFormData] = useState({ nome: '', equipe: '' });
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => {});
+  }, []);
 
   const { data: supervisores = [], isLoading } = useQuery({
     queryKey: ['supervisores'],
@@ -169,6 +176,156 @@ export default function Supervisores() {
     setExpandedSupervisor(expandedSupervisor === supervisorId ? null : supervisorId);
   };
 
+  const generatePDFData = {
+    generateContent: async (doc, addHeader, pageWidth, margin) => {
+      const { firstDay, lastDay } = getCurrentMonthRange();
+      
+      let yPosition = addHeader(doc, 'Relatório de Supervisores');
+      yPosition += 5;
+
+      // Período
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Período: ${firstDay.toLocaleDateString('pt-BR')} - ${lastDay.toLocaleDateString('pt-BR')}`, margin, yPosition);
+      yPosition += 15;
+
+      // Para cada supervisor
+      for (const supervisor of supervisores) {
+        const supervisorData = getSupervisorData(supervisor.id);
+
+        // Verificar se precisa de nova página
+        if (yPosition > doc.internal.pageSize.getHeight() - 60) {
+          doc.addPage();
+          yPosition = addHeader(doc, 'Relatório de Supervisores');
+          yPosition += 5;
+        }
+
+        // Nome do Supervisor
+        doc.setFontSize(14);
+        doc.setTextColor(173, 248, 2);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${supervisor.nome} - ${supervisor.equipe}`, margin, yPosition);
+        yPosition += 8;
+
+        // Indicadores gerais
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Média da Equipe: ${supervisorData.teamAvg} | Total de Atividades: ${supervisorData.totalActivities} | Analistas: ${supervisorData.teamAnalysts.length}`, margin, yPosition);
+        yPosition += 10;
+
+        // Tabela de ranking
+        if (supervisorData.analystStats.length > 0) {
+          const tableData = supervisorData.analystStats.map((analyst, index) => [
+            `#${index + 1}`,
+            analyst.nome,
+            analyst.avgNota.toString(),
+            analyst.totalActivities.toString(),
+            index === 0 ? '🏆 Melhor' : index === supervisorData.analystStats.length - 1 ? '⚠️ Atenção' : '-'
+          ]);
+
+          doc.autoTable({
+            startY: yPosition,
+            head: [['Pos.', 'Analista', 'Média', 'Atividades', 'Status']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: { 
+              fillColor: [173, 248, 2], 
+              textColor: [0, 0, 0],
+              fontSize: 9,
+              fontStyle: 'bold'
+            },
+            styles: { 
+              fontSize: 8,
+              cellPadding: 3
+            },
+            columnStyles: {
+              0: { cellWidth: 15, halign: 'center' },
+              1: { cellWidth: 60 },
+              2: { cellWidth: 25, halign: 'center' },
+              3: { cellWidth: 30, halign: 'center' },
+              4: { cellWidth: 'auto', halign: 'center' }
+            },
+            margin: { left: margin, right: margin }
+          });
+
+          yPosition = doc.lastAutoTable.finalY + 10;
+        }
+
+        // Pontos Positivos
+        if (supervisorData.best) {
+          doc.setFontSize(10);
+          doc.setTextColor(16, 185, 129);
+          doc.setFont('helvetica', 'bold');
+          doc.text('✓ Pontos Positivos:', margin, yPosition);
+          yPosition += 5;
+          
+          doc.setFontSize(8);
+          doc.setTextColor(80, 80, 80);
+          doc.setFont('helvetica', 'normal');
+          const positives = [
+            `• Melhor analista: ${supervisorData.best.nome} com média ${supervisorData.best.avgNota}`,
+            `• ${supervisorData.best.totalActivities} atividades registradas`,
+            supervisorData.teamAvg >= 8 ? `• Equipe com média alta (${supervisorData.teamAvg})` : null,
+          ].filter(Boolean);
+
+          positives.forEach(text => {
+            doc.text(text, margin + 5, yPosition);
+            yPosition += 4;
+          });
+          yPosition += 5;
+        }
+
+        // Pontos de Atenção
+        if (supervisorData.worst) {
+          doc.setFontSize(10);
+          doc.setTextColor(239, 68, 68);
+          doc.setFont('helvetica', 'bold');
+          doc.text('⚠ Pontos de Atenção:', margin, yPosition);
+          yPosition += 5;
+          
+          doc.setFontSize(8);
+          doc.setTextColor(80, 80, 80);
+          doc.setFont('helvetica', 'normal');
+          const negatives = [
+            `• Analista com menor média: ${supervisorData.worst.nome} (${supervisorData.worst.avgNota})`,
+            supervisorData.worst.totalActivities < 5 ? `• Poucas atividades registradas (${supervisorData.worst.totalActivities})` : null,
+            supervisorData.teamAvg < 7 ? '• Média da equipe abaixo do esperado' : null,
+          ].filter(Boolean);
+
+          negatives.forEach(text => {
+            doc.text(text, margin + 5, yPosition);
+            yPosition += 4;
+          });
+          yPosition += 5;
+        }
+
+        // Recomendações
+        doc.setFontSize(10);
+        doc.setTextColor(173, 248, 2);
+        doc.setFont('helvetica', 'bold');
+        doc.text('💡 Recomendações:', margin, yPosition);
+        yPosition += 5;
+        
+        doc.setFontSize(8);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        const recommendations = [
+          supervisorData.worst && supervisorData.worst.avgNota < 7 ? `• Agendar feedback com ${supervisorData.worst.nome}` : null,
+          supervisorData.worst && supervisorData.worst.totalActivities < 5 ? `• Aumentar monitorias para ${supervisorData.worst.nome}` : null,
+          supervisorData.teamAvg < 8 ? '• Realizar treinamento coletivo' : null,
+          `• Reconhecer boas práticas de ${supervisorData.best?.nome || 'top performers'}`,
+        ].filter(Boolean);
+
+        recommendations.forEach(text => {
+          doc.text(text, margin + 5, yPosition);
+          yPosition += 4;
+        });
+        yPosition += 15;
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -184,13 +341,22 @@ export default function Supervisores() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Supervisores</h1>
           <p className="text-gray-400 mt-1">Gerencie os supervisores do Suporte N1</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Supervisor
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+            <ExportPDFButton
+              data={generatePDFData}
+              fileName={`Relatorio_Supervisores_${format(new Date(), 'yyyy-MM-dd')}.pdf`}
+              buttonText="Exportar PDF"
+              className="bg-[#ADF802] hover:bg-[#9DE002] text-black"
+            />
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Supervisor
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-[#242424] border-gray-800 text-white">
             <DialogHeader>
               <DialogTitle>{editingSupervisor ? 'Editar Supervisor' : 'Novo Supervisor'}</DialogTitle>

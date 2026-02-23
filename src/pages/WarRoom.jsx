@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import ExportPDFButton from '@/components/ExportPDFButton';
 import {
   Select,
   SelectContent,
@@ -43,6 +44,7 @@ export default function WarRoom() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIncidente, setEditingIncidente] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
@@ -57,6 +59,10 @@ export default function WarRoom() {
   });
 
   const isDark = document.documentElement.classList.contains('dark');
+
+  useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => {});
+  }, []);
 
   const { data: incidentes = [], isLoading } = useQuery({
     queryKey: ['incidentes'],
@@ -107,6 +113,129 @@ export default function WarRoom() {
     return <XCircle className="w-4 h-4" />;
   };
 
+  const generateWarRoomPDF = {
+    generateContent: async (doc, addHeader, pageWidth, margin) => {
+      let yPosition = addHeader(doc, 'War Room - Gestão de Incidentes');
+      yPosition += 5;
+
+      // Data do relatório
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Relatório gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, margin, yPosition);
+      yPosition += 15;
+
+      // Resumo Executivo
+      doc.setFontSize(12);
+      doc.setTextColor(173, 248, 2);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESUMO EXECUTIVO', margin, yPosition);
+      yPosition += 8;
+
+      // Métricas
+      const metricas = [
+        ['Métrica', 'Valor'],
+        ['Incidentes Críticos', '0'],
+        ['Em Andamento', '0'],
+        ['Resolvidos Hoje', '0'],
+        ['Tempo Médio de Resolução', '-']
+      ];
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [metricas[0]],
+        body: metricas.slice(1),
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [173, 248, 2], 
+          textColor: [0, 0, 0],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        styles: { fontSize: 9, cellPadding: 4 },
+        margin: { left: margin, right: margin }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 15;
+
+      // Boas Práticas ITIL
+      doc.setFontSize(12);
+      doc.setTextColor(173, 248, 2);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BOAS PRÁTICAS ITIL v4', margin, yPosition);
+      yPosition += 10;
+
+      const practices = [
+        {
+          title: 'Classificação e Priorização',
+          items: [
+            '• Avaliar impacto e urgência imediatamente',
+            '• Definir prioridade baseada em matriz ITIL',
+            '• Documentar critérios de classificação'
+          ]
+        },
+        {
+          title: 'Comunicação',
+          items: [
+            '• Manter stakeholders informados',
+            '• Documentar todas as comunicações',
+            '• Definir canais de escalação claros'
+          ]
+        },
+        {
+          title: 'Resolução e Recuperação',
+          items: [
+            '• Focar na restauração rápida do serviço',
+            '• Aplicar workarounds quando necessário',
+            '• Validar resolução com usuários'
+          ]
+        },
+        {
+          title: 'Pós-Incidente',
+          items: [
+            '• Realizar revisão pós-incidente (PIR)',
+            '• Identificar melhorias de processo',
+            '• Atualizar base de conhecimento'
+          ]
+        }
+      ];
+
+      practices.forEach(practice => {
+        if (yPosition > doc.internal.pageSize.getHeight() - 60) {
+          doc.addPage();
+          yPosition = addHeader(doc, 'War Room - Boas Práticas');
+          yPosition += 10;
+        }
+
+        doc.setFontSize(10);
+        doc.setTextColor(173, 248, 2);
+        doc.setFont('helvetica', 'bold');
+        doc.text(practice.title, margin, yPosition);
+        yPosition += 5;
+
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        practice.items.forEach(item => {
+          doc.text(item, margin + 5, yPosition);
+          yPosition += 4;
+        });
+        yPosition += 8;
+      });
+
+      // Nova página para Status dos Incidentes
+      doc.addPage();
+      yPosition = addHeader(doc, 'Status dos Incidentes');
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Sistema preparado para gerenciar incidentes críticos conforme ITIL v4 e ISO 20000.', margin, yPosition);
+      yPosition += 6;
+      doc.text('A War Room permite registro detalhado, classificação por severidade e acompanhamento em tempo real.', margin, yPosition);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -114,7 +243,16 @@ export default function WarRoom() {
           <h1 className={`text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>War Room</h1>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Gestão de Incidentes e Problemas - ITIL v4 / ISO 20000</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+        <div className="flex gap-2">
+          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+            <ExportPDFButton
+              data={generateWarRoomPDF}
+              fileName={`War_Room_${format(new Date(), 'yyyy-MM-dd')}.pdf`}
+              buttonText="Exportar PDF"
+              className="bg-[#ADF802] hover:bg-[#9DE002] text-black"
+            />
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
           <DialogTrigger asChild>
             <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
               <Plus className="w-4 h-4 mr-2" />

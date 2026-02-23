@@ -153,7 +153,7 @@ export default function Layout({ children }) {
           </Button>
           <div className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20">
             <p className="text-xs font-medium text-gray-500">Grupo Agion</p>
-            <p className="text-sm font-bold mt-1 text-white">Governança N1</p>
+            <p className="text-sm font-bold mt-1 text-white">Painel de Governança - N1</p>
           </div>
         </div>
       </aside>
