@@ -34,7 +34,7 @@ import PerformanceBadge from '@/components/ui/PerformanceBadge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+const COLORS = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6'];
 
 export default function Dashboard() {
   const { data: fechamentos = [], isLoading: loadingFechamentos } = useQuery({
@@ -106,7 +106,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#e74c3c]" />
       </div>
     );
   }
@@ -120,7 +120,7 @@ export default function Dashboard() {
           <p className="text-gray-400 mt-1">Visão consolidada do Suporte N1</p>
         </div>
         <Link to={createPageUrl('RelatorioSemanal')}>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+          <Button className="bg-[#e74c3c] hover:bg-[#c0392b] text-white gap-2">
             <FileDown className="w-4 h-4" />
             Exportar Relatório PDF
           </Button>
@@ -170,7 +170,7 @@ export default function Dashboard() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Chamados por Supervisor */}
-        <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
+        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Chamados por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
@@ -181,13 +181,13 @@ export default function Dashboard() {
                 contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
                 labelStyle={{ color: '#fff' }}
               />
-              <Bar dataKey="chamados" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Ligações por Supervisor */}
-        <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
+        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Ligações por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
@@ -198,13 +198,13 @@ export default function Dashboard() {
                 contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
                 labelStyle={{ color: '#fff' }}
               />
-              <Bar dataKey="ligacoes" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="ligacoes" fill="#e74c3c" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Evolução Semanal */}
-        <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
+        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Evolução Semanal</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={evolucaoPorSemana}>
@@ -216,14 +216,14 @@ export default function Dashboard() {
                 labelStyle={{ color: '#fff' }}
               />
               <Legend />
-              <Line type="monotone" dataKey="ligacoes" stroke="#10b981" strokeWidth={2} name="Ligações" />
-              <Line type="monotone" dataKey="chamados" stroke="#3b82f6" strokeWidth={2} name="Chamados" />
+              <Line type="monotone" dataKey="ligacoes" stroke="#e74c3c" strokeWidth={2} name="Ligações" />
+              <Line type="monotone" dataKey="chamados" stroke="#3498db" strokeWidth={2} name="Chamados" />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Distribuição por Tipo */}
-        <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
+        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Distribuição por Tipo de Atividade</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -250,7 +250,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top Analistas */}
-      <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
+      <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
         <h3 className="text-lg font-semibold text-white mb-6">Performance dos Analistas</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
