@@ -47,6 +47,7 @@ export default function FechamentoSemanal() {
   const [formData, setFormData] = useState({
     semana_inicio: format(weekStart, 'yyyy-MM-dd'),
     semana_fim: format(weekEnd, 'yyyy-MM-dd'),
+    analista_id: '',
     supervisor_id: '',
     total_ligacoes_next_ip: '',
     total_chamados_verdana: '',
@@ -67,6 +68,11 @@ export default function FechamentoSemanal() {
   const { data: supervisores = [] } = useQuery({
     queryKey: ['supervisores'],
     queryFn: () => base44.entities.Supervisor.list(),
+  });
+
+  const { data: analistas = [] } = useQuery({
+    queryKey: ['analistas'],
+    queryFn: () => base44.entities.Analista.list(),
   });
 
   const createMutation = useMutation({
@@ -100,6 +106,7 @@ export default function FechamentoSemanal() {
     setFormData({
       semana_inicio: format(weekStart, 'yyyy-MM-dd'),
       semana_fim: format(weekEnd, 'yyyy-MM-dd'),
+      analista_id: '',
       supervisor_id: '',
       total_ligacoes_next_ip: '',
       total_chamados_verdana: '',
@@ -148,9 +155,11 @@ export default function FechamentoSemanal() {
 
   const openEdit = (fechamento) => {
     setEditingFechamento(fechamento);
+    const analistaDoFechamento = analistas.find(a => a.supervisor_id === fechamento.supervisor_id);
     setFormData({
       semana_inicio: fechamento.semana_inicio,
       semana_fim: fechamento.semana_fim,
+      analista_id: analistaDoFechamento?.id || '',
       supervisor_id: fechamento.supervisor_id,
       total_ligacoes_next_ip: fechamento.total_ligacoes_next_ip?.toString() || '',
       total_chamados_verdana: fechamento.total_chamados_verdana?.toString() || '',
@@ -166,6 +175,16 @@ export default function FechamentoSemanal() {
   };
 
   const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
+  const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
+
+  const handleAnalistaChange = (analistaId) => {
+    const analista = analistas.find(a => a.id === analistaId);
+    setFormData({
+      ...formData,
+      analista_id: analistaId,
+      supervisor_id: analista?.supervisor_id || ''
+    });
+  };
 
   // Supervisores sem fechamento na semana atual
   const supervisoresSemFechamento = supervisores.filter(sup => {
@@ -224,20 +243,25 @@ export default function FechamentoSemanal() {
                   />
                 </div>
                 <div>
-                  <Label>Supervisor</Label>
+                  <Label>Analista</Label>
                   <Select
-                    value={formData.supervisor_id}
-                    onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
+                    value={formData.analista_id}
+                    onValueChange={handleAnalistaChange}
                   >
                     <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#242424] border-gray-700">
-                      {supervisores.map((sup) => (
-                        <SelectItem key={sup.id} value={sup.id}>{sup.nome}</SelectItem>
+                      {analistas.map((an) => (
+                        <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.supervisor_id && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Supervisor: {getSupervisorNome(formData.supervisor_id)}
+                    </p>
+                  )}
                 </div>
               </div>
 

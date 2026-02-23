@@ -52,8 +52,8 @@ export default function Atividades() {
   });
   const [formData, setFormData] = useState({
     data: format(new Date(), 'yyyy-MM-dd'),
-    supervisor_id: '',
     analista_id: '',
+    supervisor_id: '',
     tipo: '',
     nota: '',
     comentario: '',
@@ -128,8 +128,8 @@ export default function Atividades() {
   const resetForm = () => {
     setFormData({
       data: format(new Date(), 'yyyy-MM-dd'),
-      supervisor_id: '',
       analista_id: '',
+      supervisor_id: '',
       tipo: '',
       nota: '',
       comentario: '',
@@ -158,8 +158,8 @@ export default function Atividades() {
     setEditingAtividade(atividade);
     setFormData({
       data: atividade.data,
-      supervisor_id: atividade.supervisor_id,
       analista_id: atividade.analista_id,
+      supervisor_id: atividade.supervisor_id,
       tipo: atividade.tipo,
       nota: atividade.nota?.toString() || '',
       comentario: atividade.comentario || '',
@@ -171,12 +171,17 @@ export default function Atividades() {
   const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
   const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
 
+  const handleAnalistaChange = (analistaId) => {
+    const analista = analistas.find(a => a.id === analistaId);
+    setFormData({
+      ...formData,
+      analista_id: analistaId,
+      supervisor_id: analista?.supervisor_id || ''
+    });
+  };
+
   const filteredAnalistas = filters.supervisor_id
     ? analistas.filter(a => a.supervisor_id === filters.supervisor_id)
-    : analistas;
-
-  const formFilteredAnalistas = formData.supervisor_id
-    ? analistas.filter(a => a.supervisor_id === formData.supervisor_id)
     : analistas;
 
   const filteredAtividades = atividades.filter(a => {
@@ -255,39 +260,26 @@ export default function Atividades() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Supervisor</Label>
-                  <Select
-                    value={formData.supervisor_id}
-                    onValueChange={(value) => setFormData({ ...formData, supervisor_id: value, analista_id: '' })}
-                  >
-                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#242424] border-gray-700">
-                      {supervisores.map((sup) => (
-                        <SelectItem key={sup.id} value={sup.id}>{sup.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Analista</Label>
-                  <Select
-                    value={formData.analista_id}
-                    onValueChange={(value) => setFormData({ ...formData, analista_id: value })}
-                  >
-                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#242424] border-gray-700">
-                      {formFilteredAnalistas.map((an) => (
-                        <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label>Analista</Label>
+                <Select
+                  value={formData.analista_id}
+                  onValueChange={handleAnalistaChange}
+                >
+                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#242424] border-gray-700">
+                    {analistas.map((an) => (
+                      <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.supervisor_id && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Supervisor: {getSupervisorNome(formData.supervisor_id)}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
