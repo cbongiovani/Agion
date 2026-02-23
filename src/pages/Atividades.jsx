@@ -77,6 +77,18 @@ export default function Atividades() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Atividade.create(data),
+    onMutate: async (newAtividade) => {
+      await queryClient.cancelQueries({ queryKey: ['atividades'] });
+      const previousAtividades = queryClient.getQueryData(['atividades']);
+      queryClient.setQueryData(['atividades'], (old = []) => [
+        { ...newAtividade, id: `temp-${Date.now()}` },
+        ...old
+      ]);
+      return { previousAtividades };
+    },
+    onError: (err, newAtividade, context) => {
+      queryClient.setQueryData(['atividades'], context.previousAtividades);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success('Atividade criada com sucesso!');
@@ -86,6 +98,17 @@ export default function Atividades() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Atividade.update(id, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['atividades'] });
+      const previousAtividades = queryClient.getQueryData(['atividades']);
+      queryClient.setQueryData(['atividades'], (old = []) =>
+        old.map((atividade) => (atividade.id === id ? { ...atividade, ...data } : atividade))
+      );
+      return { previousAtividades };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(['atividades'], context.previousAtividades);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success('Atividade atualizada com sucesso!');
@@ -382,8 +405,8 @@ export default function Atividades() {
         </div>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-[#242424] rounded-2xl border border-gray-800 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden lg:block bg-[#242424] rounded-2xl border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -437,7 +460,7 @@ export default function Atividades() {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEdit(atividade)}
-                        className="text-gray-400 hover:text-white"
+                        className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px]"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -445,7 +468,7 @@ export default function Atividades() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setDeleteId(atividade.id)}
-                        className="text-gray-400 hover:text-red-400"
+                        className="text-gray-400 hover:text-red-400 min-w-[44px] min-h-[44px]"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -456,6 +479,69 @@ export default function Atividades() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card List */}
+      <div className="lg:hidden space-y-4">
+        {filteredAtividades.map((atividade) => (
+          <div key={atividade.id} className="bg-[#242424] rounded-2xl border border-gray-800 p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  {atividade.tipo}
+                </span>
+                <AtividadeInfoTooltip tipo={atividade.tipo} />
+              </div>
+              <NotaBadge nota={atividade.nota} />
+            </div>
+            
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Data</span>
+                <span className="text-sm text-white">{format(new Date(atividade.data), 'dd/MM/yyyy')}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Supervisor</span>
+                <span className="text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Analista</span>
+                <span className="text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Status</span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                  atividade.status === 'Concluído' 
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    : atividade.status === 'Em evolução'
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                }`}>
+                  {atividade.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => openEdit(atividade)}
+                className="text-gray-400 hover:text-white border-gray-700 min-w-[44px] min-h-[44px]"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setDeleteId(atividade.id)}
+                className="text-red-400 hover:text-red-300 border-gray-700 min-w-[44px] min-h-[44px]"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {filteredAtividades.length === 0 && (

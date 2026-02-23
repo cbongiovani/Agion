@@ -58,6 +58,18 @@ export default function Analistas() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Analista.create(data),
+    onMutate: async (newAnalista) => {
+      await queryClient.cancelQueries({ queryKey: ['analistas'] });
+      const previousAnalistas = queryClient.getQueryData(['analistas']);
+      queryClient.setQueryData(['analistas'], (old = []) => [
+        ...old,
+        { ...newAnalista, id: `temp-${Date.now()}` }
+      ]);
+      return { previousAnalistas };
+    },
+    onError: (err, newAnalista, context) => {
+      queryClient.setQueryData(['analistas'], context.previousAnalistas);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['analistas'] });
       toast.success('Analista criado com sucesso!');
@@ -67,6 +79,17 @@ export default function Analistas() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Analista.update(id, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['analistas'] });
+      const previousAnalistas = queryClient.getQueryData(['analistas']);
+      queryClient.setQueryData(['analistas'], (old = []) =>
+        old.map((analista) => (analista.id === id ? { ...analista, ...data } : analista))
+      );
+      return { previousAnalistas };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(['analistas'], context.previousAnalistas);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['analistas'] });
       toast.success('Analista atualizado com sucesso!');
@@ -187,7 +210,8 @@ export default function Analistas() {
         </Dialog>
       </div>
 
-      <div className="bg-[#242424] rounded-2xl border border-gray-800 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden lg:block bg-[#242424] rounded-2xl border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -232,7 +256,7 @@ export default function Analistas() {
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-1">
                         <Link to={createPageUrl(`PerfilAnalista?id=${analista.id}`)}>
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-emerald-400">
+                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-emerald-400 min-w-[44px] min-h-[44px]">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
@@ -240,7 +264,7 @@ export default function Analistas() {
                           variant="ghost"
                           size="icon"
                           onClick={() => openEdit(analista)}
-                          className="text-gray-400 hover:text-white"
+                          className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px]"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -248,7 +272,7 @@ export default function Analistas() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setDeleteId(analista.id)}
-                          className="text-gray-400 hover:text-red-400"
+                          className="text-gray-400 hover:text-red-400 min-w-[44px] min-h-[44px]"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -260,6 +284,69 @@ export default function Analistas() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card List */}
+      <div className="lg:hidden space-y-4">
+        {analistas.map((analista) => {
+          const media = getMediaAnalista(analista.id);
+          return (
+            <div key={analista.id} className="bg-[#242424] rounded-2xl border border-gray-800 p-4">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <span className="text-blue-400 font-bold text-lg">
+                      {analista.nome.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold">{analista.nome}</h3>
+                    <p className="text-sm text-gray-400">{getSupervisorNome(analista.supervisor_id)}</p>
+                  </div>
+                </div>
+                {media !== null && <PerformanceBadge media={media} />}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-[#1a1a1a] rounded-lg p-3">
+                  <p className="text-xs text-gray-500 mb-1">Atividades</p>
+                  <p className="text-lg font-semibold text-white">{getTotalAtividades(analista.id)}</p>
+                </div>
+                <div className="bg-[#1a1a1a] rounded-lg p-3">
+                  <p className="text-xs text-gray-500 mb-1">Média</p>
+                  <p className="text-lg font-semibold text-white">
+                    {media !== null ? media.toFixed(1) : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Link to={createPageUrl(`PerfilAnalista?id=${analista.id}`)} className="flex-1">
+                  <Button variant="outline" className="w-full border-gray-700 gap-2 min-h-[44px]">
+                    <Eye className="w-4 h-4" />
+                    Ver Perfil
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => openEdit(analista)}
+                  className="text-gray-400 hover:text-white border-gray-700 min-w-[44px] min-h-[44px]"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setDeleteId(analista.id)}
+                  className="text-red-400 hover:text-red-300 border-gray-700 min-w-[44px] min-h-[44px]"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {analistas.length === 0 && (
