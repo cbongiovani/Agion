@@ -19,30 +19,34 @@ export default function ExportPDFButton({
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
 
-    // Fundo do header
-    doc.setFillColor(10, 10, 10);
-    doc.rect(0, 0, pageWidth, 50, 'F');
+    // Fundo do header - Verde Agion
+    doc.setFillColor(173, 248, 2);
+    doc.rect(0, 0, pageWidth, 40, 'F');
 
-    // Logo Agion
-    try {
-      const logoUrl = 'https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png';
-      doc.addImage(logoUrl, 'PNG', margin, 10, 50, 16);
-    } catch (error) {
-      console.log('Erro ao adicionar logo');
-    }
+    // Logo Agion (ajustada para o fundo verde)
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GRUPO AGION', margin, 15);
 
     // Subtítulo
-    doc.setFontSize(10);
-    doc.setTextColor(173, 248, 2);
-    doc.text('Painel de Governança - N1', margin, 35);
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Governança N1 - Suporte', margin, 25);
 
-    // Título da página
-    doc.setFontSize(18);
-    doc.setTextColor(255, 255, 255);
+    // Linha decorativa
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 30, pageWidth - margin, 30);
+
+    // Título da seção (abaixo do header)
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, margin, 45);
+    doc.text(title, margin, 50);
 
-    return 55;
+    return 60;
   };
 
   const addFooter = (doc) => {
