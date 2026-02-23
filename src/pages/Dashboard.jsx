@@ -187,16 +187,16 @@ export default function Dashboard() {
         </div>
 
         {/* Ligações por Supervisor */}
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
-          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Ligações por Supervisor</h3>
+        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
+          <h3 className="text-lg font-semibold mb-6 text-white">Ligações por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />
-              <XAxis dataKey="nome" stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151', fontSize: 12 }} />
-              <YAxis stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
+              <YAxis stroke="#888" tick={{ fill: '#888' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
-                labelStyle={{ color: isDark ? '#fff' : '#111827' }}
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                labelStyle={{ color: '#fff' }}
               />
               <Bar dataKey="ligacoes" fill="#e74c3c" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -204,16 +204,16 @@ export default function Dashboard() {
         </div>
 
         {/* Evolução Semanal */}
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
-          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Evolução Semanal</h3>
+        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
+          <h3 className="text-lg font-semibold mb-6 text-white">Evolução Semanal</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={evolucaoPorSemana}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />
-              <XAxis dataKey="semana" stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
-              <YAxis stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey="semana" stroke="#888" tick={{ fill: '#888' }} />
+              <YAxis stroke="#888" tick={{ fill: '#888' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
-                labelStyle={{ color: isDark ? '#fff' : '#111827' }}
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                labelStyle={{ color: '#fff' }}
               />
               <Legend />
               <Line type="monotone" dataKey="ligacoes" stroke="#e74c3c" strokeWidth={2} name="Ligações" />
@@ -223,8 +223,8 @@ export default function Dashboard() {
         </div>
 
         {/* Distribuição por Tipo */}
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
-          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Distribuição por Tipo de Atividade</h3>
+        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
+          <h3 className="text-lg font-semibold mb-6 text-white">Distribuição por Tipo de Atividade</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -242,7 +242,7 @@ export default function Dashboard() {
                 ))}
               </Pie>
               <Tooltip 
-                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -250,12 +250,12 @@ export default function Dashboard() {
       </div>
 
       {/* Top Analistas */}
-      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
-        <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Performance dos Analistas</h3>
+      <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
+        <h3 className="text-lg font-semibold mb-6 text-white">Performance dos Analistas</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className={`text-left text-sm border-b ${isDark ? 'text-gray-400 border-gray-800' : 'text-gray-600 border-gray-300'}`}>
+              <tr className="text-left text-sm border-b text-gray-400 border-gray-800">
                 <th className="pb-4 font-medium">Posição</th>
                 <th className="pb-4 font-medium">Analista</th>
                 <th className="pb-4 font-medium">Média</th>
@@ -264,21 +264,21 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {mediaPorAnalista.slice(0, 10).map((an, index) => (
-                <tr key={an.nome} className={`border-b ${isDark ? 'border-gray-800/50' : 'border-gray-200'}`}>
+                <tr key={an.nome} className="border-b border-gray-800/50">
                   <td className="py-4">
                     <span className={`
                       inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
-                      ${index === 0 ? (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-200 text-yellow-800') : 
-                        index === 1 ? (isDark ? 'bg-gray-400/20 text-gray-300' : 'bg-gray-200 text-gray-700') :
-                        index === 2 ? (isDark ? 'bg-amber-600/20 text-amber-500' : 'bg-amber-200 text-amber-800') : 
-                        (isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600')}
+                      ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' : 
+                        index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                        index === 2 ? 'bg-amber-600/20 text-amber-500' : 
+                        'bg-gray-800 text-gray-400'}
                     `}>
                       {index + 1}
                     </span>
                   </td>
-                  <td className={`py-4 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{an.nome}</td>
+                  <td className="py-4 font-medium text-white">{an.nome}</td>
                   <td className="py-4">
-                    <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{an.media.toFixed(1)}</span>
+                    <span className="font-semibold text-white">{an.media.toFixed(1)}</span>
                   </td>
                   <td className="py-4">
                     <PerformanceBadge media={an.media} />
