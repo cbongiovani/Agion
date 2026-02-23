@@ -56,6 +56,7 @@ import PerfilAnalista from './pages/PerfilAnalista';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
+import MeuPerfil from './pages/MeuPerfil';
 import __Layout from './Layout.jsx';
 
 
@@ -69,6 +70,7 @@ export const PAGES = {
     "RelatorioSemanal": RelatorioSemanal,
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
+    "MeuPerfil": MeuPerfil,
 }
 
 export const pagesConfig = {
