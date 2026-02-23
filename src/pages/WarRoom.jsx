@@ -292,7 +292,7 @@ export default function WarRoom() {
       <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
         <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
               <CheckCircle2 className="w-5 h-5" />
               Classificação e Priorização
@@ -303,7 +303,7 @@ export default function WarRoom() {
               <li>• Documentar critérios de classificação</li>
             </ul>
           </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
               <CheckCircle2 className="w-5 h-5" />
               Comunicação
@@ -314,7 +314,7 @@ export default function WarRoom() {
               <li>• Definir canais de escalação claros</li>
             </ul>
           </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
               <CheckCircle2 className="w-5 h-5" />
               Resolução e Recuperação
@@ -325,7 +325,7 @@ export default function WarRoom() {
               <li>• Validar resolução com usuários</li>
             </ul>
           </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
               <CheckCircle2 className="w-5 h-5" />
               Pós-Incidente
