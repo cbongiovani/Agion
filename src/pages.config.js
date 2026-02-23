@@ -50,6 +50,9 @@
 import Dashboard from './pages/Dashboard';
 import Supervisores from './pages/Supervisores';
 import Analistas from './pages/Analistas';
+import Atividades from './pages/Atividades';
+import FechamentoSemanal from './pages/FechamentoSemanal';
+import PerfilAnalista from './pages/PerfilAnalista';
 import __Layout from './Layout.jsx';
 
 
@@ -57,6 +60,9 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Supervisores": Supervisores,
     "Analistas": Analistas,
+    "Atividades": Atividades,
+    "FechamentoSemanal": FechamentoSemanal,
+    "PerfilAnalista": PerfilAnalista,
 }
 
 export const pagesConfig = {
