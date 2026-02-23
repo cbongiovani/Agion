@@ -7,10 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { User, Mail, Phone, Upload, Save, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function MeuPerfil() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     telefone: '',
@@ -34,6 +38,9 @@ export default function MeuPerfil() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       toast.success('Perfil atualizado com sucesso!');
+      setTimeout(() => {
+        navigate(createPageUrl('Dashboard'));
+      }, 1000);
     },
     onError: (error) => {
       toast.error('Erro ao atualizar perfil: ' + error.message);
@@ -59,6 +66,52 @@ export default function MeuPerfil() {
   const handleSubmit = (e) => {
     e.preventDefault();
     updateMutation.mutate(formData);
+  };
+
+  const formatPhone = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  const handlePhoneChange = (e) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData({ ...formData, telefone: formatted });
+  };
+
+  const handleRequestRoleChange = async () => {
+    setRequesting(true);
+    try {
+      const admins = await base44.entities.User.filter({ role: 'admin' });
+      
+      if (admins.length === 0) {
+        toast.error('Nenhum coordenador encontrado');
+        return;
+      }
+
+      for (const admin of admins) {
+        await base44.integrations.Core.SendEmail({
+          to: admin.email,
+          subject: 'Solicitação de Alteração de Função',
+          body: `
+            <h2>Nova Solicitação de Alteração de Função</h2>
+            <p><strong>Usuário:</strong> ${user.full_name || user.email}</p>
+            <p><strong>E-mail:</strong> ${user.email}</p>
+            <p><strong>Função Atual:</strong> ${getRoleLabel(user.role)}</p>
+            <p><strong>Função Solicitada:</strong> Supervisor</p>
+            <br>
+            <p>Por favor, acesse o sistema para aprovar ou rejeitar esta solicitação.</p>
+          `
+        });
+      }
+      
+      toast.success('Solicitação enviada para o coordenador!');
+    } catch (error) {
+      toast.error('Erro ao enviar solicitação');
+    } finally {
+      setRequesting(false);
+    }
   };
 
   const getRoleLabel = (role) => {
@@ -161,9 +214,10 @@ export default function MeuPerfil() {
               <Input
                 id="telefone"
                 value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                onChange={handlePhoneChange}
                 className="bg-[#0f1f35] border-[#1e3a5f] pl-10"
                 placeholder="(00) 00000-0000"
+                maxLength={15}
               />
             </div>
           </div>
@@ -190,23 +244,34 @@ export default function MeuPerfil() {
         </form>
       </Card>
 
-      {user.role === 'user' && (
+      {(user.role === 'user' || user.role === 'supervisor') && (
         <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Shield className="w-5 h-5" />
-                Solicitar Acesso de Supervisor
+                Solicitar Alteração de Função
               </h3>
               <p className="text-sm text-gray-400 mt-2">
-                Solicite permissões para registrar atividades e acessar mais funcionalidades do sistema.
+                {user.role === 'user' 
+                  ? 'Solicite permissões para registrar atividades e acessar mais funcionalidades do sistema.'
+                  : 'Solicite alteração para outra função do sistema.'
+                }
               </p>
             </div>
             <Button
-              onClick={() => toast.info('Solicitação enviada para o coordenador!')}
+              onClick={handleRequestRoleChange}
+              disabled={requesting}
               className="bg-[#ADF802] hover:bg-[#9DE702] text-black"
             >
-              Solicitar Acesso
+              {requesting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Solicitar Alteração'
+              )}
             </Button>
           </div>
         </Card>
