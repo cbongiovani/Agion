@@ -8,10 +8,13 @@ import {
   Users, 
   UserCircle,
   Menu,
-  X
+  X,
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -23,21 +26,27 @@ export default function Layout({ children }) {
     { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal' },
     { name: 'Supervisores', icon: Users, path: 'Supervisores' },
     { name: 'Analistas', icon: UserCircle, path: 'Analistas' },
+    { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios' },
   ];
+
+  const handleLogout = () => {
+    base44.auth.logout();
+  };
 
   const isActive = (path) => {
     return location.pathname.includes(path);
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-gray-100">
+    <div className="min-h-screen bg-[#0f1f35] text-gray-100">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#242424] border-b border-gray-800 z-50 flex items-center justify-between px-4">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0a1628] border-b border-[#1e3a5f] z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">N1</span>
-          </div>
-          <span className="font-semibold text-white">Governança N1</span>
+          <img 
+            src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+            alt="Grupo Agion" 
+            className="h-8 w-auto"
+          />
         </div>
         <Button
           variant="ghost"
@@ -59,19 +68,20 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-[#242424] border-r border-gray-800 z-50
+        fixed top-0 left-0 h-full w-64 bg-[#0a1628] border-r border-[#1e3a5f] z-50
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-6 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <span className="text-white font-bold">N1</span>
-            </div>
-            <div>
-              <h1 className="font-semibold text-white">Governança N1</h1>
-              <p className="text-xs text-gray-500">Suporte Técnico</p>
+        <div className="p-6 border-b border-[#1e3a5f]">
+          <div className="flex flex-col items-center gap-2">
+            <img 
+              src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+              alt="Grupo Agion" 
+              className="w-full h-auto"
+            />
+            <div className="text-center mt-2">
+              <p className="text-xs text-gray-400">Governança N1 - Suporte</p>
             </div>
           </div>
         </div>
@@ -85,8 +95,8 @@ export default function Layout({ children }) {
               className={`
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
                 ${isActive(item.path) 
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                  : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
+                  ? 'bg-[#e74c3c]/10 text-[#e74c3c] border border-[#e74c3c]/20' 
+                  : 'text-gray-400 hover:bg-[#1e3a5f]/50 hover:text-white'
                 }
               `}
             >
@@ -96,10 +106,18 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <div className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-xl p-4 border border-emerald-500/20">
-            <p className="text-xs text-gray-400">Sistema de Gestão</p>
-            <p className="text-sm font-medium text-white mt-1">Suporte N1</p>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#1e3a5f] space-y-2">
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            className="w-full justify-start gap-3 text-gray-400 hover:text-white hover:bg-[#1e3a5f]/50"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium">Sair</span>
+          </Button>
+          <div className="bg-gradient-to-r from-[#e74c3c]/10 to-[#3498db]/10 rounded-xl p-3 border border-[#e74c3c]/20">
+            <p className="text-xs text-gray-400">Grupo Agion</p>
+            <p className="text-sm font-medium text-white mt-1">Governança N1</p>
           </div>
         </div>
       </aside>

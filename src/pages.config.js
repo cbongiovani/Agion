@@ -54,6 +54,7 @@ import Atividades from './pages/Atividades';
 import FechamentoSemanal from './pages/FechamentoSemanal';
 import PerfilAnalista from './pages/PerfilAnalista';
 import RelatorioSemanal from './pages/RelatorioSemanal';
+import GestaoUsuarios from './pages/GestaoUsuarios';
 import __Layout from './Layout.jsx';
 
 
@@ -65,6 +66,7 @@ export const PAGES = {
     "FechamentoSemanal": FechamentoSemanal,
     "PerfilAnalista": PerfilAnalista,
     "RelatorioSemanal": RelatorioSemanal,
+    "GestaoUsuarios": GestaoUsuarios,
 }
 
 export const pagesConfig = {
