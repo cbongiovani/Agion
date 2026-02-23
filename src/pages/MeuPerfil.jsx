@@ -23,13 +23,14 @@ export default function MeuPerfil() {
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    onSuccess: (data) => {
+    queryFn: async () => {
+      const data = await base44.auth.me();
       setFormData({
         full_name: data.full_name || '',
         telefone: data.telefone || '',
         foto_url: data.foto_url || ''
       });
+      return data;
     }
   });
 
@@ -38,9 +39,6 @@ export default function MeuPerfil() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       toast.success('Perfil atualizado com sucesso!');
-      setTimeout(() => {
-        navigate(createPageUrl('Dashboard'));
-      }, 1000);
     },
     onError: (error) => {
       toast.error('Erro ao atualizar perfil: ' + error.message);
@@ -54,8 +52,10 @@ export default function MeuPerfil() {
     setUploading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.auth.updateMe({ foto_url: file_url });
       setFormData({ ...formData, foto_url: file_url });
-      await updateMutation.mutateAsync({ foto_url: file_url });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      toast.success('Foto atualizada com sucesso!');
     } catch (error) {
       toast.error('Erro ao fazer upload da foto');
     } finally {
@@ -127,7 +127,7 @@ export default function MeuPerfil() {
     const colors = {
       admin: 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30',
       supervisor: 'bg-[#ADF802]/20 text-[#ADF802] border-[#ADF802]/30',
-      user: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      user: 'bg-gray-700/30 text-gray-400 border-gray-600/30',
     };
     return colors[role] || colors.user;
   };
@@ -172,6 +172,12 @@ export default function MeuPerfil() {
           <div className="text-center">
             <h2 className="text-xl font-bold text-white">{user.full_name || 'Sem nome'}</h2>
             <p className="text-gray-400 text-sm">{user.email}</p>
+            {user.telefone && (
+              <p className="text-gray-400 text-sm flex items-center justify-center gap-1 mt-1">
+                <Phone className="w-3 h-3" />
+                {user.telefone}
+              </p>
+            )}
             <div className="mt-2">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadge(user.role)}`}>
                 <Shield className="w-3 h-3" />
