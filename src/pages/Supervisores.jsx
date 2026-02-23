@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Users, Loader2, TrendingUp, TrendingDown, Award, AlertCircle, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Loader2, TrendingUp, TrendingDown, Award, AlertCircle, Target, ChevronDown, ChevronUp, Sparkles, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import ExportPDFButton from '@/components/ExportPDFButton';
@@ -36,6 +36,8 @@ export default function Supervisores() {
   const [expandedSupervisor, setExpandedSupervisor] = useState(null);
   const [formData, setFormData] = useState({ nome: '', equipe: '' });
   const [currentUser, setCurrentUser] = useState(null);
+  const [aiRecommendations, setAiRecommendations] = useState({});
+  const [loadingAI, setLoadingAI] = useState({});
 
   useEffect(() => {
     base44.auth.me().then(setCurrentUser).catch(() => {});
@@ -174,6 +176,55 @@ export default function Supervisores() {
 
   const toggleSupervisor = (supervisorId) => {
     setExpandedSupervisor(expandedSupervisor === supervisorId ? null : supervisorId);
+  };
+
+  const generateAIRecommendations = async (analyst) => {
+    const key = analyst.id;
+    setLoadingAI(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      const atividadesDetalhadas = analyst.activities.map(a => ({
+        data: a.data,
+        tipo: a.tipo,
+        nota: a.nota,
+        comentario: a.comentario,
+        status: a.status
+      }));
+
+      const prompt = `Você é um especialista em gestão de equipes de suporte técnico N1. Analise o desempenho do analista abaixo e forneça recomendações específicas e acionáveis para melhoria:
+
+ANALISTA: ${analyst.nome}
+MÉDIA ATUAL: ${analyst.avgNota}
+TOTAL DE ATIVIDADES: ${analyst.totalActivities}
+
+ATIVIDADES DETALHADAS:
+${JSON.stringify(atividadesDetalhadas, null, 2)}
+
+DISTRIBUIÇÃO POR TIPO:
+- Chamados: ${analyst.byType['Chamados']}
+- Ligações: ${analyst.byType['Ligações']}
+- Monitoria Offline: ${analyst.byType['Monitoria Offline']}
+- Monitoria Assistida: ${analyst.byType['Monitoria Assistida']}
+- Feedback Individual: ${analyst.byType['Feedback Individual']}
+
+Baseado nesses dados, forneça:
+1. Análise dos principais pontos fracos
+2. 3-5 ações específicas e práticas para correção na próxima semana
+3. Recomendação de treinamento específico se necessário
+
+Seja direto, específico e focado em resultados mensuráveis.`;
+
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: prompt,
+        add_context_from_internet: false
+      });
+
+      setAiRecommendations(prev => ({ ...prev, [key]: result }));
+    } catch (error) {
+      toast.error('Erro ao gerar recomendações da IA');
+    } finally {
+      setLoadingAI(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   const generatePDFData = {
@@ -601,19 +652,59 @@ export default function Supervisores() {
                             )}
                           </div>
                           <div className="text-xs text-gray-400 mt-2">
-                            {index === 0 && (
-                              <p className="text-emerald-400">
-                                ✓ Melhor desempenho devido a {analyst.avgNota >= 8 ? 'notas consistentemente altas' : 'bom volume de atividades'} 
-                                {analyst.totalActivities >= 10 && ' e alto engajamento'}
-                              </p>
-                            )}
-                            {index === supervisorData.analystStats.length - 1 && supervisorData.analystStats.length > 1 && (
-                              <p className="text-red-400">
-                                ⚠ Necessita atenção: {analyst.avgNota < 7 ? 'média abaixo do esperado' : ''}
-                                {analyst.totalActivities < 5 ? ' poucos registros de atividades' : ''}
-                              </p>
-                            )}
+                           {index === 0 && (
+                             <p className="text-emerald-400">
+                               ✓ Melhor desempenho devido a {analyst.avgNota >= 8 ? 'notas consistentemente altas' : 'bom volume de atividades'} 
+                               {analyst.totalActivities >= 10 && ' e alto engajamento'}
+                             </p>
+                           )}
+                           {index === supervisorData.analystStats.length - 1 && supervisorData.analystStats.length > 1 && (
+                             <p className="text-red-400">
+                               ⚠ Necessita atenção: {analyst.avgNota < 7 ? 'média abaixo do esperado' : ''}
+                               {analyst.totalActivities < 5 ? ' poucos registros de atividades' : ''}
+                             </p>
+                           )}
                           </div>
+
+                          {analyst.avgNota < 8 && (
+                           <div className="mt-3 pt-3 border-t border-gray-700">
+                             {!aiRecommendations[analyst.id] && !loadingAI[analyst.id] ? (
+                               <Button
+                                 size="sm"
+                                 onClick={() => generateAIRecommendations(analyst)}
+                                 className="bg-[#ADF802]/10 hover:bg-[#ADF802]/20 text-[#ADF802] border border-[#ADF802]/30 gap-2"
+                               >
+                                 <Sparkles className="w-3 h-3" />
+                                 Gerar Recomendações com IA
+                               </Button>
+                             ) : loadingAI[analyst.id] ? (
+                               <div className="flex items-center gap-2 text-[#ADF802]">
+                                 <Loader2 className="w-4 h-4 animate-spin" />
+                                 <span className="text-xs">Analisando atividades...</span>
+                               </div>
+                             ) : (
+                               <div className="space-y-2">
+                                 <div className="flex items-center justify-between">
+                                   <div className="flex items-center gap-2">
+                                     <Sparkles className="w-4 h-4 text-[#ADF802]" />
+                                     <span className="text-xs font-semibold text-[#ADF802]">Recomendações da IA</span>
+                                   </div>
+                                   <Button
+                                     size="sm"
+                                     variant="ghost"
+                                     onClick={() => generateAIRecommendations(analyst)}
+                                     className="h-6 w-6 p-0 text-gray-400 hover:text-[#ADF802]"
+                                   >
+                                     <RefreshCw className="w-3 h-3" />
+                                   </Button>
+                                 </div>
+                                 <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-lg p-3 text-xs text-gray-300 whitespace-pre-wrap">
+                                   {aiRecommendations[analyst.id]}
+                                 </div>
+                               </div>
+                             )}
+                           </div>
+                          )}
                         </div>
                       ))}
                     </div>
