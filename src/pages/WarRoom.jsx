@@ -121,7 +121,7 @@ export default function WarRoom() {
               Novo Incidente
             </Button>
           </DialogTrigger>
-          <DialogContent className={`${isDark ? 'bg-[#2a2a2a] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
+          <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
             <DialogHeader>
               <DialogTitle>{editingIncidente ? 'Editar Incidente' : 'Registrar Novo Incidente'}</DialogTitle>
             </DialogHeader>
@@ -341,7 +341,7 @@ export default function WarRoom() {
 
       {/* Estado vazio */}
       {incidentes.length === 0 && (
-        <div className={`text-center py-16 rounded-2xl border ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`text-center py-16 rounded-2xl border ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
           <AlertTriangle className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
           <p className={`text-lg font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Nenhum incidente registrado</p>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>A War Room está pronta para gerenciar incidentes críticos</p>

@@ -117,7 +117,7 @@ export default function Dashboard() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Dashboard Executivo</h1>
-          <p className="text-gray-400 mt-1">Visão consolidada do Suporte N1</p>
+          <p className="text-gray-500 mt-1">Visão consolidada do Suporte N1</p>
         </div>
         <Link to={createPageUrl('RelatorioSemanal')}>
           <Button className="bg-[#e74c3c] hover:bg-[#c0392b] text-white gap-2">
@@ -170,7 +170,7 @@ export default function Dashboard() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Chamados por Supervisor */}
-        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Chamados por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
@@ -187,7 +187,7 @@ export default function Dashboard() {
         </div>
 
         {/* Ligações por Supervisor */}
-        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Ligações por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
@@ -204,7 +204,7 @@ export default function Dashboard() {
         </div>
 
         {/* Evolução Semanal */}
-        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Evolução Semanal</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={evolucaoPorSemana}>
@@ -223,7 +223,7 @@ export default function Dashboard() {
         </div>
 
         {/* Distribuição por Tipo */}
-        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Distribuição por Tipo de Atividade</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -250,7 +250,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top Analistas */}
-      <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+      <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
         <h3 className="text-lg font-semibold text-white mb-6">Performance dos Analistas</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
