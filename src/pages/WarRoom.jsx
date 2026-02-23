@@ -132,7 +132,7 @@ export default function WarRoom() {
                   <Input
                     value={formData.titulo}
                     onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                    className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                    className={isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'}
                     placeholder="Ex: Queda de servidor de produção"
                     required
                   />
@@ -140,10 +140,10 @@ export default function WarRoom() {
                 <div>
                   <Label>Severidade *</Label>
                   <Select value={formData.severidade} onValueChange={(value) => setFormData({ ...formData, severidade: value })}>
-                    <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                    <SelectTrigger className={isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
+                    <SelectContent className={isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300'}>
                       {SEVERIDADES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -151,7 +151,7 @@ export default function WarRoom() {
                 <div>
                   <Label>Categoria *</Label>
                   <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
-                    <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                    <SelectTrigger className={isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
@@ -162,7 +162,7 @@ export default function WarRoom() {
                 <div>
                   <Label>Status *</Label>
                   <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                    <SelectTrigger className={isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
@@ -175,7 +175,7 @@ export default function WarRoom() {
                   <Input
                     value={formData.responsavel}
                     onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                    className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                    className={isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'}
                     placeholder="Nome do responsável"
                   />
                 </div>
@@ -184,7 +184,7 @@ export default function WarRoom() {
                   <Textarea
                     value={formData.descricao}
                     onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                    className={`${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'} h-24`}
+                    className={`${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'} h-24`}
                     placeholder="Descreva o incidente em detalhes..."
                     required
                   />
@@ -227,8 +227,8 @@ export default function WarRoom() {
                   />
                 </div>
               </div>
-              <div className={`flex justify-end gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
-                <Button type="button" variant="outline" onClick={resetForm} className={isDark ? 'border-gray-700' : 'border-gray-300'}>
+              <div className={`flex justify-end gap-3 pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-300'}`}>
+                <Button type="button" variant="outline" onClick={resetForm} className={isDark ? 'border-gray-800' : 'border-gray-300'}>
                   Cancelar
                 </Button>
                 <Button type="submit" className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
@@ -242,7 +242,7 @@ export default function WarRoom() {
 
       {/* Métricas ITIL */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
           <div className="flex items-start justify-between">
             <div>
               <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Incidentes Críticos</p>
@@ -289,7 +289,7 @@ export default function WarRoom() {
       </div>
 
       {/* Guia de Boas Práticas */}
-      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'}`}>
+      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
         <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
