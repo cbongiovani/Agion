@@ -176,12 +176,12 @@ export default function Dashboard() {
           <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Chamados por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
-              <YAxis stroke="#888" tick={{ fill: '#888' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />
+              <XAxis dataKey="nome" stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151', fontSize: 12 }} />
+              <YAxis stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                labelStyle={{ color: '#fff' }}
+                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
+                labelStyle={{ color: isDark ? '#fff' : '#111827' }}
               />
               <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -193,12 +193,12 @@ export default function Dashboard() {
           <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Ligações por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
-              <YAxis stroke="#888" tick={{ fill: '#888' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />
+              <XAxis dataKey="nome" stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151', fontSize: 12 }} />
+              <YAxis stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                labelStyle={{ color: '#fff' }}
+                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
+                labelStyle={{ color: isDark ? '#fff' : '#111827' }}
               />
               <Bar dataKey="ligacoes" fill="#e74c3c" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -210,12 +210,12 @@ export default function Dashboard() {
           <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Evolução Semanal</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={evolucaoPorSemana}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="semana" stroke="#888" tick={{ fill: '#888' }} />
-              <YAxis stroke="#888" tick={{ fill: '#888' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#e5e7eb"} />
+              <XAxis dataKey="semana" stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
+              <YAxis stroke={isDark ? "#888" : "#6b7280"} tick={{ fill: isDark ? '#888' : '#374151' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                labelStyle={{ color: '#fff' }}
+                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
+                labelStyle={{ color: isDark ? '#fff' : '#111827' }}
               />
               <Legend />
               <Line type="monotone" dataKey="ligacoes" stroke="#e74c3c" strokeWidth={2} name="Ligações" />
