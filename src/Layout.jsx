@@ -55,9 +55,9 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#1a1a1a] text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen ${darkMode ? 'bg-[#0a0a0a] text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Mobile Header */}
-      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 ${darkMode ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'} border-b z-50 flex items-center justify-between px-4`}>
+      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} border-b z-50 flex items-center justify-between px-4`}>
         <div className="flex items-center gap-3">
           <img 
             src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
@@ -85,12 +85,12 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-200'} border-r z-50
+        fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} border-r z-50
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`p-6 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           <div className="flex flex-col items-center gap-2">
             <img 
               src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
@@ -98,26 +98,26 @@ export default function Layout({ children }) {
               className="w-full h-auto"
             />
             <div className="text-center mt-2">
-              <p className="text-xs text-gray-400">Governança N1 - Suporte</p>
+              <p className="text-xs text-gray-500">Governança N1 - Suporte</p>
             </div>
           </div>
         </div>
 
-        <nav className="p-4 space-y-1">
+        <nav className="flex flex-col">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={createPageUrl(item.path)}
               onClick={() => setMobileMenuOpen(false)}
               className={`
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                flex items-center gap-3 px-6 py-4 transition-all duration-200 border-l-4 relative
                 ${isActive(item.path) 
                   ? darkMode 
-                    ? 'bg-[#ADF802]/10 text-[#ADF802] border border-[#ADF802]/30 font-semibold' 
-                    : 'bg-[#ADF802]/20 text-[#2a2a2a] border border-[#ADF802]/40 font-semibold'
+                    ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
+                    : 'bg-gray-50 text-[#2a2a2a] border-l-[#ADF802] font-semibold'
                   : darkMode
-                    ? 'text-gray-400 hover:bg-gray-700/50 hover:text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-transparent'
                 }
               `}
             >
@@ -127,11 +127,11 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} space-y-2`}>
+        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'} space-y-2`}>
           <Button
             onClick={() => setDarkMode(!darkMode)}
             variant="ghost"
-            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-[#0a0a0a]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           >
             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             <span className="font-medium">{darkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
@@ -139,13 +139,13 @@ export default function Layout({ children }) {
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            className={`w-full justify-start gap-3 ${darkMode ? 'text-gray-400 hover:text-white hover:bg-[#0a0a0a]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
           <div className={`rounded-xl p-3 border ${darkMode ? 'bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20' : 'bg-gradient-to-r from-[#ADF802]/20 to-[#ADF802]/30 border-[#ADF802]/40'}`}>
-            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Grupo Agion</p>
+            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>Grupo Agion</p>
             <p className={`text-sm font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Governança N1</p>
           </div>
         </div>
