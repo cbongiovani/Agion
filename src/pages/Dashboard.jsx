@@ -111,16 +111,18 @@ export default function Dashboard() {
     );
   }
 
+  const isDark = document.documentElement.classList.contains('dark');
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">Dashboard Executivo</h1>
-          <p className="text-gray-500 mt-1">Visão consolidada do Suporte N1</p>
+          <h1 className={`text-2xl lg:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Dashboard Executivo</h1>
+          <p className={`mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Visão consolidada do Suporte N1</p>
         </div>
         <Link to={createPageUrl('RelatorioSemanal')}>
-          <Button className="bg-[#e74c3c] hover:bg-[#c0392b] text-white gap-2">
+          <Button className={isDark ? 'bg-[#e74c3c] hover:bg-[#c0392b] text-white gap-2' : 'bg-[#ADF802] hover:bg-[#9DE002] text-gray-900 font-bold gap-2 shadow-lg'}>
             <FileDown className="w-4 h-4" />
             Exportar Relatório PDF
           </Button>
@@ -170,8 +172,8 @@ export default function Dashboard() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Chamados por Supervisor */}
-        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Chamados por Supervisor</h3>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
+          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Chamados por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -187,8 +189,8 @@ export default function Dashboard() {
         </div>
 
         {/* Ligações por Supervisor */}
-        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Ligações por Supervisor</h3>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
+          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Ligações por Supervisor</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dadosPorSupervisor}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -204,8 +206,8 @@ export default function Dashboard() {
         </div>
 
         {/* Evolução Semanal */}
-        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Evolução Semanal</h3>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
+          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Evolução Semanal</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={evolucaoPorSemana}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -223,8 +225,8 @@ export default function Dashboard() {
         </div>
 
         {/* Distribuição por Tipo */}
-        <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Distribuição por Tipo de Atividade</h3>
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
+          <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Distribuição por Tipo de Atividade</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -242,7 +244,7 @@ export default function Dashboard() {
                 ))}
               </Pie>
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                contentStyle={{ backgroundColor: isDark ? '#1a1a1a' : '#fff', border: isDark ? '1px solid #333' : '1px solid #d1d5db', borderRadius: '8px' }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -250,12 +252,12 @@ export default function Dashboard() {
       </div>
 
       {/* Top Analistas */}
-      <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
-        <h3 className="text-lg font-semibold text-white mb-6">Performance dos Analistas</h3>
+      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-md'}`}>
+        <h3 className={`text-lg font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Performance dos Analistas</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-gray-400 text-sm border-b border-gray-800">
+              <tr className={`text-left text-sm border-b ${isDark ? 'text-gray-400 border-gray-800' : 'text-gray-600 border-gray-300'}`}>
                 <th className="pb-4 font-medium">Posição</th>
                 <th className="pb-4 font-medium">Analista</th>
                 <th className="pb-4 font-medium">Média</th>
@@ -264,21 +266,21 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {mediaPorAnalista.slice(0, 10).map((an, index) => (
-                <tr key={an.nome} className="border-b border-gray-800/50">
+                <tr key={an.nome} className={`border-b ${isDark ? 'border-gray-800/50' : 'border-gray-200'}`}>
                   <td className="py-4">
                     <span className={`
                       inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
-                      ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' : 
-                        index === 1 ? 'bg-gray-400/20 text-gray-300' :
-                        index === 2 ? 'bg-amber-600/20 text-amber-500' : 
-                        'bg-gray-800 text-gray-400'}
+                      ${index === 0 ? (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-200 text-yellow-800') : 
+                        index === 1 ? (isDark ? 'bg-gray-400/20 text-gray-300' : 'bg-gray-200 text-gray-700') :
+                        index === 2 ? (isDark ? 'bg-amber-600/20 text-amber-500' : 'bg-amber-200 text-amber-800') : 
+                        (isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600')}
                     `}>
                       {index + 1}
                     </span>
                   </td>
-                  <td className="py-4 text-white font-medium">{an.nome}</td>
+                  <td className={`py-4 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{an.nome}</td>
                   <td className="py-4">
-                    <span className="text-white font-semibold">{an.media.toFixed(1)}</span>
+                    <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{an.media.toFixed(1)}</span>
                   </td>
                   <td className="py-4">
                     <PerformanceBadge media={an.media} />

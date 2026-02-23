@@ -55,7 +55,7 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#0a0a0a] text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen ${darkMode ? 'bg-[#0a0a0a] text-gray-100' : 'bg-[#f5f7fa] text-gray-900'}`}>
       {/* Mobile Header */}
       <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} border-b z-50 flex items-center justify-between px-4`}>
         <div className="flex items-center gap-3">
@@ -85,7 +85,7 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'} border-r z-50
+        fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-300 shadow-sm'} border-r z-50
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -114,10 +114,10 @@ export default function Layout({ children }) {
                 ${isActive(item.path) 
                   ? darkMode 
                     ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
-                    : 'bg-gray-50 text-[#2a2a2a] border-l-[#ADF802] font-semibold'
+                    : 'bg-gradient-to-r from-[#ADF802]/10 to-transparent text-gray-900 border-l-[#ADF802] font-semibold shadow-sm'
                   : darkMode
                     ? 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-transparent'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 border-l-transparent'
                 }
               `}
             >
@@ -144,8 +144,8 @@ export default function Layout({ children }) {
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
-          <div className={`rounded-xl p-3 border ${darkMode ? 'bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20' : 'bg-gradient-to-r from-[#ADF802]/20 to-[#ADF802]/30 border-[#ADF802]/40'}`}>
-            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>Grupo Agion</p>
+          <div className={`rounded-xl p-3 border ${darkMode ? 'bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20' : 'bg-gradient-to-br from-[#ADF802]/30 via-[#ADF802]/20 to-[#ADF802]/10 border-[#ADF802] shadow-md'}`}>
+            <p className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-700'}`}>Grupo Agion</p>
             <p className={`text-sm font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Governança N1</p>
           </div>
         </div>
