@@ -18,13 +18,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Settings, Loader2, Mail, Shield } from 'lucide-react';
+import { Plus, Pencil, Settings, Loader2, Mail, Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function GestaoUsuarios() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
@@ -96,6 +107,16 @@ export default function GestaoUsuarios() {
     return labels[role] || role;
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const user = await base44.auth.me();
+      await base44.entities.User.delete(user.id);
+      base44.auth.logout();
+    } catch (error) {
+      toast.error('Erro ao deletar conta: ' + error.message);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -106,6 +127,29 @@ export default function GestaoUsuarios() {
 
   return (
     <div className="space-y-6">
+      {/* Danger Zone */}
+      <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-red-400 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              Zona de Perigo
+            </h3>
+            <p className="text-sm text-gray-400 mt-2">
+              Ações irreversíveis que afetam permanentemente sua conta.
+            </p>
+          </div>
+          <Button
+            onClick={() => setDeleteAccountOpen(true)}
+            variant="outline"
+            className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Deletar Minha Conta
+          </Button>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Gestão de Usuários</h1>
@@ -280,6 +324,30 @@ export default function GestaoUsuarios() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
+        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Deletar Conta Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Esta ação é <strong className="text-red-400">irreversível</strong>. Todos os seus dados, configurações e histórico serão permanentemente removidos do sistema. 
+              Você será desconectado imediatamente após a exclusão.
+              <br /><br />
+              Tem certeza que deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sim, Deletar Minha Conta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
