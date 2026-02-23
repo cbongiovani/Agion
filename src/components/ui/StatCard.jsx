@@ -3,19 +3,19 @@ import { cn } from '@/lib/utils';
 
 export default function StatCard({ title, value, icon: Icon, variant = 'default', trend }) {
   const variants = {
-    default: 'from-gray-800 to-gray-900 border-gray-700',
-    emerald: 'from-emerald-900/50 to-emerald-950/50 border-emerald-500/30',
-    blue: 'from-blue-900/50 to-blue-950/50 border-blue-500/30',
-    amber: 'from-amber-900/50 to-amber-950/50 border-amber-500/30',
-    red: 'from-red-900/50 to-red-950/50 border-red-500/30',
+    default: 'from-[#0a1628] to-[#0f1f35] border-[#1e3a5f]',
+    emerald: 'from-[#e74c3c]/20 to-[#c0392b]/20 border-[#e74c3c]/30',
+    blue: 'from-[#3498db]/20 to-[#2980b9]/20 border-[#3498db]/30',
+    amber: 'from-[#f39c12]/20 to-[#e67e22]/20 border-[#f39c12]/30',
+    red: 'from-[#e74c3c]/20 to-[#c0392b]/20 border-[#e74c3c]/30',
   };
 
   const iconVariants = {
-    default: 'bg-gray-700 text-gray-300',
-    emerald: 'bg-emerald-500/20 text-emerald-400',
-    blue: 'bg-blue-500/20 text-blue-400',
-    amber: 'bg-amber-500/20 text-amber-400',
-    red: 'bg-red-500/20 text-red-400',
+    default: 'bg-[#1e3a5f] text-gray-300',
+    emerald: 'bg-[#e74c3c]/20 text-[#e74c3c]',
+    blue: 'bg-[#3498db]/20 text-[#3498db]',
+    amber: 'bg-[#f39c12]/20 text-[#f39c12]',
+    red: 'bg-[#e74c3c]/20 text-[#e74c3c]',
   };
 
   return (

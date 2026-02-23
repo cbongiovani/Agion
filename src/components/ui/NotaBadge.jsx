@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils';
 
 export default function NotaBadge({ nota }) {
   const getColor = (n) => {
-    if (n >= 8) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-    if (n >= 6) return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-    return 'bg-red-500/20 text-red-400 border-red-500/30';
+    if (n >= 8) return 'bg-[#27ae60]/20 text-[#27ae60] border-[#27ae60]/30';
+    if (n >= 6) return 'bg-[#f39c12]/20 text-[#f39c12] border-[#f39c12]/30';
+    return 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30';
   };
 
   return (
