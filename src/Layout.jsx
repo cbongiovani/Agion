@@ -91,13 +91,13 @@ export default function Layout({ children }) {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-between px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-3">
-          <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer">
+          <Link to={createPageUrl('Dashboard')} className="hover:opacity-80 transition-opacity">
             <img 
               src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
               alt="Grupo Agion" 
-              className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+              className="h-8 w-auto cursor-pointer"
             />
-          </a>
+          </Link>
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell currentUser={currentUser} />
@@ -129,13 +129,13 @@ export default function Layout({ children }) {
       `}>
         <div className="p-6 border-b border-gray-800">
           <div className="w-full flex items-center justify-between">
-            <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer">
+            <Link to={createPageUrl('Dashboard')} className="hover:opacity-80 transition-opacity">
               <img 
                 src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
                 alt="Grupo Agion" 
-                className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+                className="h-10 w-auto cursor-pointer"
               />
-            </a>
+            </Link>
             <div className="hidden lg:block">
               <NotificationBell currentUser={currentUser} />
             </div>
@@ -197,10 +197,10 @@ export default function Layout({ children }) {
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
-          <div className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20">
+          <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer" className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20 hover:bg-gradient-to-r hover:from-[#ADF802]/10 hover:to-[#ADF802]/15 transition-colors cursor-pointer">
             <p className="text-xs font-medium text-gray-500">Grupo Agion</p>
             <p className="text-sm font-bold mt-1 text-white">Painel de Governança - N1</p>
-          </div>
+          </a>
         </div>
       </aside>
 
