@@ -41,7 +41,7 @@ export default function GestaoUsuarios() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
-  const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '' });
+  const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '', email: '' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
 
   const { data: users = [], isLoading } = useQuery({
@@ -88,7 +88,7 @@ export default function GestaoUsuarios() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['analistas'] });
       toast.success('Analista convidado com sucesso!');
-      setInviteAnalistaData({ email: '' });
+      setInviteAnalistaData({ analistaId: '', email: '' });
       setIsInviteAnalistaOpen(false);
     },
     onError: (error) => {
@@ -137,9 +137,8 @@ export default function GestaoUsuarios() {
       toast.error('Este analista já possui um usuário vinculado');
       return;
     }
-    const email = `${analista.nome.toLowerCase().replace(/\s+/g, '.')}@grupoavenida.com.br`;
     inviteAnalistaMutation.mutate({ 
-      email,
+      email: inviteAnalistaData.email,
       analistaId: analista.id
     });
   };
@@ -225,7 +224,7 @@ export default function GestaoUsuarios() {
                   <Label htmlFor="analista_select">Selecione o Analista</Label>
                   <Select
                     value={inviteAnalistaData.analistaId}
-                    onValueChange={(value) => setInviteAnalistaData({ analistaId: value })}
+                    onValueChange={(value) => setInviteAnalistaData({ ...inviteAnalistaData, analistaId: value })}
                   >
                     <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
                       <SelectValue placeholder="Selecione um analista" />
@@ -238,8 +237,20 @@ export default function GestaoUsuarios() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="email_analista">E-mail do Analista</Label>
+                  <Input
+                    id="email_analista"
+                    type="email"
+                    value={inviteAnalistaData.email}
+                    onChange={(e) => setInviteAnalistaData({ ...inviteAnalistaData, email: e.target.value })}
+                    className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
+                    placeholder="analista@grupoavenida.com.br"
+                    required
+                  />
                   <p className="text-xs text-gray-400 mt-2">
-                    O analista receberá permissão de "Usuário" e será vinculado automaticamente ao seu perfil. Um email será gerado automaticamente.
+                    O analista receberá permissão de "Usuário" e será vinculado automaticamente ao seu perfil.
                   </p>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
