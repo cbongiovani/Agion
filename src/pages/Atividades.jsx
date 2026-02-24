@@ -414,25 +414,40 @@ export default function Atividades() {
                 </div>
               </div>
               <div>
-                <Label>Analista</Label>
-                <Select
-                  value={formData.analista_id}
-                  onValueChange={handleAnalistaChange}
-                  disabled={viewOnlyMode}
-                >
-                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#242424] border-gray-700">
-                    {analistas.map((an) => (
-                      <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.supervisor_id && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Supervisor: {getSupervisorNome(formData.supervisor_id)}
-                  </p>
+                <Label className="text-gray-300">Analista</Label>
+                {viewOnlyMode ? (
+                  <div>
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">
+                      {getAnalistaNome(formData.analista_id) || '-'}
+                    </p>
+                    {formData.supervisor_id && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        Supervisor: {getSupervisorNome(formData.supervisor_id)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <Select
+                      value={formData.analista_id}
+                      onValueChange={handleAnalistaChange}
+                      disabled={viewOnlyMode}
+                    >
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#242424] border-gray-700">
+                        {analistas.map((an) => (
+                          <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.supervisor_id && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Supervisor: {getSupervisorNome(formData.supervisor_id)}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               {formData.tipo === 'Monitoria Offline' && !viewOnlyMode && (
@@ -444,17 +459,21 @@ export default function Atividades() {
                 />
               )}
               {formData.tipo === 'Monitoria Offline' && viewOnlyMode && (
-                <div>
-                  <Label>Protocolo da Gravação</Label>
-                  <p className="text-gray-400 mt-2">{formData.protocolo_gravacao || '-'}</p>
-                  <Label className="mt-4">Tópicos de Avaliação</Label>
-                  <div className="space-y-2 mt-2">
-                    {Object.entries(formData.topicos_monitoria_offline || {}).map(([key, value]) => (
-                      <div key={key} className="flex justify-between text-sm">
-                        <span className="text-gray-400">{key}</span>
-                        <span className="text-white font-semibold">{value}/5</span>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-gray-300">Protocolo da Gravação</Label>
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.protocolo_gravacao || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-300">Tópicos de Avaliação</Label>
+                    <div className="space-y-2 mt-2 p-3 bg-[#1a1a1a] rounded border border-gray-700">
+                      {Object.entries(formData.topicos_monitoria_offline || {}).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-gray-400">{key}</span>
+                          <span className="text-white font-semibold">{value}/5</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -467,50 +486,62 @@ export default function Atividades() {
                 />
               )}
               {formData.tipo === 'Monitoria Assistida' && viewOnlyMode && (
-                <div>
-                  <Label>Link da Gravação Teams</Label>
-                  <p className="text-gray-400 mt-2 break-all">{formData.link_gravacao_teams || '-'}</p>
-                  <Label className="mt-4">Tópicos Técnicos</Label>
-                  <div className="space-y-2 mt-2">
-                    {Object.entries(formData.topicos_monitoria_assistida || {}).map(([key, value]) => (
-                      <div key={key} className="flex justify-between text-sm">
-                        <span className="text-gray-400">{key}</span>
-                        <span className="text-white font-semibold">{value ? '✓' : '✗'}</span>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-gray-300">Link da Gravação Teams</Label>
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700 break-all">{formData.link_gravacao_teams || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-300">Tópicos Técnicos</Label>
+                    <div className="space-y-2 mt-2 p-3 bg-[#1a1a1a] rounded border border-gray-700">
+                      {Object.entries(formData.topicos_monitoria_assistida || {}).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-gray-400">{key}</span>
+                          <span className="text-white font-semibold">{value ? '✓' : '✗'}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
               {formData.tipo === 'Chamados' && (
                 <div>
-                  <Label>Ticket Acompanhado</Label>
-                  <Input
-                    type="text"
-                    maxLength={10}
-                    value={formData.ticket_acompanhado}
-                    onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
-                    className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    placeholder="Digite o ticket (10 caracteres)"
-                    disabled={viewOnlyMode}
-                  />
+                  <Label className="text-gray-300">Ticket Acompanhado</Label>
+                  {viewOnlyMode ? (
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.ticket_acompanhado || '-'}</p>
+                  ) : (
+                    <Input
+                      type="text"
+                      maxLength={10}
+                      value={formData.ticket_acompanhado}
+                      onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      placeholder="Digite o ticket (10 caracteres)"
+                      disabled={viewOnlyMode}
+                    />
+                  )}
                 </div>
               )}
               {formData.tipo === 'Ligações' && (
                 <div>
-                  <Label>Protocolo</Label>
-                  <Input
-                    type="text"
-                    value={formData.protocolo_gravacao}
-                    onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
-                    className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    placeholder="Digite o protocolo"
-                    disabled={viewOnlyMode}
-                  />
+                  <Label className="text-gray-300">Protocolo</Label>
+                  {viewOnlyMode ? (
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.protocolo_gravacao || '-'}</p>
+                  ) : (
+                    <Input
+                      type="text"
+                      value={formData.protocolo_gravacao}
+                      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      placeholder="Digite o protocolo"
+                      disabled={viewOnlyMode}
+                    />
+                  )}
                 </div>
               )}
               {formData.tipo === 'Feedback Individual' && (
                 <div>
-                  <Label>Tipo de Feedback</Label>
+                  <Label className="text-gray-300">Tipo de Feedback</Label>
                   {!viewOnlyMode ? (
                     <div className="flex items-center gap-6 mt-3">
                       <div className="flex items-center gap-2">
@@ -535,28 +566,59 @@ export default function Atividades() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-400 mt-2">{formData.tipo_feedback || '-'}</p>
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.tipo_feedback || '-'}</p>
                   )}
                 </div>
               )}
               {!['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Nota (0-10)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="10"
-                      step="0.1"
-                      value={formData.nota}
-                      onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
-                      className="bg-[#1a1a1a] border-gray-700 mt-2"
-                      disabled={viewOnlyMode}
-                      required
-                    />
+                    <Label className="text-gray-300">Nota (0-10)</Label>
+                    {viewOnlyMode ? (
+                      <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.nota || '-'}</p>
+                    ) : (
+                      <Input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={formData.nota}
+                        onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                        className="bg-[#1a1a1a] border-gray-700 mt-2"
+                        disabled={viewOnlyMode}
+                        required
+                      />
+                    )}
                   </div>
                   <div>
-                    <Label>Status</Label>
+                    <Label className="text-gray-300">Status</Label>
+                    {viewOnlyMode ? (
+                      <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.status || '-'}</p>
+                    ) : (
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value) => setFormData({ ...formData, status: value })}
+                        disabled={viewOnlyMode}
+                      >
+                        <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#242424] border-gray-700">
+                          {STATUS.map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              )}
+              {['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
+                <div>
+                  <Label className="text-gray-300">Status</Label>
+                  {viewOnlyMode ? (
+                    <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700">{formData.status || '-'}</p>
+                  ) : (
                     <Select
                       value={formData.status}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
@@ -571,37 +633,22 @@ export default function Atividades() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                </div>
-              )}
-              {['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
-                <div>
-                  <Label>Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                    disabled={viewOnlyMode}
-                  >
-                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#242424] border-gray-700">
-                      {STATUS.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  )}
                 </div>
               )}
               <div>
-                <Label>Comentário</Label>
-                <Textarea
-                  value={formData.comentario}
-                  onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
-                  className="bg-[#1a1a1a] border-gray-700 mt-2 h-24"
-                  placeholder="Observações sobre a atividade..."
-                  disabled={viewOnlyMode}
-                />
+                <Label className="text-gray-300">Comentário</Label>
+                {viewOnlyMode ? (
+                  <p className="text-white font-medium mt-2 px-3 py-2 bg-[#1a1a1a] rounded border border-gray-700 whitespace-pre-wrap">{formData.comentario || '-'}</p>
+                ) : (
+                  <Textarea
+                    value={formData.comentario}
+                    onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
+                    className="bg-[#1a1a1a] border-gray-700 mt-2 h-24"
+                    placeholder="Observações sobre a atividade..."
+                    disabled={viewOnlyMode}
+                  />
+                )}
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
