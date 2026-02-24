@@ -57,20 +57,20 @@ export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onCh
 
       <div className="border-t border-gray-700 pt-4">
         <Label className="text-base mb-3 block">Tópicos de Avaliação</Label>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {topicos.map((topico) => (
-            <div key={topico.key} className="space-y-2">
-              <Label className="text-sm text-gray-300">{topico.label}</Label>
-              <div className="flex items-center gap-2">
+            <div key={topico.key} className="flex items-center justify-between gap-3">
+              <Label className="text-xs text-gray-300 flex-1">{topico.label}</Label>
+              <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((valor) => (
                   <button
                     key={valor}
                     type="button"
                     onClick={() => handleTopicoChange(topico.key, valor)}
                     className={`
-                      w-12 h-12 rounded-lg border-2 transition-all font-semibold
+                      w-8 h-8 rounded border transition-all text-xs font-semibold
                       ${topicosValues[topico.key] === valor
-                        ? 'bg-[#ADF802] border-[#ADF802] text-black scale-110'
+                        ? 'bg-[#ADF802] border-[#ADF802] text-black'
                         : 'bg-[#1a1a1a] border-gray-700 text-gray-400 hover:border-gray-500'
                       }
                     `}
