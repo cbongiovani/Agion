@@ -74,11 +74,13 @@ export default function Layout({ children }) {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-between px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center gap-3">
-          <img 
-            src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
-            alt="Grupo Agion" 
-            className="h-8 w-auto"
-          />
+          <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer">
+            <img 
+              src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+              alt="Grupo Agion" 
+              className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+            />
+          </a>
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell currentUser={currentUser} />
@@ -111,11 +113,13 @@ export default function Layout({ children }) {
         <div className="p-6 border-b border-gray-800">
           <div className="flex flex-col items-center gap-2">
             <div className="w-full flex items-center justify-between">
-              <img 
-                src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
-                alt="Grupo Agion" 
-                className="h-10 w-auto"
-              />
+              <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer">
+                <img 
+                  src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+                  alt="Grupo Agion" 
+                  className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </a>
               <div className="hidden lg:block">
                 <NotificationBell currentUser={currentUser} />
               </div>
