@@ -54,7 +54,7 @@ export default function Layout({ children }) {
       { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'] },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin', 'supervisor'] },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
-      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor'] },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'noc'] },
       { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'] },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
       { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', roles: ['admin'] },
@@ -238,7 +238,7 @@ export default function Layout({ children }) {
               <Trophy className="w-5 h-5" />
               <span className="text-xs font-medium">Ranking</span>
             </Link>
-            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') && (
               <Link
                 to={createPageUrl('WarRoom')}
                 className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
