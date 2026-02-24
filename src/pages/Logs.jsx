@@ -11,10 +11,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { FileText, Filter, X, Loader2, Activity, User, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FileText, Filter, X, Loader2, Activity, User, Calendar, AlertCircle, RefreshCw, Download, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const ACOES = ['Todas', 'Criou', 'Atualizou', 'Excluiu', 'Login', 'Logout', 'Convidou Usuário', 'Alterou Permissão', 'Exportou Relatório'];
 const ENTIDADES = ['Todas', 'Atividade', 'FechamentoSemanal', 'Analista', 'Supervisor', 'Incidente', 'Usuário', 'Sistema'];
@@ -151,6 +159,114 @@ export default function Logs() {
 
   const hasActiveFilters = Object.values(filters).some(v => v && v !== 'Todas');
 
+  const exportToPDF = async () => {
+    try {
+      const user = await base44.auth.me();
+      
+      const doc = new jsPDF('landscape');
+      
+      // Cabeçalho
+      doc.setFontSize(18);
+      doc.setTextColor(173, 248, 2);
+      doc.text('Relatório de Logs do Sistema', 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 28);
+      doc.text(`Total de registros: ${filteredLogs.length}`, 14, 34);
+      
+      // Filtros ativos
+      if (hasActiveFilters) {
+        doc.text('Filtros aplicados:', 14, 40);
+        let y = 44;
+        if (filters.usuario_email) doc.text(`- Usuário: ${filters.usuario_email}`, 20, y), y += 4;
+        if (filters.acao !== 'Todas') doc.text(`- Ação: ${filters.acao}`, 20, y), y += 4;
+        if (filters.entidade !== 'Todas') doc.text(`- Entidade: ${filters.entidade}`, 20, y), y += 4;
+        if (filters.dataInicio) doc.text(`- Data início: ${format(new Date(filters.dataInicio), 'dd/MM/yyyy')}`, 20, y), y += 4;
+        if (filters.dataFim) doc.text(`- Data fim: ${format(new Date(filters.dataFim), 'dd/MM/yyyy')}`, 20, y), y += 4;
+      }
+      
+      // Tabela
+      const tableData = filteredLogs.map(log => [
+        format(new Date(log.created_date), 'dd/MM/yyyy HH:mm'),
+        log.usuario_email || '-',
+        log.acao,
+        log.entidade,
+        log.detalhes?.substring(0, 50) + (log.detalhes?.length > 50 ? '...' : '') || '-',
+      ]);
+      
+      doc.autoTable({
+        head: [['Data/Hora', 'Usuário', 'Ação', 'Entidade', 'Detalhes']],
+        body: tableData,
+        startY: hasActiveFilters ? 50 : 45,
+        theme: 'grid',
+        headStyles: { fillColor: [173, 248, 2], textColor: [0, 0, 0] },
+        styles: { fontSize: 8 },
+      });
+      
+      doc.save(`logs_sistema_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`);
+      
+      // Registrar log
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Exportou Relatório',
+        entidade: 'Sistema',
+        detalhes: `Exportou ${filteredLogs.length} logs em PDF`,
+      });
+      
+      toast.success('Relatório PDF exportado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao exportar PDF: ' + error.message);
+    }
+  };
+
+  const exportToCSV = async () => {
+    try {
+      const user = await base44.auth.me();
+      
+      // Cabeçalho CSV
+      const headers = ['Data/Hora', 'Usuário Nome', 'Usuário Email', 'Ação', 'Entidade', 'Detalhes', 'IP'];
+      
+      // Dados
+      const rows = filteredLogs.map(log => [
+        format(new Date(log.created_date), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
+        log.usuario_nome || '-',
+        log.usuario_email || '-',
+        log.acao,
+        log.entidade,
+        log.detalhes?.replace(/"/g, '""') || '-',
+        log.ip_address || '-',
+      ]);
+      
+      // Criar CSV
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+      
+      // Download
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `logs_sistema_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
+      link.click();
+      
+      // Registrar log
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Exportou Relatório',
+        entidade: 'Sistema',
+        detalhes: `Exportou ${filteredLogs.length} logs em CSV`,
+      });
+      
+      toast.success('Relatório CSV exportado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao exportar CSV: ' + error.message);
+    }
+  };
+
   const getAcaoColor = (acao) => {
     const colors = {
       'Criou': 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -193,6 +309,24 @@ export default function Logs() {
           <p className="text-gray-400 mt-1">Registro completo de todas as ações realizadas no painel</p>
         </div>
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-[#e74c3c] hover:bg-[#c0392b] gap-2">
+                <Download className="w-4 h-4" />
+                Exportar Relatório
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-[#242424] border-gray-800">
+              <DropdownMenuItem onClick={exportToPDF} className="cursor-pointer text-white hover:bg-gray-800">
+                <FileText className="w-4 h-4 mr-2" />
+                Exportar como PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToCSV} className="cursor-pointer text-white hover:bg-gray-800">
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Exportar como CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             onClick={() => generateRetroactiveMutation.mutate()}
             disabled={generateRetroactiveMutation.isPending}
