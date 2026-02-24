@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Star, TrendingUp, Award, Loader2, Calendar, Target, Zap, MessageCircle, Heart } from 'lucide-react';
+import { Trophy, Medal, Star, TrendingUp, Award, Loader2, Calendar, Target, Zap, MessageCircle, Heart, Trash2 } from 'lucide-react';
 import { startOfWeek, endOfWeek, getWeek, startOfMonth, endOfMonth, getYear, getMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -62,6 +62,14 @@ export default function Ranking() {
       setComentarioText('');
       setComentarioOpen(null);
       toast.success('Comentário adicionado!');
+    },
+  });
+
+  const excluirComentarioMutation = useMutation({
+    mutationFn: (comentarioId) => base44.entities.ComentarioRanking.delete(comentarioId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comentarios'] });
+      toast.success('Comentário excluído!');
     },
   });
 
@@ -183,6 +191,14 @@ export default function Ranking() {
       mes: getMonth(now) + 1,
       semana: getWeek(now)
     });
+  };
+
+  const handleExcluirComentario = (comentarioId) => {
+    excluirComentarioMutation.mutate(comentarioId);
+  };
+
+  const podeExcluirComentario = () => {
+    return currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
   };
 
   const getReacoesDoAnalista = (analistaId) => {
@@ -412,9 +428,17 @@ export default function Ranking() {
                               <p className="text-xs text-gray-400 mb-2">Comentários:</p>
                               <div className="space-y-2 max-h-48 overflow-auto">
                                 {getComentariosDoAnalista(analista.id).map((c) => (
-                                  <div key={c.id} className="bg-[#0f1f35] p-2 rounded text-xs">
+                                  <div key={c.id} className="bg-[#0f1f35] p-2 rounded text-xs relative group">
                                     <p className="font-semibold text-white">{c.usuario_nome}</p>
                                     <p className="text-gray-300 mt-1">{c.comentario}</p>
+                                    {podeExcluirComentario() && (
+                                      <button
+                                        onClick={() => handleExcluirComentario(c.id)}
+                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-500/20 rounded"
+                                      >
+                                        <Trash2 className="w-3 h-3 text-red-400" />
+                                      </button>
+                                    )}
                                   </div>
                                 ))}
                               </div>
