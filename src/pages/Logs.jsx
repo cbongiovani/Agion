@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,14 +11,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { FileText, Filter, X, Loader2, Activity, User, Calendar, AlertCircle } from 'lucide-react';
+import { FileText, Filter, X, Loader2, Activity, User, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const ACOES = ['Todas', 'Criou', 'Atualizou', 'Excluiu', 'Login', 'Logout', 'Convidou Usuário', 'Alterou Permissão', 'Exportou Relatório'];
 const ENTIDADES = ['Todas', 'Atividade', 'FechamentoSemanal', 'Analista', 'Supervisor', 'Incidente', 'Usuário', 'Sistema'];
 
 export default function Logs() {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     usuario_email: '',
     acao: 'Todas',
@@ -32,6 +34,95 @@ export default function Logs() {
     queryKey: ['logs'],
     queryFn: () => base44.entities.Log.list('-created_date'),
     refetchInterval: 5000, // Atualiza a cada 5 segundos
+  });
+
+  const generateRetroactiveMutation = useMutation({
+    mutationFn: async () => {
+      const user = await base44.auth.me();
+      
+      // Buscar todas as entidades
+      const atividades = await base44.entities.Atividade.list();
+      const fechamentos = await base44.entities.FechamentoSemanal.list();
+      const analistas = await base44.entities.Analista.list();
+      const supervisores = await base44.entities.Supervisor.list();
+      const usuarios = await base44.entities.User.list();
+      
+      const logsToCreate = [];
+      
+      // Logs para Atividades
+      atividades.forEach(atividade => {
+        logsToCreate.push({
+          usuario_email: atividade.registrado_por || atividade.created_by,
+          usuario_nome: atividade.registrado_por || 'Sistema',
+          acao: 'Criou',
+          entidade: 'Atividade',
+          detalhes: `[Retroativo] Criou atividade do tipo "${atividade.tipo}" para analista`,
+          created_date: atividade.created_date,
+        });
+      });
+      
+      // Logs para Fechamentos Semanais
+      fechamentos.forEach(fechamento => {
+        logsToCreate.push({
+          usuario_email: fechamento.created_by,
+          usuario_nome: fechamento.created_by,
+          acao: 'Criou',
+          entidade: 'FechamentoSemanal',
+          detalhes: `[Retroativo] Registrou fechamento semanal`,
+          created_date: fechamento.created_date,
+        });
+      });
+      
+      // Logs para Analistas
+      analistas.forEach(analista => {
+        logsToCreate.push({
+          usuario_email: analista.created_by,
+          usuario_nome: analista.created_by,
+          acao: 'Criou',
+          entidade: 'Analista',
+          detalhes: `[Retroativo] Criou analista "${analista.nome}"`,
+          created_date: analista.created_date,
+        });
+      });
+      
+      // Logs para Supervisores
+      supervisores.forEach(supervisor => {
+        logsToCreate.push({
+          usuario_email: supervisor.created_by,
+          usuario_nome: supervisor.created_by,
+          acao: 'Criou',
+          entidade: 'Supervisor',
+          detalhes: `[Retroativo] Criou supervisor "${supervisor.nome}" da equipe "${supervisor.equipe}"`,
+          created_date: supervisor.created_date,
+        });
+      });
+      
+      // Logs para Usuários
+      usuarios.forEach(usuario => {
+        logsToCreate.push({
+          usuario_email: 'sistema@grupoavenida.com.br',
+          usuario_nome: 'Sistema',
+          acao: 'Criou',
+          entidade: 'Usuário',
+          detalhes: `[Retroativo] Usuário ${usuario.full_name || usuario.email} registrado no sistema`,
+          created_date: usuario.created_date,
+        });
+      });
+      
+      // Criar logs em lote
+      for (const log of logsToCreate) {
+        await base44.entities.Log.create(log);
+      }
+      
+      return logsToCreate.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+      toast.success(`${count} logs retroativos gerados com sucesso!`);
+    },
+    onError: (error) => {
+      toast.error('Erro ao gerar logs retroativos: ' + error.message);
+    },
   });
 
   const clearFilters = () => {
@@ -101,10 +192,29 @@ export default function Logs() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Logs do Sistema</h1>
           <p className="text-gray-400 mt-1">Registro completo de todas as ações realizadas no painel</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-[#242424] border border-gray-800 rounded-xl">
-          <Activity className="w-5 h-5 text-[#ADF802]" />
-          <span className="text-sm text-gray-400">Total de eventos:</span>
-          <span className="text-lg font-bold text-white">{filteredLogs.length}</span>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => generateRetroactiveMutation.mutate()}
+            disabled={generateRetroactiveMutation.isPending}
+            className="bg-[#ADF802] hover:bg-[#9DE002] text-black gap-2"
+          >
+            {generateRetroactiveMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Gerar Logs Retroativos
+              </>
+            )}
+          </Button>
+          <div className="flex items-center gap-2 px-4 py-2 bg-[#242424] border border-gray-800 rounded-xl">
+            <Activity className="w-5 h-5 text-[#ADF802]" />
+            <span className="text-sm text-gray-400">Total:</span>
+            <span className="text-lg font-bold text-white">{filteredLogs.length}</span>
+          </div>
         </div>
       </div>
 
