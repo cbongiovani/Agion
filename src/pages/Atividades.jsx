@@ -55,6 +55,7 @@ export default function Atividades() {
     analista_id: '',
     supervisor_id: '',
     tipo: '',
+    protocolo_gravacao: '',
     nota: '',
     comentario: '',
     status: 'Aberto',
@@ -141,6 +142,7 @@ export default function Atividades() {
       analista_id: '',
       supervisor_id: '',
       tipo: '',
+      protocolo_gravacao: '',
       nota: '',
       comentario: '',
       status: 'Aberto',
@@ -175,6 +177,7 @@ export default function Atividades() {
       analista_id: atividade.analista_id,
       supervisor_id: atividade.supervisor_id,
       tipo: atividade.tipo,
+      protocolo_gravacao: atividade.protocolo_gravacao || '',
       nota: atividade.nota?.toString() || '',
       comentario: atividade.comentario || '',
       status: atividade.status || 'Aberto',
@@ -299,6 +302,22 @@ export default function Atividades() {
                   </p>
                 )}
               </div>
+              {formData.tipo === 'Monitoria Offline' && (
+                <div>
+                  <Label>Protocolo da Gravação</Label>
+                  <Input
+                    type="text"
+                    maxLength={24}
+                    value={formData.protocolo_gravacao}
+                    onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                    className="bg-[#1a1a1a] border-gray-700 mt-2"
+                    placeholder="Digite o protocolo (24 caracteres)"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formData.protocolo_gravacao.length}/24 caracteres
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Nota (0-10)</Label>
