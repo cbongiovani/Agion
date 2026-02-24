@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -78,14 +79,17 @@ export default function Layout({ children }) {
             className="h-8 w-auto"
           />
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px] select-none"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <NotificationBell currentUser={currentUser} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px] select-none"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -105,12 +109,17 @@ export default function Layout({ children }) {
       `}>
         <div className="p-6 border-b border-gray-800">
           <div className="flex flex-col items-center gap-2">
-            <img 
-              src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
-              alt="Grupo Agion" 
-              className="w-full h-auto"
-            />
-            <div className="text-center mt-2">
+            <div className="w-full flex items-center justify-between">
+              <img 
+                src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+                alt="Grupo Agion" 
+                className="h-10 w-auto"
+              />
+              <div className="hidden lg:block">
+                <NotificationBell currentUser={currentUser} />
+              </div>
+            </div>
+            <div className="text-center mt-2 w-full">
               <p className="text-xs text-gray-500">Governança N1 - Suporte</p>
             </div>
           </div>
