@@ -54,6 +54,7 @@ export default function Layout({ children }) {
       { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor'] },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
+      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', roles: ['admin'] },
     ];
     
     return baseItems.filter(item => item.roles.includes(role));

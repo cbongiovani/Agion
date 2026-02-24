@@ -62,7 +62,7 @@ export default function FechamentoSemanal() {
 
   const { data: fechamentos = [], isLoading } = useQuery({
     queryKey: ['fechamentos'],
-    queryFn: () => base44.entities.FechamentoSemanal.list('-semana_inicio'),
+    queryFn: () => base44.entities.FechamentoSemanal.list('-created_date'),
   });
 
   const { data: supervisores = [] } = useQuery({
