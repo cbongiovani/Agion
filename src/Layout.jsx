@@ -21,6 +21,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import NotificationBell from '@/components/NotificationBell';
+import ClockWidget from '@/components/ClockWidget';
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -146,6 +147,7 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 space-y-2">
+          <ClockWidget />
           <Link
             to={createPageUrl('MeuPerfil')}
             onClick={() => setMobileMenuOpen(false)}

@@ -54,10 +54,10 @@ import FechamentoSemanal from './pages/FechamentoSemanal';
 import GestaoUsuarios from './pages/GestaoUsuarios';
 import MeuPerfil from './pages/MeuPerfil';
 import PerfilAnalista from './pages/PerfilAnalista';
+import Ranking from './pages/Ranking';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
-import Ranking from './pages/Ranking';
 import __Layout from './Layout.jsx';
 
 
@@ -69,10 +69,10 @@ export const PAGES = {
     "GestaoUsuarios": GestaoUsuarios,
     "MeuPerfil": MeuPerfil,
     "PerfilAnalista": PerfilAnalista,
+    "Ranking": Ranking,
     "RelatorioSemanal": RelatorioSemanal,
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
-    "Ranking": Ranking,
 }
 
 export const pagesConfig = {
