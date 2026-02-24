@@ -1,14 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Star, TrendingUp, Award, Loader2, Calendar, Target, Zap } from 'lucide-react';
+import { Trophy, Medal, Star, TrendingUp, Award, Loader2, Calendar, Target, Zap, MessageCircle, Heart } from 'lucide-react';
 import { startOfWeek, endOfWeek, getWeek, startOfMonth, endOfMonth, getYear, getMonth } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 export default function Ranking() {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState('semanal');
   const [rankingType, setRankingType] = useState('pontos');
+  const [comentarioOpen, setComentarioOpen] = useState(null);
+  const [comentarioText, setComentarioText] = useState('');
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
 
   const { data: analistas = [], isLoading: loadingAnalistas } = useQuery({
     queryKey: ['analistas'],
@@ -23,6 +35,34 @@ export default function Ranking() {
   const { data: rankings = [], isLoading: loadingRankings } = useQuery({
     queryKey: ['rankings'],
     queryFn: () => base44.entities.RankingAnalista.list('-pontos_total'),
+  });
+
+  const { data: reacoes = [] } = useQuery({
+    queryKey: ['reacoes'],
+    queryFn: () => base44.entities.ReacaoRanking.list(),
+  });
+
+  const { data: comentarios = [] } = useQuery({
+    queryKey: ['comentarios'],
+    queryFn: () => base44.entities.ComentarioRanking.list('-created_date'),
+  });
+
+  const adicionarReacaoMutation = useMutation({
+    mutationFn: (data) => base44.entities.ReacaoRanking.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reacoes'] });
+      toast.success('Reação adicionada!');
+    },
+  });
+
+  const adicionarComentarioMutation = useMutation({
+    mutationFn: (data) => base44.entities.ComentarioRanking.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comentarios'] });
+      setComentarioText('');
+      setComentarioOpen(null);
+      toast.success('Comentário adicionado!');
+    },
   });
 
   const calculateRanking = useMemo(() => {
@@ -116,6 +156,42 @@ export default function Ranking() {
 
     return analistaStats;
   }, [analistas, atividades, rankings, viewMode, rankingType]);
+
+  const handleReacao = (analistaId, emoji) => {
+    const now = new Date();
+    adicionarReacaoMutation.mutate({
+      analista_id: analistaId,
+      usuario_id: currentUser.id,
+      usuario_nome: currentUser.full_name || currentUser.email,
+      tipo_reacao: emoji,
+      ano: getYear(now),
+      mes: getMonth(now) + 1,
+      semana: getWeek(now)
+    });
+  };
+
+  const handleComentario = (analistaId) => {
+    if (!comentarioText.trim()) return;
+    
+    const now = new Date();
+    adicionarComentarioMutation.mutate({
+      analista_id: analistaId,
+      usuario_id: currentUser.id,
+      usuario_nome: currentUser.full_name || currentUser.email,
+      comentario: comentarioText,
+      ano: getYear(now),
+      mes: getMonth(now) + 1,
+      semana: getWeek(now)
+    });
+  };
+
+  const getReacoesDoAnalista = (analistaId) => {
+    return reacoes.filter(r => r.analista_id === analistaId);
+  };
+
+  const getComentariosDoAnalista = (analistaId) => {
+    return comentarios.filter(c => c.analista_id === analistaId);
+  };
 
   const getPodiumColor = (position) => {
     switch(position) {
@@ -265,6 +341,88 @@ export default function Ranking() {
                         </div>
                       </>
                     )}
+                  </div>
+
+                  {/* Reações e Comentários */}
+                  <div className="flex justify-center gap-2 pt-2 border-t border-gray-700">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="bg-[#0a1628] border-gray-700 hover:bg-[#0f1f35]">
+                          <Heart className="w-4 h-4 mr-1" />
+                          {getReacoesDoAnalista(analista.id).length}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 bg-[#0a1628] border-[#1e3a5f]">
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-white">Reagir com:</p>
+                          <div className="flex gap-2">
+                            {['🎉', '👏', '🏆', '⭐', '🔥'].map(emoji => (
+                              <button
+                                key={emoji}
+                                onClick={() => handleReacao(analista.id, emoji)}
+                                className="text-2xl hover:scale-125 transition-transform"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                          {getReacoesDoAnalista(analista.id).length > 0 && (
+                            <div className="pt-2 border-t border-gray-700">
+                              <p className="text-xs text-gray-400 mb-1">Reações:</p>
+                              <div className="space-y-1 max-h-32 overflow-auto">
+                                {getReacoesDoAnalista(analista.id).map((r, i) => (
+                                  <div key={i} className="text-xs text-gray-300">
+                                    {r.tipo_reacao} {r.usuario_nome}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover open={comentarioOpen === analista.id} onOpenChange={(open) => setComentarioOpen(open ? analista.id : null)}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="bg-[#0a1628] border-gray-700 hover:bg-[#0f1f35]">
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          {getComentariosDoAnalista(analista.id).length}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-[#0a1628] border-[#1e3a5f]">
+                        <div className="space-y-3">
+                          <div>
+                            <Textarea
+                              value={comentarioText}
+                              onChange={(e) => setComentarioText(e.target.value)}
+                              placeholder="Escreva um comentário..."
+                              className="bg-[#0f1f35] border-gray-700 text-sm"
+                              rows={3}
+                            />
+                            <Button
+                              onClick={() => handleComentario(analista.id)}
+                              className="w-full mt-2 bg-[#ADF802] hover:bg-[#9DE702] text-black"
+                              size="sm"
+                            >
+                              Comentar
+                            </Button>
+                          </div>
+                          {getComentariosDoAnalista(analista.id).length > 0 && (
+                            <div className="pt-2 border-t border-gray-700">
+                              <p className="text-xs text-gray-400 mb-2">Comentários:</p>
+                              <div className="space-y-2 max-h-48 overflow-auto">
+                                {getComentariosDoAnalista(analista.id).map((c) => (
+                                  <div key={c.id} className="bg-[#0f1f35] p-2 rounded text-xs">
+                                    <p className="font-semibold text-white">{c.usuario_nome}</p>
+                                    <p className="text-gray-300 mt-1">{c.comentario}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
               </Card>
