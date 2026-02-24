@@ -424,7 +424,7 @@ export default function Atividades() {
                   </p>
                 )}
               </div>
-              {formData.tipo === 'Monitoria Offline' && (
+              {formData.tipo === 'Monitoria Offline' && !viewOnlyMode && (
                 <MonitoriaOfflineForm
                   topicos={formData.topicos_monitoria_offline}
                   onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
@@ -432,13 +432,43 @@ export default function Atividades() {
                   onProtocoloChange={(value) => setFormData({ ...formData, protocolo_gravacao: value })}
                 />
               )}
-              {formData.tipo === 'Monitoria Assistida' && (
+              {formData.tipo === 'Monitoria Offline' && viewOnlyMode && (
+                <div>
+                  <Label>Protocolo da Gravação</Label>
+                  <p className="text-gray-400 mt-2">{formData.protocolo_gravacao || '-'}</p>
+                  <Label className="mt-4">Tópicos de Avaliação</Label>
+                  <div className="space-y-2 mt-2">
+                    {Object.entries(formData.topicos_monitoria_offline || {}).map(([key, value]) => (
+                      <div key={key} className="flex justify-between text-sm">
+                        <span className="text-gray-400">{key}</span>
+                        <span className="text-white font-semibold">{value}/5</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {formData.tipo === 'Monitoria Assistida' && !viewOnlyMode && (
                 <MonitoriaAssistidaForm
                   topicos={formData.topicos_monitoria_assistida}
                   onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
                   linkGravacao={formData.link_gravacao_teams}
                   onLinkChange={(value) => setFormData({ ...formData, link_gravacao_teams: value })}
                 />
+              )}
+              {formData.tipo === 'Monitoria Assistida' && viewOnlyMode && (
+                <div>
+                  <Label>Link da Gravação Teams</Label>
+                  <p className="text-gray-400 mt-2 break-all">{formData.link_gravacao_teams || '-'}</p>
+                  <Label className="mt-4">Tópicos Técnicos</Label>
+                  <div className="space-y-2 mt-2">
+                    {Object.entries(formData.topicos_monitoria_assistida || {}).map(([key, value]) => (
+                      <div key={key} className="flex justify-between text-sm">
+                        <span className="text-gray-400">{key}</span>
+                        <span className="text-white font-semibold">{value ? '✓' : '✗'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
               {formData.tipo === 'Chamados' && (
                 <div>
@@ -470,28 +500,32 @@ export default function Atividades() {
               {formData.tipo === 'Feedback Individual' && (
                 <div>
                   <Label>Tipo de Feedback</Label>
-                  <div className="flex items-center gap-6 mt-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="positivo"
-                        checked={formData.tipo_feedback === 'Positivo'}
-                        onCheckedChange={(checked) => checked && setFormData({ ...formData, tipo_feedback: 'Positivo' })}
-                      />
-                      <label htmlFor="positivo" className="text-sm text-white cursor-pointer">
-                        Positivo
-                      </label>
+                  {!viewOnlyMode ? (
+                    <div className="flex items-center gap-6 mt-3">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="positivo"
+                          checked={formData.tipo_feedback === 'Positivo'}
+                          onCheckedChange={(checked) => checked && setFormData({ ...formData, tipo_feedback: 'Positivo' })}
+                        />
+                        <label htmlFor="positivo" className="text-sm text-white cursor-pointer">
+                          Positivo
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="negativo"
+                          checked={formData.tipo_feedback === 'Negativo'}
+                          onCheckedChange={(checked) => checked && setFormData({ ...formData, tipo_feedback: 'Negativo' })}
+                        />
+                        <label htmlFor="negativo" className="text-sm text-white cursor-pointer">
+                          Negativo
+                        </label>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="negativo"
-                        checked={formData.tipo_feedback === 'Negativo'}
-                        onCheckedChange={(checked) => checked && setFormData({ ...formData, tipo_feedback: 'Negativo' })}
-                      />
-                      <label htmlFor="negativo" className="text-sm text-white cursor-pointer">
-                        Negativo
-                      </label>
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-gray-400 mt-2">{formData.tipo_feedback || '-'}</p>
+                  )}
                 </div>
               )}
               {!['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
