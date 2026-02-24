@@ -325,7 +325,7 @@ export default function WarRoom() {
              <ExportButton
                data={generateWarRoomData}
                fileName={`War_Room_${format(new Date(), 'yyyy-MM-dd')}`}
-               className="bg-[#ADF802] hover:bg-[#9DE002] text-black font-semibold"
+               className="bg-[#e74c3c] hover:bg-[#c0392b] font-semibold"
              />
            )}
            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
