@@ -371,7 +371,7 @@ export default function Atividades() {
                     type="date"
                     value={formData.data}
                     onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                    className="bg-[#1a1a1a] border-gray-700 mt-2"
+                    className="bg-[#1a1a1a] border-gray-700 mt-2 [color-scheme:dark]"
                     required
                   />
                 </div>
@@ -604,14 +604,14 @@ export default function Atividades() {
             type="date"
             value={filters.dataInicio}
             onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
-            className="bg-[#1a1a1a] border-gray-700"
+            className="bg-[#1a1a1a] border-gray-700 [color-scheme:dark]"
             placeholder="Data início"
           />
           <Input
             type="date"
             value={filters.dataFim}
             onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
-            className="bg-[#1a1a1a] border-gray-700"
+            className="bg-[#1a1a1a] border-gray-700 [color-scheme:dark]"
             placeholder="Data fim"
           />
         </div>
