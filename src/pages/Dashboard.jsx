@@ -178,8 +178,9 @@ export default function Dashboard() {
               <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
               <YAxis stroke="#888" tick={{ fill: '#888' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
                 labelStyle={{ color: '#fff' }}
+                itemStyle={{ color: '#fff' }}
               />
               <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
             </BarChart>
