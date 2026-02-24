@@ -157,8 +157,16 @@ export default function Supervisores() {
      const supervisorUser = supervisores.find(s => s.id === supervisorId);
      const supervisorEmail = supervisorUser?.usuario_email;
 
-     // Contar atividades registradas por este supervisor
-     const atividadesCount = atividades.filter(a => a.registrado_por === supervisorEmail).length;
+     // Atividades por tipo registradas por este supervisor
+     const supervisorActivities = atividades.filter(a => a.registrado_por === supervisorEmail);
+     
+     const atividadesPorTipo = {
+       'Chamados': supervisorActivities.filter(a => a.tipo === 'Chamados').length,
+       'Ligações': supervisorActivities.filter(a => a.tipo === 'Ligações').length,
+       'Monitoria Offline': supervisorActivities.filter(a => a.tipo === 'Monitoria Offline').length,
+       'Monitoria Assistida': supervisorActivities.filter(a => a.tipo === 'Monitoria Assistida').length,
+       'Feedback Individual': supervisorActivities.filter(a => a.tipo === 'Feedback Individual').length,
+     };
 
      // Contar incidentes (war room) registrados por este supervisor
      const incidentesCount = incidentes.filter(i => i.registrado_por === supervisorEmail).length;
@@ -167,7 +175,7 @@ export default function Supervisores() {
      const fechamentosCount = fechamentos.filter(f => f.supervisor_id === supervisorId).length;
 
      return {
-       atividades: atividadesCount,
+       atividadesPorTipo,
        incidentes: incidentesCount,
        fechamentos: fechamentosCount
      };
@@ -554,23 +562,45 @@ Seja direto, específico e focado em resultados mensuráveis.`;
                     {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-800 flex flex-wrap items-center gap-4">
-                   <div className="flex items-center gap-2 text-sm text-gray-400">
-                     <Users className="w-4 h-4" />
-                     <span>{getAnalistasCount(supervisor.id)} analistas</span>
+                <div className="mt-4 pt-4 border-t border-gray-800">
+                   <div className="flex flex-wrap items-center gap-4 mb-3">
+                     <div className="flex items-center gap-2 text-sm text-gray-400">
+                       <Users className="w-4 h-4" />
+                       <span>{getAnalistasCount(supervisor.id)} analistas</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-sm text-gray-400">
+                       <Target className="w-4 h-4" />
+                       <span>Média: {supervisorData.teamAvg}</span>
+                     </div>
                    </div>
-                   <div className="flex items-center gap-2 text-sm text-gray-400">
-                     <Target className="w-4 h-4" />
-                     <span>Média: {supervisorData.teamAvg}</span>
+                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
+                       <div className="text-cyan-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Chamados']}</div>
+                       <div className="text-gray-400">Chamados</div>
+                     </div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
+                       <div className="text-blue-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Ligações']}</div>
+                       <div className="text-gray-400">Ligações</div>
+                     </div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
+                       <div className="text-purple-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Monitoria Offline']}</div>
+                       <div className="text-gray-400">Monitoria Offline</div>
+                     </div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
+                       <div className="text-pink-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Monitoria Assistida']}</div>
+                       <div className="text-gray-400">Monitoria Assistida</div>
+                     </div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
+                       <div className="text-orange-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Feedback Individual']}</div>
+                       <div className="text-gray-400">Feedback Individual</div>
+                     </div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
+                       <div className="text-amber-400 font-semibold">{getSupervisorStats(supervisor.id).incidentes}</div>
+                       <div className="text-gray-400">War Room</div>
+                     </div>
                    </div>
-                   <div className="flex items-center gap-2 text-sm text-cyan-400">
-                     <span>📋 {getSupervisorStats(supervisor.id).atividades} Atividades</span>
-                   </div>
-                   <div className="flex items-center gap-2 text-sm text-amber-400">
-                     <span>⚠️ {getSupervisorStats(supervisor.id).incidentes} War Room</span>
-                   </div>
-                   <div className="flex items-center gap-2 text-sm text-emerald-400">
-                     <span>📊 {getSupervisorStats(supervisor.id).fechamentos} Fechamentos</span>
+                   <div className="mt-2 text-center">
+                     <div className="text-sm text-emerald-400">📊 {getSupervisorStats(supervisor.id).fechamentos} Fechamentos Semanais</div>
                    </div>
                  </div>
               </div>
