@@ -44,8 +44,9 @@ const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
 export default function Atividades() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAtividade, setEditingAtividade] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
+   const [editingAtividade, setEditingAtividade] = useState(null);
+   const [viewOnlyMode, setViewOnlyMode] = useState(false);
+   const [deleteId, setDeleteId] = useState(null);
   const [filters, setFilters] = useState({
     supervisor_id: '',
     analista_id: '',
@@ -197,6 +198,7 @@ export default function Atividades() {
       status: 'Aberto',
     });
     setEditingAtividade(null);
+    setViewOnlyMode(false);
     setIsDialogOpen(false);
   };
 
@@ -280,8 +282,9 @@ export default function Atividades() {
     }
   };
 
-  const openEdit = (atividade) => {
+  const openEdit = (atividade, viewOnly = false) => {
     setEditingAtividade(atividade);
+    setViewOnlyMode(viewOnly);
     setFormData({
       data: atividade.data,
       analista_id: atividade.analista_id,
@@ -366,27 +369,29 @@ export default function Atividades() {
             </DialogTrigger>
           <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
+              <DialogTitle>{editingAtividade ? (viewOnlyMode ? 'Visualizar Atividade' : 'Editar Atividade') : 'Nova Atividade'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Data</Label>
-                  <Input
-                    type="date"
-                    value={formData.data}
-                    onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                    className="bg-[#1a1a1a] border-gray-700 mt-2 [color-scheme:dark]"
-                    required
-                  />
-                </div>
+            <form onSubmit={viewOnlyMode ? (e) => { e.preventDefault(); resetForm(); } : handleSubmit} className="space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <Label>Data</Label>
+                   <Input
+                     type="date"
+                     value={formData.data}
+                     onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                     className="bg-[#1a1a1a] border-gray-700 mt-2 [color-scheme:dark]"
+                     disabled={viewOnlyMode}
+                     required
+                   />
+                 </div>
                 <div>
                   <Label>Tipo</Label>
                   <Select
                     value={formData.tipo}
                     onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                    disabled={viewOnlyMode}
                   >
-                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#242424] border-gray-700">
@@ -402,8 +407,9 @@ export default function Atividades() {
                 <Select
                   value={formData.analista_id}
                   onValueChange={handleAnalistaChange}
+                  disabled={viewOnlyMode}
                 >
-                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#242424] border-gray-700">
@@ -444,6 +450,7 @@ export default function Atividades() {
                     onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
                     className="bg-[#1a1a1a] border-gray-700 mt-2"
                     placeholder="Digite o ticket (10 caracteres)"
+                    disabled={viewOnlyMode}
                   />
                 </div>
               )}
@@ -456,6 +463,7 @@ export default function Atividades() {
                     onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
                     className="bg-[#1a1a1a] border-gray-700 mt-2"
                     placeholder="Digite o protocolo"
+                    disabled={viewOnlyMode}
                   />
                 </div>
               )}
@@ -498,6 +506,7 @@ export default function Atividades() {
                       value={formData.nota}
                       onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      disabled={viewOnlyMode}
                       required
                     />
                   </div>
@@ -506,8 +515,9 @@ export default function Atividades() {
                     <Select
                       value={formData.status}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
+                      disabled={viewOnlyMode}
                     >
-                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
@@ -525,8 +535,9 @@ export default function Atividades() {
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    disabled={viewOnlyMode}
                   >
-                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#242424] border-gray-700">
@@ -544,15 +555,18 @@ export default function Atividades() {
                   onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
                   className="bg-[#1a1a1a] border-gray-700 mt-2 h-24"
                   placeholder="Observações sobre a atividade..."
+                  disabled={viewOnlyMode}
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
-                  Cancelar
+                  {viewOnlyMode ? 'Fechar' : 'Cancelar'}
                 </Button>
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                  {editingAtividade ? 'Atualizar' : 'Criar'}
-                </Button>
+                {!viewOnlyMode && (
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                    {editingAtividade ? 'Atualizar' : 'Criar'}
+                  </Button>
+                )}
               </div>
             </form>
             </DialogContent>
@@ -635,8 +649,8 @@ export default function Atividades() {
                 <th className="px-6 py-4 font-medium">Analista</th>
                 <th className="px-6 py-4 font-medium">Registrado Por</th>
                 <th className="px-6 py-4 font-medium">Nota</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Ações</th>
+                 <th className="px-6 py-4 font-medium">Status</th>
+                 <th className="px-6 py-4 font-medium text-center">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -677,10 +691,11 @@ export default function Atividades() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-center gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => openEdit(atividade, true)}
                         className="text-gray-400 hover:text-emerald-400 min-w-[44px] min-h-[44px]"
                         title="Visualizar detalhes"
                       >
@@ -760,10 +775,11 @@ export default function Atividades() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex justify-center gap-2">
                <Button
                  variant="outline"
                  size="icon"
+                 onClick={() => openEdit(atividade, true)}
                  className="text-gray-400 hover:text-emerald-400 border-gray-700 min-w-[44px] min-h-[44px]"
                  title="Visualizar detalhes"
                >
