@@ -589,30 +589,30 @@ Seja direto, específico e focado em resultados mensuráveis.`;
                        <span>Média: {supervisorData.teamAvg}</span>
                      </div>
                    </div>
-                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
-                       <div className="text-cyan-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Chamados']}</div>
-                       <div className="text-gray-400">Chamados</div>
+                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                     <div className="bg-[#1a1a1a] rounded-lg p-4 text-center">
+                       <div className="text-cyan-400 font-bold text-2xl">{getSupervisorStats(supervisor.id).atividadesPorTipo['Chamados']}</div>
+                       <div className="text-gray-400 text-sm mt-2">Chamados</div>
                      </div>
-                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
-                       <div className="text-blue-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Ligações']}</div>
-                       <div className="text-gray-400">Ligações</div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-4 text-center">
+                       <div className="text-blue-400 font-bold text-2xl">{getSupervisorStats(supervisor.id).atividadesPorTipo['Ligações']}</div>
+                       <div className="text-gray-400 text-sm mt-2">Ligações</div>
                      </div>
-                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
-                       <div className="text-purple-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Monitoria Offline']}</div>
-                       <div className="text-gray-400">Monitoria Offline</div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-4 text-center">
+                       <div className="text-purple-400 font-bold text-2xl">{getSupervisorStats(supervisor.id).atividadesPorTipo['Monitoria Offline']}</div>
+                       <div className="text-gray-400 text-sm mt-2">Monitoria Offline</div>
                      </div>
-                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
-                       <div className="text-pink-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Monitoria Assistida']}</div>
-                       <div className="text-gray-400">Monitoria Assistida</div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-4 text-center">
+                       <div className="text-pink-400 font-bold text-2xl">{getSupervisorStats(supervisor.id).atividadesPorTipo['Monitoria Assistida']}</div>
+                       <div className="text-gray-400 text-sm mt-2">Monitoria Assistida</div>
                      </div>
-                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
-                       <div className="text-orange-400 font-semibold">{getSupervisorStats(supervisor.id).atividadesPorTipo['Feedback Individual']}</div>
-                       <div className="text-gray-400">Feedback Individual</div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-4 text-center">
+                       <div className="text-orange-400 font-bold text-2xl">{getSupervisorStats(supervisor.id).atividadesPorTipo['Feedback Individual']}</div>
+                       <div className="text-gray-400 text-sm mt-2">Feedback Individual</div>
                      </div>
-                     <div className="bg-[#1a1a1a] rounded-lg p-2 text-center">
-                       <div className="text-amber-400 font-semibold">{getSupervisorStats(supervisor.id).incidentes}</div>
-                       <div className="text-gray-400">War Room</div>
+                     <div className="bg-[#1a1a1a] rounded-lg p-4 text-center">
+                       <div className="text-amber-400 font-bold text-2xl">{getSupervisorStats(supervisor.id).incidentes}</div>
+                       <div className="text-gray-400 text-sm mt-2">War Room</div>
                      </div>
                    </div>
                    <div className="mt-2 text-center">
