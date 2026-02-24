@@ -139,6 +139,7 @@ export default function FechamentoSemanal() {
 
     const payload = {
       ...formData,
+      analista_id: formData.analista_id || null,
       total_ligacoes_next_ip: parseInt(formData.total_ligacoes_next_ip) || 0,
       total_chamados_verdana: parseInt(formData.total_chamados_verdana) || 0,
       total_monitorias: parseInt(formData.total_monitorias) || 0,
@@ -155,11 +156,10 @@ export default function FechamentoSemanal() {
 
   const openEdit = (fechamento) => {
     setEditingFechamento(fechamento);
-    const analistaDoFechamento = analistas.find(a => a.supervisor_id === fechamento.supervisor_id);
     setFormData({
       semana_inicio: fechamento.semana_inicio,
       semana_fim: fechamento.semana_fim,
-      analista_id: analistaDoFechamento?.id || '',
+      analista_id: fechamento.analista_id || '',
       supervisor_id: fechamento.supervisor_id,
       total_ligacoes_next_ip: fechamento.total_ligacoes_next_ip?.toString() || '',
       total_chamados_verdana: fechamento.total_chamados_verdana?.toString() || '',
@@ -407,6 +407,11 @@ export default function FechamentoSemanal() {
                   <p className="text-sm text-gray-400">
                     {format(new Date(fechamento.semana_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(fechamento.semana_fim), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
+                  {fechamento.analista_id && (
+                    <p className="text-xs text-emerald-400 mt-1">
+                      Analista: {getAnalistaNome(fechamento.analista_id)}
+                    </p>
+                  )}
                 </div>
               </div>
 
