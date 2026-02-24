@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import ExportPDFButton from '@/components/ExportPDFButton';
 import { format } from 'date-fns';
+import AIRecommendationDisplay from '@/components/AIRecommendationDisplay';
 
 export default function Supervisores() {
   const queryClient = useQueryClient();
@@ -698,8 +699,8 @@ Seja direto, específico e focado em resultados mensuráveis.`;
                                      <RefreshCw className="w-3 h-3" />
                                    </Button>
                                  </div>
-                                 <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-lg p-3 text-xs text-gray-300 whitespace-pre-wrap">
-                                   {aiRecommendations[analyst.id]}
+                                 <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-lg p-3">
+                                   <AIRecommendationDisplay text={aiRecommendations[analyst.id]} />
                                  </div>
                                </div>
                              )}
