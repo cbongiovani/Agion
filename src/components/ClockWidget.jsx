@@ -29,8 +29,12 @@ export default function ClockWidget() {
               `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
             );
             const data = await response.json();
-            const city = data.address?.city || data.address?.town || data.address?.state || 'Localização detectada';
-            setLocation(city);
+            const city = data.address?.city || data.address?.town || data.address?.village || '';
+            const state = data.address?.state || '';
+            const country = data.address?.country || '';
+            
+            const locationParts = [city, state, country].filter(Boolean);
+            setLocation(locationParts.join(' - ') || 'Localização detectada');
           } catch (error) {
             setLocation(getCityFromTimezone(detectedTz));
           }
