@@ -356,13 +356,14 @@ export default function Atividades() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Atividades</h1>
           <p className="text-gray-400 mt-1">Registre e gerencie as atividades do Suporte N1</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-              <Plus className="w-4 h-4" />
-              Nova Atividade
-            </Button>
-          </DialogTrigger>
+        {canCreate && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Plus className="w-4 h-4" />
+                Nova Atividade
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
@@ -554,9 +555,10 @@ export default function Atividades() {
                 </Button>
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogContent>
+            </Dialog>
+            )}
+            </div>
 
       {/* Filtros */}
       <div className="bg-[#242424] rounded-2xl border border-gray-800 p-4">
@@ -679,19 +681,31 @@ export default function Atividades() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => openEdit(atividade)}
-                        className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px]"
+                        className="text-gray-400 hover:text-emerald-400 min-w-[44px] min-h-[44px]"
+                        title="Visualizar detalhes"
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(atividade.id)}
-                        className="text-gray-400 hover:text-red-400 min-w-[44px] min-h-[44px]"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(atividade)}
+                          className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px]"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(atividade.id)}
+                          className="text-gray-400 hover:text-red-400 min-w-[44px] min-h-[44px]"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -747,23 +761,35 @@ export default function Atividades() {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => openEdit(atividade)}
-                className="text-gray-400 hover:text-white border-gray-700 min-w-[44px] min-h-[44px]"
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setDeleteId(atividade.id)}
-                className="text-red-400 hover:text-red-300 border-gray-700 min-w-[44px] min-h-[44px]"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
+               <Button
+                 variant="outline"
+                 size="icon"
+                 className="text-gray-400 hover:text-emerald-400 border-gray-700 min-w-[44px] min-h-[44px]"
+                 title="Visualizar detalhes"
+               >
+                 <Eye className="w-4 h-4" />
+               </Button>
+               {canEdit && (
+                 <Button
+                   variant="outline"
+                   size="icon"
+                   onClick={() => openEdit(atividade)}
+                   className="text-gray-400 hover:text-white border-gray-700 min-w-[44px] min-h-[44px]"
+                 >
+                   <Pencil className="w-4 h-4" />
+                 </Button>
+               )}
+               {canDelete && (
+                 <Button
+                   variant="outline"
+                   size="icon"
+                   onClick={() => setDeleteId(atividade.id)}
+                   className="text-red-400 hover:text-red-300 border-gray-700 min-w-[44px] min-h-[44px]"
+                 >
+                   <Trash2 className="w-4 h-4" />
+                 </Button>
+               )}
+             </div>
           </div>
         ))}
       </div>
