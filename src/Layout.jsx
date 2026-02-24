@@ -38,7 +38,7 @@ export default function Layout({ children }) {
       { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor'] },
       { name: 'Atividades', icon: ClipboardList, path: 'Atividades', roles: ['admin', 'supervisor'] },
       { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', roles: ['admin', 'supervisor'] },
-      { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'] },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin'] },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor'] },
@@ -164,25 +164,27 @@ export default function Layout({ children }) {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex items-center justify-around px-4 py-2">
             {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
-              <Link
-                to={createPageUrl('Dashboard')}
-                className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
-                  isActive('Dashboard') ? 'text-[#ADF802]' : 'text-gray-400'
-                }`}
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                <span className="text-xs font-medium">Dashboard</span>
-              </Link>
+              <>
+                <Link
+                  to={createPageUrl('Dashboard')}
+                  className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
+                    isActive('Dashboard') ? 'text-[#ADF802]' : 'text-gray-400'
+                  }`}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="text-xs font-medium">Dashboard</span>
+                </Link>
+                <Link
+                  to={createPageUrl('Supervisores')}
+                  className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
+                    isActive('Supervisores') ? 'text-[#ADF802]' : 'text-gray-400'
+                  }`}
+                >
+                  <Users className="w-5 h-5" />
+                  <span className="text-xs font-medium">Supervisores</span>
+                </Link>
+              </>
             )}
-            <Link
-              to={createPageUrl('Supervisores')}
-              className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
-                isActive('Supervisores') ? 'text-[#ADF802]' : 'text-gray-400'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              <span className="text-xs font-medium">Supervisores</span>
-            </Link>
             <Link
               to={createPageUrl('Ranking')}
               className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
