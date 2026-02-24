@@ -52,13 +52,14 @@ import Atividades from './pages/Atividades';
 import Dashboard from './pages/Dashboard';
 import FechamentoSemanal from './pages/FechamentoSemanal';
 import GestaoUsuarios from './pages/GestaoUsuarios';
+import Logs from './pages/Logs';
 import MeuPerfil from './pages/MeuPerfil';
 import PerfilAnalista from './pages/PerfilAnalista';
 import Ranking from './pages/Ranking';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
-import Logs from './pages/Logs';
+import ManualSupervisor from './pages/ManualSupervisor';
 import __Layout from './Layout.jsx';
 
 
@@ -68,13 +69,14 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "FechamentoSemanal": FechamentoSemanal,
     "GestaoUsuarios": GestaoUsuarios,
+    "Logs": Logs,
     "MeuPerfil": MeuPerfil,
     "PerfilAnalista": PerfilAnalista,
     "Ranking": Ranking,
     "RelatorioSemanal": RelatorioSemanal,
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
-    "Logs": Logs,
+    "ManualSupervisor": ManualSupervisor,
 }
 
 export const pagesConfig = {

@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   User as UserIcon,
   Trophy,
-  Bell
+  Bell,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -22,6 +23,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import NotificationBell from '@/components/NotificationBell';
 import ClockWidget from '@/components/ClockWidget';
+import ManualPopup from '@/components/ManualPopup';
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -53,6 +55,7 @@ export default function Layout({ children }) {
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin'] },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor'] },
+      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'] },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
       { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', roles: ['admin'] },
     ];
@@ -255,6 +258,9 @@ export default function Layout({ children }) {
           {children}
         </div>
       </main>
+
+      {/* Manual Popup for Supervisors */}
+      <ManualPopup currentUser={currentUser} />
 
       </div>
   );
