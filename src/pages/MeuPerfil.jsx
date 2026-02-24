@@ -51,12 +51,18 @@ export default function MeuPerfil() {
   const updateMutation = useMutation({
     mutationFn: (data) => base44.auth.updateMe(data),
     onSuccess: (updatedUser) => {
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingRequests'] });
-      setFormData({
+      const newUserData = {
+        ...user,
         nome_customizado: updatedUser.nome_customizado || updatedUser.full_name || '',
         telefone: updatedUser.telefone || '',
         foto_url: updatedUser.foto_url || ''
+      };
+      queryClient.setQueryData(['currentUser'], newUserData);
+      queryClient.invalidateQueries({ queryKey: ['pendingRequests'] });
+      setFormData({
+        nome_customizado: newUserData.nome_customizado,
+        telefone: newUserData.telefone,
+        foto_url: newUserData.foto_url
       });
       toast.success('Perfil atualizado com sucesso!');
     },
