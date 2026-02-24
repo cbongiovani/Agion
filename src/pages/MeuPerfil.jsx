@@ -5,16 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { User, Mail, Phone, Upload, Save, Loader2, Shield } from 'lucide-react';
+import { User, Mail, Phone, Upload, Save, Loader2, Shield, Check, X, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function MeuPerfil() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    funcao_solicitada: 'supervisor',
+    justificativa: ''
+  });
   const [formData, setFormData] = useState({
     full_name: '',
     telefone: '',
@@ -32,6 +40,12 @@ export default function MeuPerfil() {
       });
       return data;
     }
+  });
+
+  const { data: solicitacoes = [] } = useQuery({
+    queryKey: ['solicitacoesFuncao'],
+    queryFn: () => base44.entities.SolicitacaoFuncao.filter({ status: 'pendente' }),
+    enabled: user?.role === 'admin' || user?.role === 'supervisor',
   });
 
   const updateMutation = useMutation({
@@ -81,36 +95,57 @@ export default function MeuPerfil() {
   };
 
   const handleRequestRoleChange = async () => {
+    if (!requestForm.justificativa.trim()) {
+      toast.error('Por favor, adicione uma justificativa');
+      return;
+    }
+
     setRequesting(true);
     try {
-      const admins = await base44.entities.User.filter({ role: 'admin' });
+      await base44.entities.SolicitacaoFuncao.create({
+        usuario_id: user.id,
+        usuario_nome: user.full_name || user.email,
+        usuario_email: user.email,
+        funcao_atual: user.role,
+        funcao_solicitada: requestForm.funcao_solicitada,
+        justificativa: requestForm.justificativa,
+        status: 'pendente'
+      });
       
-      if (admins.length === 0) {
-        toast.error('Nenhum coordenador encontrado');
-        return;
-      }
-
-      for (const admin of admins) {
-        await base44.integrations.Core.SendEmail({
-          to: admin.email,
-          subject: 'Solicitação de Alteração de Função',
-          body: `
-            <h2>Nova Solicitação de Alteração de Função</h2>
-            <p><strong>Usuário:</strong> ${user.full_name || user.email}</p>
-            <p><strong>E-mail:</strong> ${user.email}</p>
-            <p><strong>Função Atual:</strong> ${getRoleLabel(user.role)}</p>
-            <p><strong>Função Solicitada:</strong> Supervisor</p>
-            <br>
-            <p>Por favor, acesse o sistema para aprovar ou rejeitar esta solicitação.</p>
-          `
-        });
-      }
-      
-      toast.success('Solicitação enviada para o coordenador!');
+      toast.success('Solicitação enviada com sucesso!');
+      setShowRequestDialog(false);
+      setRequestForm({ funcao_solicitada: 'supervisor', justificativa: '' });
     } catch (error) {
       toast.error('Erro ao enviar solicitação');
     } finally {
       setRequesting(false);
+    }
+  };
+
+  const handleResponseRequest = async (solicitacao, aprovada) => {
+    try {
+      await base44.entities.SolicitacaoFuncao.update(solicitacao.id, {
+        status: aprovada ? 'aprovada' : 'rejeitada',
+        data_resposta: new Date().toISOString(),
+        respondido_por: user.email
+      });
+
+      if (aprovada) {
+        const targetUser = await base44.entities.User.filter({ email: solicitacao.usuario_email });
+        if (targetUser.length > 0) {
+          await base44.entities.User.update(targetUser[0].id, {
+            role: solicitacao.funcao_solicitada
+          });
+        }
+        toast.success('Solicitação aprovada e usuário atualizado!');
+      } else {
+        toast.success('Solicitação rejeitada');
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['solicitacoesFuncao'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingRequests'] });
+    } catch (error) {
+      toast.error('Erro ao processar solicitação');
     }
   };
 
@@ -266,6 +301,116 @@ export default function MeuPerfil() {
               </p>
             </div>
             <Button
+              onClick={() => setShowRequestDialog(true)}
+              className="bg-[#ADF802] hover:bg-[#9DE702] text-black"
+            >
+              Solicitar Alteração
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {(user.role === 'admin' || user.role === 'supervisor') && solicitacoes.length > 0 && (
+        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[#ADF802]" />
+            Solicitações Pendentes
+          </h3>
+          <div className="space-y-4">
+            {solicitacoes.map((solicitacao) => (
+              <div key={solicitacao.id} className="bg-[#0f1f35] border border-[#1e3a5f] rounded-lg p-4">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#e74c3c]/20 flex items-center justify-center">
+                        <User className="w-5 h-5 text-[#e74c3c]" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-white">{solicitacao.usuario_nome}</h4>
+                        <p className="text-sm text-gray-400">{solicitacao.usuario_email}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="text-xs px-2 py-1 rounded bg-gray-700/30 text-gray-400">
+                            Atual: {getRoleLabel(solicitacao.funcao_atual)}
+                          </span>
+                          <span className="text-xs px-2 py-1 rounded bg-[#ADF802]/20 text-[#ADF802]">
+                            Solicitado: {getRoleLabel(solicitacao.funcao_solicitada)}
+                          </span>
+                        </div>
+                        {solicitacao.justificativa && (
+                          <p className="text-sm text-gray-300 mt-2 bg-[#0a1628] p-2 rounded">
+                            {solicitacao.justificativa}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleResponseRequest(solicitacao, true)}
+                      className="bg-[#ADF802] hover:bg-[#9DE702] text-black"
+                      size="sm"
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      Aprovar
+                    </Button>
+                    <Button
+                      onClick={() => handleResponseRequest(solicitacao, false)}
+                      variant="outline"
+                      className="border-[#e74c3c] text-[#e74c3c] hover:bg-[#e74c3c]/10"
+                      size="sm"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Rejeitar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <AlertDialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Solicitar Alteração de Função</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Preencha os detalhes da sua solicitação. Um coordenador irá analisar seu pedido.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="funcao_solicitada" className="text-white">Função Desejada</Label>
+              <Select 
+                value={requestForm.funcao_solicitada} 
+                onValueChange={(value) => setRequestForm({ ...requestForm, funcao_solicitada: value })}
+              >
+                <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="supervisor">Supervisor</SelectItem>
+                  {user.role === 'supervisor' && <SelectItem value="admin">Coordenador</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="justificativa" className="text-white">Justificativa</Label>
+              <Textarea
+                id="justificativa"
+                value={requestForm.justificativa}
+                onChange={(e) => setRequestForm({ ...requestForm, justificativa: e.target.value })}
+                className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
+                placeholder="Explique o motivo da solicitação..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-gray-600 text-gray-400">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleRequestRoleChange}
               disabled={requesting}
               className="bg-[#ADF802] hover:bg-[#9DE702] text-black"
@@ -276,12 +421,12 @@ export default function MeuPerfil() {
                   Enviando...
                 </>
               ) : (
-                'Solicitar Alteração'
+                'Enviar Solicitação'
               )}
-            </Button>
-          </div>
-        </Card>
-      )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

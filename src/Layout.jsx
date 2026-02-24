@@ -13,16 +13,25 @@ import {
   LogOut,
   AlertTriangle,
   User as UserIcon,
-  Trophy
+  Trophy,
+  Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ['pendingRequests'],
+    queryFn: () => base44.entities.SolicitacaoFuncao.filter({ status: 'pendente' }),
+    enabled: currentUser?.role === 'admin' || currentUser?.role === 'supervisor',
+    refetchInterval: 30000, // Atualiza a cada 30 segundos
+  });
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -144,6 +153,14 @@ export default function Layout({ children }) {
               <p className="font-medium text-sm text-white truncate">{currentUser?.full_name || 'Meu Perfil'}</p>
               <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
             </div>
+            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && pendingRequests.length > 0 && (
+              <div className="relative">
+                <Bell className="w-5 h-5 text-[#ADF802]" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#e74c3c] rounded-full text-white text-xs flex items-center justify-center">
+                  {pendingRequests.length}
+                </span>
+              </div>
+            )}
           </Link>
           <Button
             onClick={handleLogout}
