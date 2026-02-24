@@ -282,7 +282,7 @@ export default function Atividades() {
               Nova Atividade
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-lg">
+          <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
             </DialogHeader>
