@@ -301,21 +301,22 @@ export default function WarRoom() {
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Gestão de Incidentes e Problemas - ITIL v4 / ISO 20000</p>
         </div>
         <div className="flex gap-2">
-          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
-            <ExportPDFButton
-              data={generateWarRoomPDF}
-              fileName={`War_Room_${format(new Date(), 'yyyy-MM-dd')}.pdf`}
-              buttonText="Exportar PDF"
-              className="bg-[#ADF802] hover:bg-[#9DE002] text-black"
-            />
-          )}
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-            <DialogTrigger asChild>
-            <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Incidente
-            </Button>
-            </DialogTrigger>
+           {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') && (
+             <ExportPDFButton
+               data={generateWarRoomPDF}
+               fileName={`War_Room_${format(new Date(), 'yyyy-MM-dd')}.pdf`}
+               buttonText="Exportar PDF"
+               className="bg-[#ADF802] hover:bg-[#9DE002] text-black"
+             />
+           )}
+           {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+             <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+               <DialogTrigger asChild>
+               <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
+                 <Plus className="w-4 h-4 mr-2" />
+                 Novo Incidente
+               </Button>
+               </DialogTrigger>
           <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
             <DialogHeader>
               <DialogTitle>{editingIncidente ? 'Editar Incidente' : 'Registrar Novo Incidente'}</DialogTitle>
@@ -432,8 +433,9 @@ export default function WarRoom() {
               </div>
             </form>
           </DialogContent>
-          </Dialog>
-        </div>
+            </Dialog>
+          )}
+          </div>
       </div>
 
       {/* Métricas ITIL */}
