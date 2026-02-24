@@ -36,7 +36,9 @@ export default function GestaoUsuarios() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [editingUser, setEditingUser] = useState(false);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
 
@@ -63,6 +65,19 @@ export default function GestaoUsuarios() {
     },
     onError: (error) => {
       toast.error('Erro ao enviar convite: ' + error.message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId) => base44.entities.User.delete(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Usuário deletado com sucesso!');
+      setDeleteUserOpen(false);
+      setUserToDelete(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao deletar usuário: ' + error.message);
     },
   });
 
@@ -118,6 +133,17 @@ export default function GestaoUsuarios() {
     } catch (error) {
       toast.error('Erro ao deletar conta: ' + error.message);
     }
+  };
+
+  const handleDeleteUser = () => {
+    if (userToDelete) {
+      deleteMutation.mutate(userToDelete.id);
+    }
+  };
+
+  const openDeleteDialog = (user) => {
+    setUserToDelete(user);
+    setDeleteUserOpen(true);
   };
 
   if (isLoading) {
@@ -248,6 +274,14 @@ export default function GestaoUsuarios() {
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openDeleteDialog(user)}
+                        className="text-gray-400 hover:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -355,6 +389,30 @@ export default function GestaoUsuarios() {
               className="bg-red-600 hover:bg-red-700"
             >
               Sim, Deletar Minha Conta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
+        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Deletar Usuário</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja deletar o usuário <strong className="text-white">{userToDelete?.full_name || userToDelete?.email}</strong>?
+              <br /><br />
+              Esta ação é <strong className="text-red-400">irreversível</strong> e todos os dados do usuário serão permanentemente removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deletando...' : 'Sim, Deletar Usuário'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
