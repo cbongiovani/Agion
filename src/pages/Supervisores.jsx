@@ -55,9 +55,19 @@ export default function Supervisores() {
   });
 
   const { data: atividades = [] } = useQuery({
-    queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list(),
-  });
+     queryKey: ['atividades'],
+     queryFn: () => base44.entities.Atividade.list(),
+   });
+
+   const { data: incidentes = [] } = useQuery({
+     queryKey: ['incidentes'],
+     queryFn: () => base44.entities.Incidente.list(),
+   });
+
+   const { data: fechamentos = [] } = useQuery({
+     queryKey: ['fechamentos'],
+     queryFn: () => base44.entities.FechamentoSemanal.list(),
+   });
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -140,8 +150,28 @@ export default function Supervisores() {
   };
 
   const getAnalistasCount = (supervisorId) => {
-    return analistas.filter(a => a.supervisor_id === supervisorId).length;
-  };
+     return analistas.filter(a => a.supervisor_id === supervisorId).length;
+   };
+
+   const getSupervisorStats = (supervisorId) => {
+     const supervisorUser = supervisores.find(s => s.id === supervisorId);
+     const supervisorEmail = supervisorUser?.usuario_email;
+
+     // Contar atividades registradas por este supervisor
+     const atividadesCount = atividades.filter(a => a.registrado_por === supervisorEmail).length;
+
+     // Contar incidentes (war room) registrados por este supervisor
+     const incidentesCount = incidentes.filter(i => i.registrado_por === supervisorEmail).length;
+
+     // Contar fechamentos semanais do supervisor
+     const fechamentosCount = fechamentos.filter(f => f.supervisor_id === supervisorId).length;
+
+     return {
+       atividades: atividadesCount,
+       incidentes: incidentesCount,
+       fechamentos: fechamentosCount
+     };
+   };
 
   const getCurrentMonthRange = () => {
     const now = new Date();
@@ -524,16 +554,25 @@ Seja direto, específico e focado em resultados mensuráveis.`;
                     {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-800 flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Users className="w-4 h-4" />
-                    <span>{getAnalistasCount(supervisor.id)} analistas</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Target className="w-4 h-4" />
-                    <span>Média: {supervisorData.teamAvg}</span>
-                  </div>
-                </div>
+                <div className="mt-4 pt-4 border-t border-gray-800 flex flex-wrap items-center gap-4">
+                   <div className="flex items-center gap-2 text-sm text-gray-400">
+                     <Users className="w-4 h-4" />
+                     <span>{getAnalistasCount(supervisor.id)} analistas</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-sm text-gray-400">
+                     <Target className="w-4 h-4" />
+                     <span>Média: {supervisorData.teamAvg}</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-sm text-cyan-400">
+                     <span>📋 {getSupervisorStats(supervisor.id).atividades} Atividades</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-sm text-amber-400">
+                     <span>⚠️ {getSupervisorStats(supervisor.id).incidentes} War Room</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-sm text-emerald-400">
+                     <span>📊 {getSupervisorStats(supervisor.id).fechamentos} Fechamentos</span>
+                   </div>
+                 </div>
               </div>
 
               {isExpanded && (
