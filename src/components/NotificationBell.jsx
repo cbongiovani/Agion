@@ -68,8 +68,8 @@ export default function NotificationBell({ currentUser }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
+        <Button variant="ghost" size="icon" className="relative h-12 w-12">
+          <Bell className="w-6 h-6" />
           {naoLidas > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#e74c3c] rounded-full text-white text-xs flex items-center justify-center font-bold">
               {naoLidas > 9 ? '9+' : naoLidas}

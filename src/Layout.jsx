@@ -111,21 +111,16 @@ export default function Layout({ children }) {
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6 border-b border-gray-800">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-full flex items-center justify-between">
-              <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer">
-                <img 
-                  src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
-                  alt="Grupo Agion" 
-                  className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
-                />
-              </a>
-              <div className="hidden lg:block">
-                <NotificationBell currentUser={currentUser} />
-              </div>
-            </div>
-            <div className="text-center mt-2 w-full">
-              <p className="text-xs text-gray-500">Governança N1 - Suporte</p>
+          <div className="w-full flex items-center justify-between">
+            <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer">
+              <img 
+                src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+                alt="Grupo Agion" 
+                className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+              />
+            </a>
+            <div className="hidden lg:block">
+              <NotificationBell currentUser={currentUser} />
             </div>
           </div>
         </div>
