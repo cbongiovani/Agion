@@ -60,7 +60,17 @@ export default function GestaoUsuarios() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const user = await base44.auth.me();
+      await base44.entities.User.update(id, data);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'Usuário',
+        detalhes: `Atualizou usuário ${data.full_name || editingUser?.email}`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuário atualizado com sucesso!');
@@ -69,7 +79,17 @@ export default function GestaoUsuarios() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: ({ email, role }) => base44.users.inviteUser(email, role),
+    mutationFn: async ({ email, role }) => {
+      const user = await base44.auth.me();
+      await base44.users.inviteUser(email, role);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Convidou Usuário',
+        entidade: 'Usuário',
+        detalhes: `Convidou ${email} com função ${role === 'admin' ? 'Coordenador' : role === 'supervisor' ? 'Supervisor' : 'Usuário'}`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Convite enviado com sucesso!');
@@ -83,8 +103,16 @@ export default function GestaoUsuarios() {
 
   const inviteAnalistaMutation = useMutation({
     mutationFn: async ({ email, analistaId }) => {
+      const user = await base44.auth.me();
       await base44.users.inviteUser(email, 'user');
       await base44.entities.Analista.update(analistaId, { usuario_email: email });
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Convidou Usuário',
+        entidade: 'Analista',
+        detalhes: `Convidou analista com e-mail ${email}`,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['analistas'] });
@@ -98,7 +126,17 @@ export default function GestaoUsuarios() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (userId) => base44.entities.User.delete(userId),
+    mutationFn: async (userId) => {
+      const user = await base44.auth.me();
+      await base44.entities.User.delete(userId);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Usuário',
+        detalhes: `Deletou usuário ${userToDelete?.full_name || userToDelete?.email}`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuário deletado com sucesso!');

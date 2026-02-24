@@ -62,7 +62,20 @@ export default function Layout({ children }) {
 
   const navItems = getNavItems();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (currentUser) {
+        await base44.entities.Log.create({
+          usuario_email: currentUser.email,
+          usuario_nome: currentUser.full_name,
+          acao: 'Logout',
+          entidade: 'Sistema',
+          detalhes: 'Usuário fez logout do sistema',
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao criar log de logout:', error);
+    }
     base44.auth.logout();
   };
 
