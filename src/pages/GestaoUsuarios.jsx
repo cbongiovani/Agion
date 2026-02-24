@@ -41,7 +41,7 @@ export default function GestaoUsuarios() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
-  const [inviteAnalistaData, setInviteAnalistaData] = useState({ email: '' });
+  const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
 
   const { data: users = [], isLoading } = useQuery({
@@ -128,13 +128,18 @@ export default function GestaoUsuarios() {
 
   const handleInviteAnalista = (e) => {
     e.preventDefault();
-    const analista = analistas.find(a => a.usuario_email === inviteAnalistaData.email || !a.usuario_email);
+    const analista = analistas.find(a => a.id === inviteAnalistaData.analistaId);
     if (!analista) {
-      toast.error('Nenhum analista disponível para vincular');
+      toast.error('Selecione um analista');
       return;
     }
+    if (analista.usuario_email) {
+      toast.error('Este analista já possui um usuário vinculado');
+      return;
+    }
+    const email = `${analista.nome.toLowerCase().replace(/\s+/g, '.')}@grupoavenida.com.br`;
     inviteAnalistaMutation.mutate({ 
-      email: inviteAnalistaData.email,
+      email,
       analistaId: analista.id
     });
   };
@@ -217,18 +222,24 @@ export default function GestaoUsuarios() {
               </DialogHeader>
               <form onSubmit={handleInviteAnalista} className="space-y-4">
                 <div>
-                  <Label htmlFor="analista_email">E-mail do Analista</Label>
-                  <Input
-                    id="analista_email"
-                    type="email"
-                    value={inviteAnalistaData.email}
-                    onChange={(e) => setInviteAnalistaData({ email: e.target.value })}
-                    className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
-                    placeholder="analista@grupoavenida.com.br"
-                    required
-                  />
+                  <Label htmlFor="analista_select">Selecione o Analista</Label>
+                  <Select
+                    value={inviteAnalistaData.analistaId}
+                    onValueChange={(value) => setInviteAnalistaData({ analistaId: value })}
+                  >
+                    <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
+                      <SelectValue placeholder="Selecione um analista" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                      {analistas.filter(a => !a.usuario_email).map((analista) => (
+                        <SelectItem key={analista.id} value={analista.id}>
+                          {analista.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-gray-400 mt-2">
-                    O analista receberá permissão de "Usuário" e será vinculado automaticamente ao seu perfil.
+                    O analista receberá permissão de "Usuário" e será vinculado automaticamente ao seu perfil. Um email será gerado automaticamente.
                   </p>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
