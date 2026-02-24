@@ -603,7 +603,7 @@ export default function Atividades() {
                     <NotaBadge nota={atividade.nota} />
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${
                       atividade.status === 'Concluído' 
                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                         : atividade.status === 'Em evolução'
@@ -673,7 +673,7 @@ export default function Atividades() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Status</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${
                   atividade.status === 'Concluído' 
                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                     : atividade.status === 'Em evolução'
