@@ -34,6 +34,9 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import NotaBadge from '@/components/ui/NotaBadge';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
+import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
+import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const TIPOS = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', 'Feedback Individual'];
 const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
@@ -56,6 +59,11 @@ export default function Atividades() {
     supervisor_id: '',
     tipo: '',
     protocolo_gravacao: '',
+    link_gravacao_teams: '',
+    ticket_acompanhado: '',
+    tipo_feedback: '',
+    topicos_monitoria_offline: {},
+    topicos_monitoria_assistida: {},
     nota: '',
     comentario: '',
     status: 'Aberto',
@@ -143,6 +151,11 @@ export default function Atividades() {
       supervisor_id: '',
       tipo: '',
       protocolo_gravacao: '',
+      link_gravacao_teams: '',
+      ticket_acompanhado: '',
+      tipo_feedback: '',
+      topicos_monitoria_offline: {},
+      topicos_monitoria_assistida: {},
       nota: '',
       comentario: '',
       status: 'Aberto',
@@ -153,16 +166,32 @@ export default function Atividades() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const nota = parseFloat(formData.nota);
+    
+    let nota = parseFloat(formData.nota);
+    
+    // Calcular nota automaticamente para Monitoria Offline
+    if (formData.tipo === 'Monitoria Offline' && Object.keys(formData.topicos_monitoria_offline).length > 0) {
+      const total = Object.values(formData.topicos_monitoria_offline).reduce((sum, val) => sum + val, 0);
+      nota = parseFloat(((total / 47) * 10).toFixed(2));
+    }
+    
+    // Calcular nota automaticamente para Monitoria Assistida
+    if (formData.tipo === 'Monitoria Assistida' && Object.keys(formData.topicos_monitoria_assistida).length > 0) {
+      const acertos = Object.values(formData.topicos_monitoria_assistida).filter(v => v === true).length;
+      nota = parseFloat(acertos.toFixed(1));
+    }
+    
     if (nota < 0 || nota > 10) {
       toast.error('A nota deve estar entre 0 e 10');
       return;
     }
+    
     const payload = { 
       ...formData, 
       nota,
       registrado_por: currentUser?.email
     };
+    
     if (editingAtividade) {
       updateMutation.mutate({ id: editingAtividade.id, data: payload });
     } else {
@@ -178,6 +207,11 @@ export default function Atividades() {
       supervisor_id: atividade.supervisor_id,
       tipo: atividade.tipo,
       protocolo_gravacao: atividade.protocolo_gravacao || '',
+      link_gravacao_teams: atividade.link_gravacao_teams || '',
+      ticket_acompanhado: atividade.ticket_acompanhado || '',
+      tipo_feedback: atividade.tipo_feedback || '',
+      topicos_monitoria_offline: atividade.topicos_monitoria_offline || {},
+      topicos_monitoria_assistida: atividade.topicos_monitoria_assistida || {},
       nota: atividade.nota?.toString() || '',
       comentario: atividade.comentario || '',
       status: atividade.status || 'Aberto',
@@ -303,35 +337,95 @@ export default function Atividades() {
                 )}
               </div>
               {formData.tipo === 'Monitoria Offline' && (
+                <MonitoriaOfflineForm
+                  topicos={formData.topicos_monitoria_offline}
+                  onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
+                  protocolo={formData.protocolo_gravacao}
+                  onProtocoloChange={(value) => setFormData({ ...formData, protocolo_gravacao: value })}
+                />
+              )}
+              {formData.tipo === 'Monitoria Assistida' && (
+                <MonitoriaAssistidaForm
+                  topicos={formData.topicos_monitoria_assistida}
+                  onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
+                  linkGravacao={formData.link_gravacao_teams}
+                  onLinkChange={(value) => setFormData({ ...formData, link_gravacao_teams: value })}
+                />
+              )}
+              {formData.tipo === 'Chamados' && (
                 <div>
-                  <Label>Protocolo da Gravação</Label>
+                  <Label>Ticket Acompanhado</Label>
                   <Input
                     type="text"
-                    maxLength={24}
-                    value={formData.protocolo_gravacao}
-                    onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                    maxLength={10}
+                    value={formData.ticket_acompanhado}
+                    onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
                     className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    placeholder="Digite o protocolo (24 caracteres)"
+                    placeholder="Digite o ticket (10 caracteres)"
                   />
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formData.protocolo_gravacao.length}/24 caracteres
-                  </p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              {formData.tipo === 'Feedback Individual' && (
                 <div>
-                  <Label>Nota (0-10)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="0.1"
-                    value={formData.nota}
-                    onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
-                    className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    required
-                  />
+                  <Label>Tipo de Feedback</Label>
+                  <div className="flex items-center gap-6 mt-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="positivo"
+                        checked={formData.tipo_feedback === 'Positivo'}
+                        onCheckedChange={(checked) => checked && setFormData({ ...formData, tipo_feedback: 'Positivo' })}
+                      />
+                      <label htmlFor="positivo" className="text-sm text-white cursor-pointer">
+                        Positivo
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="negativo"
+                        checked={formData.tipo_feedback === 'Negativo'}
+                        onCheckedChange={(checked) => checked && setFormData({ ...formData, tipo_feedback: 'Negativo' })}
+                      />
+                      <label htmlFor="negativo" className="text-sm text-white cursor-pointer">
+                        Negativo
+                      </label>
+                    </div>
+                  </div>
                 </div>
+              )}
+              {!['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nota (0-10)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={formData.nota}
+                      onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    >
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#242424] border-gray-700">
+                        {STATUS.map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              {['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
                 <div>
                   <Label>Status</Label>
                   <Select
@@ -348,7 +442,7 @@ export default function Atividades() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              )}
               <div>
                 <Label>Comentário</Label>
                 <Textarea
