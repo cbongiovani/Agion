@@ -24,7 +24,7 @@ export default function MeuPerfil() {
     justificativa: ''
   });
   const [formData, setFormData] = useState({
-    full_name: '',
+    nome_customizado: '',
     telefone: '',
     foto_url: ''
   });
@@ -34,7 +34,7 @@ export default function MeuPerfil() {
     queryFn: async () => {
       const data = await base44.auth.me();
       setFormData({
-        full_name: data.full_name || '',
+        nome_customizado: data.nome_customizado || data.full_name || '',
         telefone: data.telefone || '',
         foto_url: data.foto_url || ''
       });
@@ -205,7 +205,7 @@ export default function MeuPerfil() {
             </label>
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-bold text-white">{user.full_name || 'Sem nome'}</h2>
+            <h2 className="text-xl font-bold text-white">{user.nome_customizado || user.full_name || 'Sem nome'}</h2>
             <p className="text-gray-400 text-sm">{user.email}</p>
             {user.telefone && (
               <p className="text-gray-400 text-sm flex items-center justify-center gap-1 mt-1">
@@ -224,11 +224,11 @@ export default function MeuPerfil() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="full_name">Nome Completo</Label>
+            <Label htmlFor="nome_customizado">Nome Completo</Label>
             <Input
-              id="full_name"
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              id="nome_customizado"
+              value={formData.nome_customizado}
+              onChange={(e) => setFormData({ ...formData, nome_customizado: e.target.value })}
               className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
               placeholder="Seu nome completo"
             />
