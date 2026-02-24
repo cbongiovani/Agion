@@ -72,6 +72,17 @@ export default function GestaoUsuarios() {
       });
       return result;
     },
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] });
+      const previousUsers = queryClient.getQueryData(['users']);
+      queryClient.setQueryData(['users'], (old = []) =>
+        old.map((user) => (user.id === id ? { ...user, ...data } : user))
+      );
+      return { previousUsers };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(['users'], context.previousUsers);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuário atualizado com sucesso!');
