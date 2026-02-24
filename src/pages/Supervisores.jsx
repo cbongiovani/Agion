@@ -60,7 +60,18 @@ export default function Supervisores() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Supervisor.create(data),
+    mutationFn: async (data) => {
+      const result = await base44.entities.Supervisor.create(data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Criou',
+        entidade: 'Supervisor',
+        detalhes: `Criou supervisor "${data.nome}" da equipe "${data.equipe}"`,
+      });
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       toast.success('Supervisor criado com sucesso!');
@@ -69,7 +80,18 @@ export default function Supervisores() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Supervisor.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.Supervisor.update(id, data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'Supervisor',
+        detalhes: `Atualizou supervisor "${data.nome}"`,
+      });
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       toast.success('Supervisor atualizado com sucesso!');
@@ -78,7 +100,17 @@ export default function Supervisores() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Supervisor.delete(id),
+    mutationFn: async (id) => {
+      const user = await base44.auth.me();
+      await base44.entities.Supervisor.delete(id);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Supervisor',
+        detalhes: `Excluiu um supervisor`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       toast.success('Supervisor excluído com sucesso!');

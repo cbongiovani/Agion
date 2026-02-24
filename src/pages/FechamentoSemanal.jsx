@@ -76,7 +76,18 @@ export default function FechamentoSemanal() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.FechamentoSemanal.create(data),
+    mutationFn: async (data) => {
+      const result = await base44.entities.FechamentoSemanal.create(data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Criou',
+        entidade: 'FechamentoSemanal',
+        detalhes: `Registrou fechamento semanal para supervisor`,
+      });
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       toast.success('Fechamento registrado com sucesso!');
@@ -85,7 +96,18 @@ export default function FechamentoSemanal() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.FechamentoSemanal.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.FechamentoSemanal.update(id, data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'FechamentoSemanal',
+        detalhes: `Atualizou fechamento semanal`,
+      });
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       toast.success('Fechamento atualizado com sucesso!');
@@ -94,7 +116,17 @@ export default function FechamentoSemanal() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.FechamentoSemanal.delete(id),
+    mutationFn: async (id) => {
+      const user = await base44.auth.me();
+      await base44.entities.FechamentoSemanal.delete(id);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'FechamentoSemanal',
+        detalhes: `Excluiu fechamento semanal`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       toast.success('Fechamento excluído com sucesso!');

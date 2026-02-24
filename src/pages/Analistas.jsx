@@ -57,7 +57,18 @@ export default function Analistas() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Analista.create(data),
+    mutationFn: async (data) => {
+      const result = await base44.entities.Analista.create(data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Criou',
+        entidade: 'Analista',
+        detalhes: `Criou analista "${data.nome}"`,
+      });
+      return result;
+    },
     onMutate: async (newAnalista) => {
       await queryClient.cancelQueries({ queryKey: ['analistas'] });
       const previousAnalistas = queryClient.getQueryData(['analistas']);
@@ -78,7 +89,18 @@ export default function Analistas() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Analista.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.Analista.update(id, data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'Analista',
+        detalhes: `Atualizou analista "${data.nome}"`,
+      });
+      return result;
+    },
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['analistas'] });
       const previousAnalistas = queryClient.getQueryData(['analistas']);
@@ -98,7 +120,17 @@ export default function Analistas() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Analista.delete(id),
+    mutationFn: async (id) => {
+      const user = await base44.auth.me();
+      await base44.entities.Analista.delete(id);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Analista',
+        detalhes: `Excluiu um analista`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['analistas'] });
       toast.success('Analista excluído com sucesso!');

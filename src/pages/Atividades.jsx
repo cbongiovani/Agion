@@ -95,7 +95,18 @@ export default function Atividades() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Atividade.create(data),
+    mutationFn: async (data) => {
+      const result = await base44.entities.Atividade.create(data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Criou',
+        entidade: 'Atividade',
+        detalhes: `Criou atividade do tipo "${data.tipo}" para o analista`,
+      });
+      return result;
+    },
     onMutate: async (newAtividade) => {
       await queryClient.cancelQueries({ queryKey: ['atividades'] });
       const previousAtividades = queryClient.getQueryData(['atividades']);
@@ -116,7 +127,18 @@ export default function Atividades() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Atividade.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.Atividade.update(id, data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'Atividade',
+        detalhes: `Atualizou atividade do tipo "${data.tipo}"`,
+      });
+      return result;
+    },
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['atividades'] });
       const previousAtividades = queryClient.getQueryData(['atividades']);
@@ -136,7 +158,17 @@ export default function Atividades() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Atividade.delete(id),
+    mutationFn: async (id) => {
+      const user = await base44.auth.me();
+      await base44.entities.Atividade.delete(id);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Atividade',
+        detalhes: `Excluiu uma atividade`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success('Atividade excluída com sucesso!');
