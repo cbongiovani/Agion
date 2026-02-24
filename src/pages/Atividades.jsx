@@ -60,6 +60,11 @@ export default function Atividades() {
     status: 'Aberto',
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades'],
     queryFn: () => base44.entities.Atividade.list('-data'),
@@ -73,6 +78,11 @@ export default function Atividades() {
   const { data: analistas = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
+  });
+
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
   });
 
   const createMutation = useMutation({
@@ -146,7 +156,11 @@ export default function Atividades() {
       toast.error('A nota deve estar entre 0 e 10');
       return;
     }
-    const payload = { ...formData, nota };
+    const payload = { 
+      ...formData, 
+      nota,
+      registrado_por: currentUser?.email
+    };
     if (editingAtividade) {
       updateMutation.mutate({ id: editingAtividade.id, data: payload });
     } else {
@@ -170,6 +184,10 @@ export default function Atividades() {
 
   const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
   const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
+  const getUsuarioNome = (email) => {
+    const usuario = usuarios.find(u => u.email === email);
+    return usuario?.full_name || email || '-';
+  };
 
   const handleAnalistaChange = (analistaId) => {
     const analista = analistas.find(a => a.id === analistaId);
@@ -405,8 +423,9 @@ export default function Atividades() {
               <tr className="text-left text-gray-400 text-sm border-b border-gray-800 bg-[#1a1a1a]">
                 <th className="px-6 py-4 font-medium">Data</th>
                 <th className="px-6 py-4 font-medium">Tipo</th>
-                <th className="px-6 py-4 font-medium">Supervisor</th>
+                <th className="px-6 py-4 font-medium">Supervisor Resp.</th>
                 <th className="px-6 py-4 font-medium">Analista</th>
+                <th className="px-6 py-4 font-medium">Registrado Por</th>
                 <th className="px-6 py-4 font-medium">Nota</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Ações</th>
@@ -431,6 +450,9 @@ export default function Atividades() {
                   </td>
                   <td className="px-6 py-4 text-gray-400">
                     {getAnalistaNome(atividade.analista_id)}
+                  </td>
+                  <td className="px-6 py-4 text-gray-400 text-sm">
+                    {getUsuarioNome(atividade.registrado_por)}
                   </td>
                   <td className="px-6 py-4">
                     <NotaBadge nota={atividade.nota} />
@@ -493,12 +515,16 @@ export default function Atividades() {
                 <span className="text-sm text-white">{format(new Date(atividade.data), 'dd/MM/yyyy')}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Supervisor</span>
+                <span className="text-sm text-gray-500">Supervisor Resp.</span>
                 <span className="text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Analista</span>
                 <span className="text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Registrado Por</span>
+                <span className="text-sm text-gray-300">{getUsuarioNome(atividade.registrado_por)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Status</span>
