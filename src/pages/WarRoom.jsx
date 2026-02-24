@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import ExportPDFButton from '@/components/ExportPDFButton';
+import ExportButton from '@/components/ExportButton';
 import {
   Select,
   SelectContent,
@@ -170,7 +170,7 @@ export default function WarRoom() {
     return <XCircle className="w-4 h-4" />;
   };
 
-  const generateWarRoomPDF = {
+  const generateWarRoomData = {
     generateContent: async (doc, addHeader, pageWidth, margin) => {
       let yPosition = addHeader(doc, 'War Room - Gestão de Incidentes');
       yPosition += 5;
@@ -290,6 +290,26 @@ export default function WarRoom() {
       doc.text('Sistema preparado para gerenciar incidentes críticos conforme ITIL v4 e ISO 20000.', margin, yPosition);
       yPosition += 6;
       doc.text('A War Room permite registro detalhado, classificação por severidade e acompanhamento em tempo real.', margin, yPosition);
+    },
+    generateCSV: async () => {
+      const headers = ['Título', 'Severidade', 'Categoria', 'Status', 'Responsável', 'Data Início', 'Data Resolução', 'Descrição'];
+      const rows = incidentes.map(incidente => [
+        incidente.titulo,
+        incidente.severidade,
+        incidente.categoria,
+        incidente.status,
+        incidente.responsavel || '-',
+        format(new Date(incidente.data_inicio), "dd/MM/yyyy HH:mm"),
+        incidente.data_resolucao ? format(new Date(incidente.data_resolucao), "dd/MM/yyyy HH:mm") : '-',
+        incidente.descricao
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      return csvContent;
     }
   };
 
@@ -302,11 +322,10 @@ export default function WarRoom() {
         </div>
         <div className="flex gap-2">
            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') && (
-             <ExportPDFButton
-               data={generateWarRoomPDF}
-               fileName={`War_Room_${format(new Date(), 'yyyy-MM-dd')}.pdf`}
-               buttonText="Exportar PDF"
-               className="bg-[#ADF802] hover:bg-[#9DE002] text-black"
+             <ExportButton
+               data={generateWarRoomData}
+               fileName={`War_Room_${format(new Date(), 'yyyy-MM-dd')}`}
+               className="bg-[#ADF802] hover:bg-[#9DE002] text-black font-semibold"
              />
            )}
            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
