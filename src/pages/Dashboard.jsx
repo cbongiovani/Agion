@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import DashboardIntro from '@/components/DashboardIntro';
 import { 
   Phone, 
   Ticket, 
@@ -37,6 +38,12 @@ import { createPageUrl } from '@/utils';
 const COLORS = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6'];
 
 export default function Dashboard() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => {});
+  }, []);
+
   const { data: fechamentos = [], isLoading: loadingFechamentos } = useQuery({
     queryKey: ['fechamentos'],
     queryFn: () => base44.entities.FechamentoSemanal.list('-semana_inicio'),
@@ -109,6 +116,11 @@ export default function Dashboard() {
         <Loader2 className="w-8 h-8 animate-spin text-[#e74c3c]" />
       </div>
     );
+  }
+
+  // Mostrar intro para NOC e Usuário
+  if (currentUser?.role === 'noc' || currentUser?.role === 'user') {
+    return <DashboardIntro />;
   }
 
   return (
