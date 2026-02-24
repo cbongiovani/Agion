@@ -303,12 +303,23 @@ export default function Atividades() {
     setIsDialogOpen(true);
   };
 
-  const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
-  const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
-  const getUsuarioNome = (email) => {
-    const usuario = usuarios.find(u => u.email === email);
-    return usuario?.full_name || email || '-';
+  const getAtividadeColor = (tipo) => {
+    const colors = {
+      'Monitoria Offline': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      'Monitoria Assistida': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      'Chamados': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      'Ligações': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      'Feedback Individual': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    };
+    return colors[tipo] || 'bg-blue-500/20 text-blue-400 border-blue-500/30';
   };
+
+  const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
+   const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
+   const getUsuarioNome = (email) => {
+     const usuario = usuarios.find(u => u.email === email);
+     return usuario?.full_name || email || '-';
+   };
 
   const handleAnalistaChange = (analistaId) => {
     const analista = analistas.find(a => a.id === analistaId);
@@ -695,7 +706,7 @@ export default function Atividades() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getAtividadeColor(atividade.tipo)}`}>
                         {atividade.tipo}
                       </span>
                       <AtividadeInfoTooltip tipo={atividade.tipo} />
@@ -769,12 +780,12 @@ export default function Atividades() {
         {filteredAtividades.map((atividade) => (
           <div key={atividade.id} className="bg-[#242424] rounded-2xl border border-gray-800 p-4">
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  {atividade.tipo}
-                </span>
-                <AtividadeInfoTooltip tipo={atividade.tipo} />
-              </div>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getAtividadeColor(atividade.tipo)}`}>
+                {atividade.tipo}
+              </span>
+              <AtividadeInfoTooltip tipo={atividade.tipo} />
+            </div>
               <NotaBadge nota={atividade.nota} />
             </div>
             
