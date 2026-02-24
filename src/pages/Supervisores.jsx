@@ -41,8 +41,27 @@ export default function Supervisores() {
   const [loadingAI, setLoadingAI] = useState({});
 
   useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
-  }, []);
+     base44.auth.me().then(setCurrentUser).catch(() => {});
+
+     // Subscrições em tempo real
+     const unsubscribeAtividades = base44.entities.Atividade.subscribe(() => {
+       queryClient.invalidateQueries({ queryKey: ['atividades'] });
+     });
+
+     const unsubscribeIncidentes = base44.entities.Incidente.subscribe(() => {
+       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+     });
+
+     const unsubscribeFechamentos = base44.entities.FechamentoSemanal.subscribe(() => {
+       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
+     });
+
+     return () => {
+       unsubscribeAtividades();
+       unsubscribeIncidentes();
+       unsubscribeFechamentos();
+     };
+   }, [queryClient]);
 
   const { data: supervisores = [], isLoading } = useQuery({
     queryKey: ['supervisores'],
@@ -154,11 +173,8 @@ export default function Supervisores() {
    };
 
    const getSupervisorStats = (supervisorId) => {
-     const supervisorUser = supervisores.find(s => s.id === supervisorId);
-     const supervisorEmail = supervisorUser?.usuario_email;
-
-     // Atividades por tipo registradas por este supervisor
-     const supervisorActivities = atividades.filter(a => a.registrado_por === supervisorEmail);
+     // Contar atividades por tipo deste supervisor
+     const supervisorActivities = atividades.filter(a => a.supervisor_id === supervisorId);
      
      const atividadesPorTipo = {
        'Chamados': supervisorActivities.filter(a => a.tipo === 'Chamados').length,
@@ -168,8 +184,8 @@ export default function Supervisores() {
        'Feedback Individual': supervisorActivities.filter(a => a.tipo === 'Feedback Individual').length,
      };
 
-     // Contar incidentes (war room) registrados por este supervisor
-     const incidentesCount = incidentes.filter(i => i.registrado_por === supervisorEmail).length;
+     // Contar incidentes (war room) deste supervisor
+     const incidentesCount = incidentes.filter(i => i.registrado_por === supervisores.find(s => s.id === supervisorId)?.usuario_email).length;
 
      // Contar fechamentos semanais do supervisor
      const fechamentosCount = fechamentos.filter(f => f.supervisor_id === supervisorId).length;
