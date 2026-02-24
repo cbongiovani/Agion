@@ -202,7 +202,27 @@ export default function Atividades() {
     let nota = parseFloat(formData.nota);
     
     // Calcular nota automaticamente para Monitoria Offline (com pesos)
-    if (formData.tipo === 'Monitoria Offline' && Object.keys(formData.topicos_monitoria_offline).length > 0) {
+    if (formData.tipo === 'Monitoria Offline') {
+      const topicoKeys = [
+        'saudacao_padrao',
+        'validacao_loja',
+        'dominio_problema',
+        'comunicacao_direta',
+        'dominio_conclusao',
+        'tratou_respeito',
+        'teve_equilibrio',
+        'ruido_ambiente',
+        'retorno_loja',
+        'encerramento_padrao'
+      ];
+      
+      // Validar se todos os tópicos foram preenchidos
+      const topicosFaltando = topicoKeys.filter(key => !formData.topicos_monitoria_offline[key]);
+      if (topicosFaltando.length > 0) {
+        toast.error('Por favor, preencha todos os tópicos de avaliação antes de criar a atividade.');
+        return;
+      }
+      
       const pesos = {
         saudacao_padrao: 0.5,
         validacao_loja: 1.0,
