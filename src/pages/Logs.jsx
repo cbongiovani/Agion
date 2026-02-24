@@ -31,6 +31,7 @@ export default function Logs() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['logs'],
     queryFn: () => base44.entities.Log.list('-created_date'),
+    refetchInterval: 5000, // Atualiza a cada 5 segundos
   });
 
   const clearFilters = () => {
