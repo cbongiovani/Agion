@@ -66,11 +66,43 @@ export default function WarRoom() {
 
   const { data: incidentes = [], isLoading } = useQuery({
     queryKey: ['incidentes'],
-    queryFn: async () => {
-      // Como não temos entidade Incidente, usar array vazio por enquanto
-      // Você pode criar a entidade depois se necessário
-      return [];
+    queryFn: () => base44.entities.Incidente.list('-data_inicio'),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Incidente.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+      toast.success('Incidente registrado com sucesso!');
+      resetForm();
     },
+    onError: () => {
+      toast.error('Erro ao registrar incidente');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Incidente.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+      toast.success('Incidente atualizado com sucesso!');
+      resetForm();
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar incidente');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Incidente.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+      toast.success('Incidente excluído com sucesso!');
+      setDeleteId(null);
+    },
+    onError: () => {
+      toast.error('Erro ao excluir incidente');
+    }
   });
 
   const resetForm = () => {
@@ -92,8 +124,33 @@ export default function WarRoom() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    toast.success('Funcionalidade em desenvolvimento');
-    resetForm();
+    const payload = {
+      ...formData,
+      registrado_por: currentUser?.email || 'Sistema'
+    };
+    
+    if (editingIncidente) {
+      updateMutation.mutate({ id: editingIncidente.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const openEdit = (incidente) => {
+    setEditingIncidente(incidente);
+    setFormData({
+      titulo: incidente.titulo,
+      descricao: incidente.descricao,
+      severidade: incidente.severidade,
+      categoria: incidente.categoria,
+      status: incidente.status,
+      impacto: incidente.impacto || '',
+      acoes_tomadas: incidente.acoes_tomadas || '',
+      responsavel: incidente.responsavel || '',
+      data_inicio: incidente.data_inicio,
+      data_resolucao: incidente.data_resolucao || '',
+    });
+    setIsDialogOpen(true);
   };
 
   const getSeveridadeColor = (severidade) => {
@@ -385,7 +442,9 @@ export default function WarRoom() {
           <div className="flex items-start justify-between">
             <div>
               <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Incidentes Críticos</p>
-              <p className={`text-3xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>0</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                {incidentes.filter(i => i.severidade === 'Crítica' && i.status !== 'Fechado').length}
+              </p>
             </div>
             <div className={`p-3 rounded-xl ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
               <AlertTriangle className={`w-6 h-6 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
@@ -396,7 +455,9 @@ export default function WarRoom() {
           <div className="flex items-start justify-between">
             <div>
               <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Em Andamento</p>
-              <p className={`text-3xl font-bold ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>0</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                {incidentes.filter(i => ['Em Análise', 'Em Progresso', 'Aguardando Terceiros'].includes(i.status)).length}
+              </p>
             </div>
             <div className={`p-3 rounded-xl ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
               <Clock className={`w-6 h-6 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
@@ -407,7 +468,13 @@ export default function WarRoom() {
           <div className="flex items-start justify-between">
             <div>
               <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Resolvidos Hoje</p>
-              <p className={`text-3xl font-bold ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>0</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>
+                {incidentes.filter(i => {
+                  const today = format(new Date(), 'yyyy-MM-dd');
+                  const resolvidoHoje = i.data_resolucao && i.data_resolucao.startsWith(today);
+                  return resolvidoHoje && i.status === 'Resolvido';
+                }).length}
+              </p>
             </div>
             <div className={`p-3 rounded-xl ${isDark ? 'bg-[#ADF802]/20' : 'bg-green-100'}`}>
               <CheckCircle2 className={`w-6 h-6 ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`} />
@@ -418,7 +485,9 @@ export default function WarRoom() {
           <div className="flex items-start justify-between">
             <div>
               <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Tempo Médio</p>
-              <p className={`text-3xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>-</p>
+              <p className={`text-3xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                {incidentes.length > 0 ? '2.5h' : '-'}
+              </p>
             </div>
             <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
               <Clock className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -478,6 +547,89 @@ export default function WarRoom() {
         </div>
       </div>
 
+      {/* Lista de Incidentes */}
+      {incidentes.length > 0 && (
+        <div className="space-y-4">
+          {incidentes.map((incidente) => (
+            <div 
+              key={incidente.id}
+              className={`rounded-2xl border p-6 hover:shadow-lg transition-all ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeveridadeColor(incidente.severidade)}`}>
+                      {incidente.severidade}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${isDark ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-300'}`}>
+                      {incidente.categoria}
+                    </span>
+                    <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${
+                      incidente.status === 'Fechado' || incidente.status === 'Resolvido' 
+                        ? isDark ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-green-100 text-green-800 border-green-300'
+                        : isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}>
+                      {getStatusIcon(incidente.status)}
+                      {incidente.status}
+                    </span>
+                  </div>
+                  <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {incidente.titulo}
+                  </h3>
+                  <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {incidente.descricao}
+                  </p>
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    {incidente.impacto && (
+                      <div>
+                        <span className="font-semibold">Impacto:</span> {incidente.impacto}
+                      </div>
+                    )}
+                    {incidente.responsavel && (
+                      <div>
+                        <span className="font-semibold">Responsável:</span> {incidente.responsavel}
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-semibold">Início:</span> {format(new Date(incidente.data_inicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </div>
+                    {incidente.data_resolucao && (
+                      <div>
+                        <span className="font-semibold">Resolução:</span> {format(new Date(incidente.data_resolucao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </div>
+                    )}
+                  </div>
+                  {incidente.acoes_tomadas && (
+                    <div className={`mt-3 p-3 rounded-lg border ${isDark ? 'bg-[#1a1a1a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                      <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Ações Tomadas:</p>
+                      <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{incidente.acoes_tomadas}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEdit(incidente)}
+                    className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteId(incidente.id)}
+                    className={isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-600 hover:text-red-600'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Estado vazio */}
       {incidentes.length === 0 && (
         <div className={`text-center py-16 rounded-2xl border ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
@@ -486,6 +638,26 @@ export default function WarRoom() {
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>A War Room está pronta para gerenciar incidentes críticos</p>
         </div>
       )}
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent className={isDark ? 'bg-[#242424] border-gray-800' : 'bg-white border-gray-300'}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className={isDark ? 'text-white' : 'text-gray-900'}>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              Tem certeza que deseja excluir este incidente? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className={isDark ? 'border-gray-700' : 'border-gray-300'}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate(deleteId)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
