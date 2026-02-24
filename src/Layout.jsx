@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NotificationBell from '@/components/NotificationBell';
 import ClockWidget from '@/components/ClockWidget';
 import ManualPopup from '@/components/ManualPopup';
@@ -28,7 +28,12 @@ import ManualPopup from '@/components/ManualPopup';
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
 
   const { data: pendingRequests = [] } = useQuery({
     queryKey: ['pendingRequests'],
@@ -39,9 +44,6 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
-    
-    // Load current user
-    base44.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
 
   const getNavItems = () => {
