@@ -53,6 +53,7 @@ export default function MeuPerfil() {
     onSuccess: (updatedUser) => {
       const newUserData = {
         ...user,
+        full_name: updatedUser.nome_customizado || updatedUser.full_name || user.full_name,
         nome_customizado: updatedUser.nome_customizado || updatedUser.full_name || '',
         telefone: updatedUser.telefone || '',
         foto_url: updatedUser.foto_url || ''
