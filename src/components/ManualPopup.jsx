@@ -9,15 +9,11 @@ export default function ManualPopup({ currentUser }) {
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    // Mostrar popup apenas para supervisores no primeiro login da sessão
-    if (currentUser?.role === 'supervisor') {
-      const hasSeenManualToday = sessionStorage.getItem('manual_popup_shown');
-      if (!hasSeenManualToday) {
-        setShowPopup(true);
-        sessionStorage.setItem('manual_popup_shown', 'true');
-      }
+    // Mostrar popup sempre que um supervisor fizer login
+    if (currentUser?.role === 'supervisor' && currentUser?.email) {
+      setShowPopup(true);
     }
-  }, [currentUser]);
+  }, [currentUser?.email, currentUser?.role]);
 
   const handleClose = () => {
     setShowPopup(false);
