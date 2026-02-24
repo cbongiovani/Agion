@@ -57,9 +57,14 @@ export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onCh
 
       <div className="border-t border-gray-700 pt-4">
         <Label className="text-base mb-3 block">Tópicos de Avaliação</Label>
-        <div className="space-y-2">
-          {topicos.map((topico) => (
-            <div key={topico.key} className="flex items-center justify-between gap-3">
+        <div className="space-y-1">
+          {topicos.map((topico, index) => (
+            <div 
+              key={topico.key} 
+              className={`flex items-center justify-between gap-3 p-2 rounded border border-gray-700/50 ${
+                index % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#0d0d0d]'
+              }`}
+            >
               <Label className="text-xs text-gray-300 flex-1">{topico.label}</Label>
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((valor) => (
@@ -71,7 +76,7 @@ export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onCh
                       w-8 h-8 rounded border transition-all text-xs font-semibold
                       ${topicosValues[topico.key] === valor
                         ? 'bg-[#ADF802] border-[#ADF802] text-black'
-                        : 'bg-[#1a1a1a] border-gray-700 text-gray-400 hover:border-gray-500'
+                        : 'bg-[#242424] border-gray-600 text-gray-400 hover:border-gray-500'
                       }
                     `}
                   >
