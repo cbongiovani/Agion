@@ -91,6 +91,15 @@ export default function Analistas() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const result = await base44.entities.Analista.update(id, data);
+
+      // Se houver um email vinculado e o nome foi alterado, atualizar o usuário
+      if (data.usuario_email) {
+        const users = await base44.entities.User.filter({ email: data.usuario_email });
+        if (users.length > 0) {
+          await base44.entities.User.update(users[0].id, { full_name: data.nome });
+        }
+      }
+
       const user = await base44.auth.me();
       await base44.entities.Log.create({
         usuario_email: user.email,
@@ -114,6 +123,7 @@ export default function Analistas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['analistas'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Analista atualizado com sucesso!');
       resetForm();
     },
