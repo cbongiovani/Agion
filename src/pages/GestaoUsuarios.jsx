@@ -61,8 +61,8 @@ export default function GestaoUsuarios() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.User.update(id, data);
       const user = await base44.auth.me();
-      await base44.entities.User.update(id, data);
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
@@ -70,6 +70,7 @@ export default function GestaoUsuarios() {
         entidade: 'Usuário',
         detalhes: `Atualizou usuário ${data.full_name || editingUser?.email}`,
       });
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
