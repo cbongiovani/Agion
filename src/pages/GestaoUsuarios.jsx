@@ -98,7 +98,7 @@ export default function GestaoUsuarios() {
         usuario_nome: user.full_name,
         acao: 'Convidou Usuário',
         entidade: 'Usuário',
-        detalhes: `Convidou ${email} com função ${role === 'admin' ? 'Coordenador' : role === 'supervisor' ? 'Supervisor' : 'Usuário'}`,
+        detalhes: `Convidou ${email} com função ${role === 'admin' ? 'Coordenador' : role === 'supervisor' ? 'Supervisor' : role === 'noc' ? 'NOC' : 'Usuário'}`,
       });
     },
     onSuccess: () => {
@@ -207,6 +207,7 @@ export default function GestaoUsuarios() {
       admin: 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30',
       supervisor: 'bg-[#ADF802]/20 text-[#ADF802] border-[#ADF802]/30',
       user: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      noc: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     };
     return colors[role] || colors.user;
   };
@@ -216,6 +217,7 @@ export default function GestaoUsuarios() {
       admin: 'Coordenador',
       supervisor: 'Supervisor',
       user: 'Usuário',
+      noc: 'NOC',
     };
     return labels[role] || role;
   };
@@ -361,6 +363,7 @@ export default function GestaoUsuarios() {
                     <SelectItem value="user">Usuário</SelectItem>
                     <SelectItem value="supervisor">Supervisor</SelectItem>
                     <SelectItem value="admin">Coordenador</SelectItem>
+                    <SelectItem value="noc">NOC</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -518,6 +521,7 @@ export default function GestaoUsuarios() {
                   <SelectItem value="user">Usuário</SelectItem>
                   <SelectItem value="supervisor">Supervisor</SelectItem>
                   <SelectItem value="admin">Coordenador</SelectItem>
+                  <SelectItem value="noc">NOC</SelectItem>
                 </SelectContent>
               </Select>
             </div>
