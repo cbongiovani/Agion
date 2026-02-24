@@ -197,10 +197,13 @@ export default function Layout({ children }) {
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
           </Button>
-          <a href="https://www.grupoagion.com.br" target="_blank" rel="noopener noreferrer" className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20 hover:bg-gradient-to-r hover:from-[#ADF802]/10 hover:to-[#ADF802]/15 transition-colors cursor-pointer">
+          <div 
+            onClick={() => window.open('https://www.grupoagion.com.br', '_blank')}
+            className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20 hover:bg-gradient-to-r hover:from-[#ADF802]/10 hover:to-[#ADF802]/15 transition-colors cursor-pointer"
+          >
             <p className="text-xs font-medium text-gray-500">Grupo Agion</p>
             <p className="text-sm font-bold mt-1 text-white">Painel de Governança - N1</p>
-          </a>
+          </div>
         </div>
       </aside>
 
