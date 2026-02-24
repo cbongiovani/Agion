@@ -35,12 +35,13 @@ export default function Layout({ children }) {
     const role = currentUser?.role;
     
     const baseItems = [
-      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor'] },
       { name: 'Atividades', icon: ClipboardList, path: 'Atividades', roles: ['admin', 'supervisor'] },
       { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', roles: ['admin', 'supervisor'] },
       { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor', 'user'] },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin'] },
-      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor'] },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
     ];
     
@@ -128,18 +129,6 @@ export default function Layout({ children }) {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 space-y-2">
           <Link
-            to={createPageUrl('Ranking')}
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors select-none min-h-[44px] ${
-              isActive('Ranking') 
-                ? 'bg-[#0a0a0a] text-[#ADF802]' 
-                : 'text-gray-400 hover:text-white hover:bg-[#0a0a0a]'
-            }`}
-          >
-            <Trophy className="w-5 h-5" />
-            <span className="font-medium">Ranking</span>
-          </Link>
-          <Link
             to={createPageUrl('MeuPerfil')}
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] transition-colors select-none min-h-[44px]"
@@ -174,26 +163,26 @@ export default function Layout({ children }) {
       {/* Bottom Navigation - Mobile Only */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex items-center justify-around px-4 py-2">
-            <Link
-              to={createPageUrl('Dashboard')}
-              className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
-                isActive('Dashboard') ? 'text-[#ADF802]' : 'text-gray-400'
-              }`}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              <span className="text-xs font-medium">Dashboard</span>
-            </Link>
             {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
               <Link
-                to={createPageUrl('Atividades')}
+                to={createPageUrl('Dashboard')}
                 className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
-                  isActive('Atividades') ? 'text-[#ADF802]' : 'text-gray-400'
+                  isActive('Dashboard') ? 'text-[#ADF802]' : 'text-gray-400'
                 }`}
               >
-                <ClipboardList className="w-5 h-5" />
-                <span className="text-xs font-medium">Atividades</span>
+                <LayoutDashboard className="w-5 h-5" />
+                <span className="text-xs font-medium">Dashboard</span>
               </Link>
             )}
+            <Link
+              to={createPageUrl('Supervisores')}
+              className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
+                isActive('Supervisores') ? 'text-[#ADF802]' : 'text-gray-400'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              <span className="text-xs font-medium">Supervisores</span>
+            </Link>
             <Link
               to={createPageUrl('Ranking')}
               className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
@@ -203,15 +192,17 @@ export default function Layout({ children }) {
               <Trophy className="w-5 h-5" />
               <span className="text-xs font-medium">Ranking</span>
             </Link>
-            <Link
-              to={createPageUrl('WarRoom')}
-              className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
-                isActive('WarRoom') ? 'text-[#ADF802]' : 'text-gray-400'
-              }`}
-            >
-              <AlertTriangle className="w-5 h-5" />
-              <span className="text-xs font-medium">War Room</span>
-            </Link>
+            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+              <Link
+                to={createPageUrl('WarRoom')}
+                className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors select-none min-w-[44px] min-h-[44px] justify-center ${
+                  isActive('WarRoom') ? 'text-[#ADF802]' : 'text-gray-400'
+                }`}
+              >
+                <AlertTriangle className="w-5 h-5" />
+                <span className="text-xs font-medium">War Room</span>
+              </Link>
+            )}
           </div>
       </div>
 
