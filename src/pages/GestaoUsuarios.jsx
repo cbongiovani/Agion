@@ -71,6 +71,7 @@ export default function GestaoUsuarios() {
   const inviteMutation = useMutation({
     mutationFn: ({ email, role }) => base44.users.inviteUser(email, role),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Convite enviado com sucesso!');
       setInviteData({ email: '', role: 'user' });
       setIsInviteDialogOpen(false);
