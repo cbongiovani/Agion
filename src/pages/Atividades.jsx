@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import NotaBadge from '@/components/ui/NotaBadge';
@@ -70,9 +70,13 @@ export default function Atividades() {
   });
 
   const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
+     queryKey: ['currentUser'],
+     queryFn: () => base44.auth.me(),
+   });
+
+   const canEdit = currentUser?.role === 'admin';
+   const canDelete = currentUser?.role === 'admin';
+   const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
 
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades'],

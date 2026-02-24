@@ -167,14 +167,32 @@ export default function Ranking() {
 
   const handleReacao = (analistaId, emoji) => {
     const now = new Date();
+    const anoAtual = getYear(now);
+    const mesAtual = getMonth(now) + 1;
+    const semanaAtual = getWeek(now);
+
+    // Verificar se o usuário já reagiu a este analista
+    const jaReagiu = reacoes.some(r => 
+      r.analista_id === analistaId && 
+      r.usuario_id === currentUser.id &&
+      r.ano === anoAtual &&
+      r.mes === mesAtual &&
+      r.semana === semanaAtual
+    );
+
+    if (jaReagiu) {
+      toast.error('Você já reagiu a este analista nesta semana!');
+      return;
+    }
+
     adicionarReacaoMutation.mutate({
       analista_id: analistaId,
       usuario_id: currentUser.id,
       usuario_nome: currentUser.full_name || currentUser.email,
       tipo_reacao: emoji,
-      ano: getYear(now),
-      mes: getMonth(now) + 1,
-      semana: getWeek(now)
+      ano: anoAtual,
+      mes: mesAtual,
+      semana: semanaAtual
     });
   };
 
