@@ -3,32 +3,43 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
 const topicos = [
-  { key: 'saudacao_padrao', label: '1 - Saudação Padrão de Atendimento', max: 5 },
-  { key: 'validacao_loja', label: '2 - Validação da loja e colaborador em linha', max: 5 },
-  { key: 'dominio_problema', label: '3 - Domínio/conhecimento do problema', max: 5 },
-  { key: 'comunicacao_direta', label: '4 - Comunicação direta e objetiva', max: 5 },
-  { key: 'dominio_conclusao', label: '5 - Domínio na condução da ligação', max: 5 },
-  { key: 'tratou_respeito', label: '6 - Tratou a loja com respeito', max: 5 },
-  { key: 'teve_equilibrio', label: '7 - Teve Equilíbrio Emocional', max: 5 },
-  { key: 'ruido_ambiente', label: '8 - Ruído no Ambiente/mutar o telefone', max: 5 },
-  { key: 'retorno_loja', label: '9 - Retorno para a loja', max: 2 },
-  { key: 'encerramento_padrao', label: '10 - Encerramento Padrão', max: 5 }
+  { key: 'saudacao_padrao', label: '1 - Saudação Padrão de Atendimento', peso: 0.5 },
+  { key: 'validacao_loja', label: '2 - Validação da loja e colaborador em linha', peso: 1.0 },
+  { key: 'dominio_problema', label: '3 - Domínio/conhecimento do problema', peso: 1.5 },
+  { key: 'comunicacao_direta', label: '4 - Comunicação direta e objetiva', peso: 1.0 },
+  { key: 'dominio_conclusao', label: '5 - Domínio na condução da ligação', peso: 1.5 },
+  { key: 'tratou_respeito', label: '6 - Tratou a loja com respeito', peso: 1.0 },
+  { key: 'teve_equilibrio', label: '7 - Teve Equilíbrio Emocional', peso: 1.0 },
+  { key: 'ruido_ambiente', label: '8 - Ruído no Ambiente/mutar o telefone', peso: 1.0 },
+  { key: 'retorno_loja', label: '9 - Retorno para a loja', peso: 1.0 },
+  { key: 'encerramento_padrao', label: '10 - Encerramento Padrão', peso: 0.5 }
 ];
 
 export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onChange, protocolo, onProtocoloChange }) {
   const handleTopicoChange = (key, value) => {
-    const numValue = parseFloat(value) || 0;
     onChange({
       ...topicosValues,
-      [key]: numValue
+      [key]: value
     });
   };
 
   const calcularNotaTotal = () => {
-    const total = topicos.reduce((sum, topico) => {
-      return sum + (topicosValues[topico.key] || 0);
-    }, 0);
-    return ((total / 47) * 10).toFixed(2); // 47 é a soma máxima possível
+    let totalPonderado = 0;
+    let pesoTotal = 0;
+    
+    topicos.forEach((topico) => {
+      const valor = topicosValues[topico.key];
+      if (valor) {
+        totalPonderado += valor * topico.peso;
+        pesoTotal += topico.peso;
+      }
+    });
+    
+    if (pesoTotal === 0) return '0.00';
+    
+    // Calcular nota proporcional a 10
+    const nota = (totalPonderado / pesoTotal) * 2; // *2 porque escala vai de 1-5 e queremos 0-10
+    return Math.min(nota, 10).toFixed(2);
   };
 
   return (
@@ -46,20 +57,28 @@ export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onCh
 
       <div className="border-t border-gray-700 pt-4">
         <Label className="text-base mb-3 block">Tópicos de Avaliação</Label>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {topicos.map((topico) => (
-            <div key={topico.key} className="grid grid-cols-[1fr,100px] gap-3 items-center">
+            <div key={topico.key} className="space-y-2">
               <Label className="text-sm text-gray-300">{topico.label}</Label>
-              <Input
-                type="number"
-                min="0"
-                max={topico.max}
-                step="0.5"
-                value={topicosValues[topico.key] || ''}
-                onChange={(e) => handleTopicoChange(topico.key, e.target.value)}
-                className="bg-[#1a1a1a] border-gray-700"
-                placeholder={`0-${topico.max}`}
-              />
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((valor) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => handleTopicoChange(topico.key, valor)}
+                    className={`
+                      w-12 h-12 rounded-lg border-2 transition-all font-semibold
+                      ${topicosValues[topico.key] === valor
+                        ? 'bg-[#ADF802] border-[#ADF802] text-black scale-110'
+                        : 'bg-[#1a1a1a] border-gray-700 text-gray-400 hover:border-gray-500'
+                      }
+                    `}
+                  >
+                    {valor}
+                  </button>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -70,7 +89,7 @@ export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onCh
           <span className="text-sm font-medium text-white">Nota Calculada:</span>
           <span className="text-2xl font-bold text-[#ADF802]">{calcularNotaTotal()}</span>
         </div>
-        <p className="text-xs text-gray-400 mt-1">Nota calculada automaticamente com base nos tópicos</p>
+        <p className="text-xs text-gray-400 mt-1">Nota calculada automaticamente com pesos diferenciados (máximo 10.0)</p>
       </div>
     </div>
   );

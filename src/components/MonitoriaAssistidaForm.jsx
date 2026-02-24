@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Pencil, Save, X } from 'lucide-react';
 
-const perguntas = [
+const perguntasDefault = [
   {
     key: 'ip_hotline_ata',
     pergunta: '1 - Qual o IP padrão do Hotline ou ATA das Lojas?',
@@ -57,6 +60,19 @@ const perguntas = [
 ];
 
 export default function MonitoriaAssistidaForm({ topicos = {}, onChange, linkGravacao, onLinkChange }) {
+  const [editingKey, setEditingKey] = useState(null);
+  const [editData, setEditData] = useState({});
+
+  // Recuperar perguntas salvas ou usar default
+  const getPerguntas = () => {
+    if (topicos.perguntas && Array.isArray(topicos.perguntas)) {
+      return topicos.perguntas;
+    }
+    return perguntasDefault;
+  };
+
+  const perguntas = getPerguntas();
+
   const handleCheckboxChange = (key, checked) => {
     onChange({
       ...topicos,
@@ -64,8 +80,37 @@ export default function MonitoriaAssistidaForm({ topicos = {}, onChange, linkGra
     });
   };
 
+  const startEdit = (item) => {
+    setEditingKey(item.key);
+    setEditData({
+      pergunta: item.pergunta,
+      resposta: item.resposta
+    });
+  };
+
+  const saveEdit = () => {
+    const updatedPerguntas = perguntas.map(p => 
+      p.key === editingKey 
+        ? { ...p, pergunta: editData.pergunta, resposta: editData.resposta }
+        : p
+    );
+    
+    onChange({
+      ...topicos,
+      perguntas: updatedPerguntas
+    });
+    
+    setEditingKey(null);
+    setEditData({});
+  };
+
+  const cancelEdit = () => {
+    setEditingKey(null);
+    setEditData({});
+  };
+
   const calcularNotaTotal = () => {
-    const acertos = Object.values(topicos).filter(v => v === true).length;
+    const acertos = perguntas.filter(p => topicos[p.key] === true).length;
     return acertos.toFixed(1);
   };
 
@@ -85,22 +130,75 @@ export default function MonitoriaAssistidaForm({ topicos = {}, onChange, linkGra
       <div className="border-t border-gray-700 pt-4">
         <Label className="text-base mb-3 block">Avaliação Técnica - Conhecimento</Label>
         <div className="space-y-4">
-          {perguntas.map((item, index) => (
+          {perguntas.map((item) => (
             <div key={item.key} className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id={item.key}
-                  checked={topicos[item.key] || false}
-                  onCheckedChange={(checked) => handleCheckboxChange(item.key, checked)}
-                  className="mt-1"
-                />
-                <div className="flex-1">
-                  <label htmlFor={item.key} className="text-sm font-medium text-white cursor-pointer block mb-1">
-                    {item.pergunta}
-                  </label>
-                  <p className="text-xs text-emerald-400">✓ {item.resposta}</p>
+              {editingKey === item.key ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-gray-400">Pergunta</Label>
+                    <Textarea
+                      value={editData.pergunta}
+                      onChange={(e) => setEditData({ ...editData, pergunta: e.target.value })}
+                      className="bg-[#0d0d0d] border-gray-600 mt-1 text-sm"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-400">Resposta</Label>
+                    <Textarea
+                      value={editData.resposta}
+                      onChange={(e) => setEditData({ ...editData, resposta: e.target.value })}
+                      className="bg-[#0d0d0d] border-gray-600 mt-1 text-sm"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={saveEdit}
+                      className="bg-emerald-600 hover:bg-emerald-700 gap-1"
+                    >
+                      <Save className="w-3 h-3" />
+                      Salvar
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEdit}
+                      className="border-gray-600 gap-1"
+                    >
+                      <X className="w-3 h-3" />
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id={item.key}
+                    checked={topicos[item.key] || false}
+                    onCheckedChange={(checked) => handleCheckboxChange(item.key, checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor={item.key} className="text-sm font-medium text-white cursor-pointer block mb-1">
+                      {item.pergunta}
+                    </label>
+                    <p className="text-xs text-emerald-400">✓ {item.resposta}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => startEdit(item)}
+                    className="text-gray-400 hover:text-white h-8 w-8"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>

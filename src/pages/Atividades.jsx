@@ -201,10 +201,35 @@ export default function Atividades() {
     
     let nota = parseFloat(formData.nota);
     
-    // Calcular nota automaticamente para Monitoria Offline
+    // Calcular nota automaticamente para Monitoria Offline (com pesos)
     if (formData.tipo === 'Monitoria Offline' && Object.keys(formData.topicos_monitoria_offline).length > 0) {
-      const total = Object.values(formData.topicos_monitoria_offline).reduce((sum, val) => sum + val, 0);
-      nota = parseFloat(((total / 47) * 10).toFixed(2));
+      const pesos = {
+        saudacao_padrao: 0.5,
+        validacao_loja: 1.0,
+        dominio_problema: 1.5,
+        comunicacao_direta: 1.0,
+        dominio_conclusao: 1.5,
+        tratou_respeito: 1.0,
+        teve_equilibrio: 1.0,
+        ruido_ambiente: 1.0,
+        retorno_loja: 1.0,
+        encerramento_padrao: 0.5
+      };
+      
+      let totalPonderado = 0;
+      let pesoTotal = 0;
+      
+      Object.entries(formData.topicos_monitoria_offline).forEach(([key, valor]) => {
+        if (valor && pesos[key]) {
+          totalPonderado += valor * pesos[key];
+          pesoTotal += pesos[key];
+        }
+      });
+      
+      if (pesoTotal > 0) {
+        nota = Math.min((totalPonderado / pesoTotal) * 2, 10);
+        nota = parseFloat(nota.toFixed(2));
+      }
     }
     
     // Calcular nota automaticamente para Monitoria Assistida
@@ -394,6 +419,18 @@ export default function Atividades() {
                     onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
                     className="bg-[#1a1a1a] border-gray-700 mt-2"
                     placeholder="Digite o ticket (10 caracteres)"
+                  />
+                </div>
+              )}
+              {formData.tipo === 'Ligações' && (
+                <div>
+                  <Label>Protocolo</Label>
+                  <Input
+                    type="text"
+                    value={formData.protocolo_gravacao}
+                    onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                    className="bg-[#1a1a1a] border-gray-700 mt-2"
+                    placeholder="Digite o protocolo"
                   />
                 </div>
               )}
