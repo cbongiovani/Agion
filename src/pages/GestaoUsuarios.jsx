@@ -86,9 +86,6 @@ export default function GestaoUsuarios() {
     onSuccess: () => {
       toast.success('Usuário atualizado com sucesso!');
       resetForm();
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-      }, 100);
     },
   });
 
