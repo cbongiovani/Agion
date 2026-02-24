@@ -35,16 +35,28 @@ export default function GestaoUsuarios() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isInviteAnalistaOpen, setIsInviteAnalistaOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
+  const [inviteAnalistaData, setInviteAnalistaData] = useState({ email: '' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: () => base44.entities.User.list(),
+  });
+
+  const { data: analistas = [] } = useQuery({
+    queryKey: ['analistas'],
+    queryFn: () => base44.entities.Analista.list(),
+  });
+
+  const { data: supervisores = [] } = useQuery({
+    queryKey: ['supervisores'],
+    queryFn: () => base44.entities.Supervisor.list(),
   });
 
   const updateMutation = useMutation({
@@ -65,6 +77,22 @@ export default function GestaoUsuarios() {
     },
     onError: (error) => {
       toast.error('Erro ao enviar convite: ' + error.message);
+    },
+  });
+
+  const inviteAnalistaMutation = useMutation({
+    mutationFn: async ({ email, analistaId }) => {
+      await base44.users.inviteUser(email, 'user');
+      await base44.entities.Analista.update(analistaId, { usuario_email: email });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analistas'] });
+      toast.success('Analista convidado com sucesso!');
+      setInviteAnalistaData({ email: '' });
+      setIsInviteAnalistaOpen(false);
+    },
+    onError: (error) => {
+      toast.error('Erro ao convidar analista: ' + error.message);
     },
   });
 
@@ -96,6 +124,19 @@ export default function GestaoUsuarios() {
   const handleInvite = (e) => {
     e.preventDefault();
     inviteMutation.mutate(inviteData);
+  };
+
+  const handleInviteAnalista = (e) => {
+    e.preventDefault();
+    const analista = analistas.find(a => a.usuario_email === inviteAnalistaData.email || !a.usuario_email);
+    if (!analista) {
+      toast.error('Nenhum analista disponível para vincular');
+      return;
+    }
+    inviteAnalistaMutation.mutate({ 
+      email: inviteAnalistaData.email,
+      analistaId: analista.id
+    });
   };
 
   const openEdit = (user) => {
@@ -162,13 +203,62 @@ export default function GestaoUsuarios() {
           <p className="text-gray-400 mt-1">Gerencie acesso e permissões do sistema</p>
         </div>
         
-        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#e74c3c] hover:bg-[#c0392b] gap-2">
-              <Plus className="w-4 h-4" />
-              Convidar Usuário
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isInviteAnalistaOpen} onOpenChange={setIsInviteAnalistaOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Plus className="w-4 h-4" />
+                Convidar Analista
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white">
+              <DialogHeader>
+                <DialogTitle>Convidar Analista para o Painel</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleInviteAnalista} className="space-y-4">
+                <div>
+                  <Label htmlFor="analista_email">E-mail do Analista</Label>
+                  <Input
+                    id="analista_email"
+                    type="email"
+                    value={inviteAnalistaData.email}
+                    onChange={(e) => setInviteAnalistaData({ email: e.target.value })}
+                    className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
+                    placeholder="analista@grupoavenida.com.br"
+                    required
+                  />
+                  <p className="text-xs text-gray-400 mt-2">
+                    O analista receberá permissão de "Usuário" e será vinculado automaticamente ao seu perfil.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsInviteAnalistaOpen(false)} 
+                    className="border-[#1e3a5f]"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    disabled={inviteAnalistaMutation.isPending}
+                  >
+                    {inviteAnalistaMutation.isPending ? 'Convidando...' : 'Convidar Analista'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#e74c3c] hover:bg-[#c0392b] gap-2">
+                <Plus className="w-4 h-4" />
+                Convidar Usuário
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white">
             <DialogHeader>
               <DialogTitle>Convidar Novo Usuário</DialogTitle>
@@ -222,6 +312,7 @@ export default function GestaoUsuarios() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] overflow-hidden">

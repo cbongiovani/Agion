@@ -107,7 +107,7 @@ export default function Analistas() {
   });
 
   const resetForm = () => {
-    setFormData({ nome: '', supervisor_id: '' });
+    setFormData({ nome: '', supervisor_id: '', usuario_email: '' });
     setEditingAnalista(null);
     setIsDialogOpen(false);
   };
@@ -123,7 +123,11 @@ export default function Analistas() {
 
   const openEdit = (analista) => {
     setEditingAnalista(analista);
-    setFormData({ nome: analista.nome, supervisor_id: analista.supervisor_id });
+    setFormData({ 
+      nome: analista.nome, 
+      supervisor_id: analista.supervisor_id,
+      usuario_email: analista.usuario_email || ''
+    });
     setIsDialogOpen(true);
   };
 
@@ -196,6 +200,20 @@ export default function Analistas() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="usuario_email">E-mail Vinculado (Opcional)</Label>
+                <Input
+                  id="usuario_email"
+                  type="email"
+                  value={formData.usuario_email}
+                  onChange={(e) => setFormData({ ...formData, usuario_email: e.target.value })}
+                  className="bg-[#1a1a1a] border-gray-700 mt-2"
+                  placeholder="Email do usuário no sistema"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Vincule o email do usuário que terá acesso ao painel como este analista
+                </p>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
