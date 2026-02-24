@@ -24,25 +24,25 @@ export default function ExportButton({
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
 
-    doc.setFillColor(173, 248, 2);
+    doc.setFillColor(10, 10, 10);
     doc.rect(0, 0, pageWidth, 40, 'F');
 
     doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(173, 248, 2);
     doc.setFont('helvetica', 'bold');
     doc.text('GRUPO AGION', margin, 15);
 
     doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'normal');
     doc.text('Governança N1 - Suporte', margin, 25);
 
-    doc.setDrawColor(0, 0, 0);
+    doc.setDrawColor(173, 248, 2);
     doc.setLineWidth(0.5);
     doc.line(margin, 30, pageWidth - margin, 30);
 
     doc.setFontSize(16);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.text(title, margin, 50);
 
@@ -62,7 +62,7 @@ export default function ExportButton({
       );
       
       doc.setDrawColor(173, 248, 2);
-      doc.setLineWidth(0.5);
+      doc.setLineWidth(1);
       doc.line(14, doc.internal.pageSize.getHeight() - 15, doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 15);
     }
   };
@@ -74,6 +74,9 @@ export default function ExportButton({
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const margin = 14;
+
+      doc.setFillColor(20, 20, 20);
+      doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F');
 
       if (data && data.generateContent) {
         await data.generateContent(doc, addHeader, pageWidth, margin);
@@ -97,7 +100,8 @@ export default function ExportButton({
     try {
       if (data && data.generateCSV) {
         const csv = await data.generateCSV();
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
