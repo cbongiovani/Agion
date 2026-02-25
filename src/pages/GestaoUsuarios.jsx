@@ -1013,6 +1013,28 @@ export default function GestaoUsuarios() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="supervisor_select">Vincular ao Supervisor</Label>
+              <Select
+                value={formData.supervisor_id}
+                onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
+              >
+                <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
+                  <SelectValue placeholder="Selecione um supervisor (opcional)" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                  <SelectItem value={null}>Nenhum</SelectItem>
+                  {supervisores.map((sup) => (
+                    <SelectItem key={sup.id} value={sup.id}>
+                      {sup.nome} ({sup.equipe})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-400 mt-2">
+                Vinculando o usuário ao supervisor, seus War Rooms serão contabilizados no painel.
+              </p>
+            </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={resetForm} className="border-[#1e3a5f]">
                 Cancelar
