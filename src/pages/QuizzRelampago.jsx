@@ -158,6 +158,7 @@ export default function QuizzRelampago() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['respostasQuizz'] });
+      queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
     },
   });
 
@@ -292,6 +293,9 @@ export default function QuizzRelampago() {
         tempoInicio: Date.now(),
       });
     } else {
+      // Invalidar queries para atualizar a verificação de participação
+      await queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
+      await queryClient.invalidateQueries({ queryKey: ['respostasQuizz'] });
       toast.success('Quizz concluído! Confira o ranking.');
       setViewMode('results');
     }
