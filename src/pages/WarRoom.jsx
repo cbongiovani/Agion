@@ -140,28 +140,40 @@ export default function WarRoom() {
     }
   };
 
-  const loadDraft = () => {
+  const checkDraft = () => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
       const draft = localStorage.getItem('draft_warroom');
       if (draft) {
-        const { formData: savedFormData, editingIncidente: savedEditing, timestamp } = JSON.parse(draft);
+        const { timestamp } = JSON.parse(draft);
         const hoursDiff = (Date.now() - timestamp) / (1000 * 60 * 60);
         if (hoursDiff < 24) {
-          toast.success('Rascunho restaurado!', {
-            action: {
-              label: 'Descartar',
-              onClick: () => {
-                localStorage.removeItem('draft_warroom');
-                resetForm();
-              }
-            }
-          });
-          setFormData(savedFormData);
-          setEditingIncidente(savedEditing);
+          setHasDraft(true);
         } else {
           localStorage.removeItem('draft_warroom');
+          setHasDraft(false);
         }
+      } else {
+        setHasDraft(false);
       }
+    }
+  };
+
+  const loadDraft = () => {
+    const draft = localStorage.getItem('draft_warroom');
+    if (draft) {
+      const { formData: savedFormData, editingIncidente: savedEditing } = JSON.parse(draft);
+      setFormData(savedFormData);
+      setEditingIncidente(savedEditing);
+      setViewingDraft(null);
+      toast.success('Rascunho carregado!');
+    }
+  };
+
+  const viewDraft = () => {
+    const draft = localStorage.getItem('draft_warroom');
+    if (draft) {
+      const { formData: savedFormData } = JSON.parse(draft);
+      setViewingDraft(savedFormData);
     }
   };
 
