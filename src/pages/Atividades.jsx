@@ -290,8 +290,18 @@ export default function Atividades() {
         } else {
           localStorage.removeItem('draft_atividade');
         }
+      } else {
+        toast.info('Nenhum rascunho disponível');
       }
     }
+  };
+
+  const hasDraft = () => {
+    const draft = localStorage.getItem('draft_atividade');
+    if (!draft) return false;
+    const { timestamp } = JSON.parse(draft);
+    const hoursDiff = (Date.now() - timestamp) / (1000 * 60 * 60);
+    return hoursDiff < 24;
   };
 
   const clearDraft = () => {
