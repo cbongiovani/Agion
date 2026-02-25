@@ -15,7 +15,8 @@ import {
   User as UserIcon,
   Trophy,
   Bell,
-  BookOpen
+  BookOpen,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
