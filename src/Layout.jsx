@@ -16,7 +16,8 @@ import {
   Trophy,
   Bell,
   BookOpen,
-  Info
+  Info,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -70,6 +71,7 @@ export default function Layout({ children }) {
       { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'], permKey: 'supervisores' },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin', 'supervisor'], permKey: 'analistas' },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'], permKey: 'ranking' },
+      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', roles: ['admin', 'supervisor', 'user'], permKey: 'quizz_relampago' },
       { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', roles: ['admin', 'supervisor'], permKey: 'avaliacoes' },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'noc'], permKey: 'war_room' },
       { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'], permKey: 'manual_supervisor' },
