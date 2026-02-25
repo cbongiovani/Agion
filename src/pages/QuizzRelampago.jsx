@@ -282,7 +282,7 @@ export default function QuizzRelampago() {
     await submeterRespostaMutation.mutateAsync({
       quizz_id: selectedQuizz.id,
       pergunta_id: perguntaAtual.id,
-      analista_id: analistaLogado?.id || currentUser.id,
+      analista_id: analistaLogado?.id || `usr_${currentUser.id}`,
       usuario_id: currentUser.id,
       resposta_selecionada: alternativa,
       correta,
@@ -318,8 +318,9 @@ export default function QuizzRelampago() {
     const rankingMap = {};
 
     respostasQuizz.forEach(resposta => {
-      if (!rankingMap[resposta.analista_id]) {
-        rankingMap[resposta.analista_id] = {
+      const chave = resposta.usuario_id;
+      if (!rankingMap[chave]) {
+        rankingMap[chave] = {
           analista_id: resposta.analista_id,
           usuario_id: resposta.usuario_id,
           acertos: 0,
@@ -329,10 +330,10 @@ export default function QuizzRelampago() {
       }
 
       if (resposta.correta) {
-        rankingMap[resposta.analista_id].acertos += 1;
+        rankingMap[chave].acertos += 1;
       }
-      rankingMap[resposta.analista_id].tempoTotal += resposta.tempo_resposta_segundos;
-      rankingMap[resposta.analista_id].respostas.push(resposta);
+      rankingMap[chave].tempoTotal += resposta.tempo_resposta_segundos;
+      rankingMap[chave].respostas.push(resposta);
     });
 
     const ranking = Object.values(rankingMap)
