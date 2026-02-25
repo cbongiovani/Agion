@@ -688,8 +688,18 @@ export default function WarRoom() {
             </form>
           </DialogContent>
             </Dialog>
-          )}
-          </div>
+             {hasDraft && (
+               <Button 
+                 onClick={viewDraft}
+                 className={isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'}
+               >
+                 <Eye className="w-4 h-4 mr-2" />
+                 Ver Rascunho
+               </Button>
+             )}
+             </>
+            )}
+            </div>
       </div>
 
       {/* Guia de Boas Práticas */}
