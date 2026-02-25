@@ -49,7 +49,7 @@ export default function GestaoUsuarios() {
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '', email: '' });
-  const [formData, setFormData] = useState({ full_name: '', role: '' });
+  const [formData, setFormData] = useState({ full_name: '', role: '', supervisor_id: '' });
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [permissionsData, setPermissionsData] = useState({
     abas_visiveis: {
@@ -300,7 +300,7 @@ export default function GestaoUsuarios() {
   });
 
   const resetForm = () => {
-    setFormData({ full_name: '', role: '' });
+    setFormData({ full_name: '', role: '', supervisor_id: '' });
     setEditingUser(null);
     setIsDialogOpen(false);
   };
@@ -337,7 +337,8 @@ export default function GestaoUsuarios() {
     setEditingUser(user);
     setFormData({ 
       full_name: user.full_name || '',
-      role: user.role || 'user'
+      role: user.role || 'user',
+      supervisor_id: user.supervisor_id || ''
     });
     setIsDialogOpen(true);
   };
@@ -766,22 +767,45 @@ export default function GestaoUsuarios() {
                   onValueChange={(value) => setInviteData({ ...inviteData, role: value })}
                 >
                   <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                    <SelectItem value="admin">Coordenador</SelectItem>
-                    <SelectItem value="noc">NOC</SelectItem>
-                    {funcoesPersonalizadas.map((funcao) => (
-                      <SelectItem key={funcao.id} value={funcao.nome_funcao}>
-                        {funcao.label_exibicao}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="admin">Coordenador</SelectItem>
+                      <SelectItem value="noc">NOC</SelectItem>
+                      {funcoesPersonalizadas.map((funcao) => (
+                        <SelectItem key={funcao.id} value={funcao.nome_funcao}>
+                          {funcao.label_exibicao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  </div>
+                  {formData.role === 'supervisor' && (
+                  <div>
+                    <Label htmlFor="supervisor_id">Vincular ao Supervisor</Label>
+                    <Select
+                      value={formData.supervisor_id}
+                      onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
+                    >
+                      <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
+                        <SelectValue placeholder="Selecione um supervisor" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                        {supervisores.map((sup) => (
+                          <SelectItem key={sup.id} value={sup.id}>
+                            {sup.nome} ({sup.equipe})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-400 mt-2">
+                      Vinculando o usuário ao supervisor, os War Rooms criados serão contabilizados no painel de supervisores.
+                    </p>
+                  </div>
+                  )}
+                  <div className="flex justify-end gap-3 pt-4">
                 <Button 
                   type="button" 
                   variant="outline" 
