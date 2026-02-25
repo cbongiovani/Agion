@@ -78,6 +78,11 @@ export default function QuizzRelampago() {
     queryFn: () => base44.entities.RespostaQuizz.list(),
   });
 
+  const { data: todasPerguntas = [] } = useQuery({
+    queryKey: ['todasPerguntasQuizz'],
+    queryFn: () => base44.entities.PerguntaQuizz.list(),
+  });
+
   const createQuizzMutation = useMutation({
     mutationFn: async (data) => {
       const quizz = await base44.entities.QuizzRelampago.create(data.quizz);
@@ -455,25 +460,18 @@ Formato esperado:
 
   const jaParticipou = (quizzId) => {
     if (!currentUser) return false;
-    const respostasDoUsuario = todasRespostas.filter(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
-    const perguntasDoQuizz = quizzes.find(q => q.id === quizzId);
-    if (!perguntasDoQuizz) return false;
     
-    // Conta quantas perguntas tem o quizz
-    const totalPerguntas = respostasQuizz.filter(r => r.quizz_id === quizzId)
-      .reduce((acc, r) => {
-        if (!acc.includes(r.pergunta_id)) acc.push(r.pergunta_id);
-        return acc;
-      }, []).length;
+    // Buscar quantas perguntas tem o quizz
+    const perguntasDoQuizz = todasPerguntas.filter(p => p.quizz_id === quizzId);
+    if (perguntasDoQuizz.length === 0) return false;
     
-    // Se não há perguntas ainda registradas, verifica de forma simplificada
-    if (totalPerguntas === 0) {
-      return respostasDoUsuario.length > 0;
-    }
+    // Buscar respostas do usuário para este quizz
+    const respostasDoUsuario = todasRespostas.filter(
+      r => r.quizz_id === quizzId && r.usuario_id === currentUser.id
+    );
     
-    // Verifica se o usuário respondeu todas as perguntas
-    const perguntasRespondidas = [...new Set(respostasDoUsuario.map(r => r.pergunta_id))];
-    return perguntasRespondidas.length >= totalPerguntas;
+    // Se respondeu pelo menos o mesmo número de perguntas que o quizz tem, já participou
+    return respostasDoUsuario.length >= perguntasDoQuizz.length;
   };
 
   return (
