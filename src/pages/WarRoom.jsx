@@ -88,6 +88,11 @@ export default function WarRoom() {
     queryFn: () => base44.entities.Incidente.list('-data_inicio'),
   });
 
+  const { data: supervisores = [] } = useQuery({
+    queryKey: ['supervisores'],
+    queryFn: () => base44.entities.Supervisor.list(),
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const result = await base44.entities.Incidente.create(data);
