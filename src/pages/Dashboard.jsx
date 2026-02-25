@@ -52,32 +52,26 @@ export default function Dashboard() {
 
   const { data: fechamentos = [], isLoading: loadingFechamentos } = useQuery({
     queryKey: ['fechamentos'],
-    queryFn: () => base44.entities.FechamentoSemanal.list('-semana_inicio'),
+    queryFn: () => base44.entities.FechamentoSemanal.list('-semana_inicio', 12),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: atividades = [], isLoading: loadingAtividades } = useQuery({
     queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list('-data'),
-  });
-
-  const { data: supervisores = [] } = useQuery({
-    queryKey: ['supervisores'],
-    queryFn: () => base44.entities.Supervisor.list(),
+    queryFn: () => base44.entities.Atividade.list('-data', 100),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: analistas = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
-  });
-
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: rankingAnalistas = [] } = useQuery({
     queryKey: ['rankingAnalistas'],
-    queryFn: () => base44.entities.RankingAnalista.list('-pontos_total'),
+    queryFn: () => base44.entities.RankingAnalista.list('-pontos_total', 50),
+    staleTime: 5 * 60 * 1000,
   });
 
   const isLoading = loadingFechamentos || loadingAtividades;
