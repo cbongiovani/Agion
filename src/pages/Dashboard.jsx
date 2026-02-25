@@ -77,6 +77,11 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Analista.list(),
   });
 
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
   const isLoading = loadingFechamentos || loadingAtividades;
 
   // Calcular totais consolidados
@@ -88,10 +93,6 @@ export default function Dashboard() {
   }), { ligacoes: 0, chamados: 0, monitorias: 0, oneOnOne: 0 });
 
   // Dados por supervisor
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
-  });
 
   const dadosPorSupervisor = supervisores.map(sup => {
     const usuario = usuarios.find(u => u.email === sup.usuario_email);
