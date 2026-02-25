@@ -590,28 +590,60 @@ export default function Atividades() {
                   </Select>
                 </div>
               </div>
-              <div>
-                <Label className="text-blue-400">Analista</Label>
-                <Select
-                  value={formData.analista_id}
-                  onValueChange={handleAnalistaChange}
-                  disabled={viewOnlyMode}
-                >
-                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#242424] border-gray-700">
-                    {analistas.map((an) => (
-                      <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.supervisor_id && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Supervisor: {getSupervisorNome(formData.supervisor_id)}
-                  </p>
-                )}
-              </div>
+              {currentUser?.role === 'admin' || currentUser?.role === 'supervisor' ? (
+                <div>
+                  <Label className="text-blue-400">Analista</Label>
+                  <Select
+                    value={formData.analista_id}
+                    onValueChange={handleAnalistaChange}
+                    disabled={viewOnlyMode}
+                  >
+                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#242424] border-gray-700">
+                      {analistas.map((an) => (
+                        <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.supervisor_id && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Supervisor: {getSupervisorNome(formData.supervisor_id)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-blue-400">Analista</Label>
+                  <Select
+                    value={formData.analista_id}
+                    onValueChange={(value) => {
+                      const analista = analistas.find(a => a.id === value);
+                      setFormData({
+                        ...formData,
+                        analista_id: value,
+                        supervisor_id: analista?.supervisor_id || ''
+                      });
+                    }}
+                    disabled={viewOnlyMode}
+                  >
+                    <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2" disabled={viewOnlyMode}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#242424] border-gray-700">
+                      {analistas.map((an) => (
+                        <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.supervisor_id && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Supervisor: {getSupervisorNome(formData.supervisor_id)}
+                    </p>
+                  )}
+                </div>
+              )}
               {formData.tipo === 'Monitoria Offline' && (
                 <MonitoriaOfflineForm
                   topicos={formData.topicos_monitoria_offline}
@@ -779,17 +811,19 @@ export default function Atividades() {
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Select value={filters.supervisor_id} onValueChange={(value) => setFilters({ ...filters, supervisor_id: value, analista_id: '' })}>
-            <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
-              <SelectValue placeholder="Supervisor" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#242424] border-gray-700">
-              <SelectItem value={null}>Todos</SelectItem>
-              {supervisores.map((sup) => (
-                <SelectItem key={sup.id} value={sup.id}>{sup.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+           {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+             <Select value={filters.supervisor_id} onValueChange={(value) => setFilters({ ...filters, supervisor_id: value, analista_id: '' })}>
+               <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
+                 <SelectValue placeholder="Supervisor" />
+               </SelectTrigger>
+               <SelectContent className="bg-[#242424] border-gray-700">
+                 <SelectItem value={null}>Todos</SelectItem>
+                 {supervisores.map((sup) => (
+                   <SelectItem key={sup.id} value={sup.id}>{sup.nome}</SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
+           )}
           <Select value={filters.analista_id} onValueChange={(value) => setFilters({ ...filters, analista_id: value })}>
             <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
               <SelectValue placeholder="Analista" />
