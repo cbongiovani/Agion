@@ -77,6 +77,7 @@ export default function Layout({ children }) {
       { name: 'Ranking', icon: Trophy, path: 'Ranking', permKey: 'ranking', tooltip: 'Ranking de performance com gamificação MMORPG - Pontos e Medalhas' },
       { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago', tooltip: 'Testes rápidos de conhecimento com questões sobre processos técnicos' },
       { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', permKey: 'avaliacoes', tooltip: 'Avaliações periódicas (AT) estruturadas com 20 questões por período' },
+      { name: 'Certificados', icon: Award, path: 'Certificados', permKey: 'certificados', tooltip: 'Gerenciar certificados e cursos realizados por analistas e supervisores' },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room', tooltip: 'Gerenciamento de incidentes críticos com rastreamento de atividades' },
       { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', permKey: 'manual_supervisor', tooltip: 'Base de conhecimento e orientações para supervisores' },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', permKey: 'gestao_usuarios', tooltip: 'Convites, permissões e funções personalizadas do painel' },

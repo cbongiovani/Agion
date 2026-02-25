@@ -59,6 +59,9 @@ export default function GestaoUsuarios() {
       supervisores: false,
       analistas: false,
       ranking: true,
+      quizz_relampago: true,
+      avaliacoes: false,
+      certificados: false,
       war_room: false,
       manual_supervisor: false,
       gestao_usuarios: false,
@@ -419,41 +422,43 @@ export default function GestaoUsuarios() {
     const userPermissions = permissoes.find(p => p.usuario_email === user.email);
     
     if (userPermissions) {
-      setPermissionsData({
-        abas_visiveis: userPermissions.abas_visiveis || {
-          dashboard: false,
-          atividades: false,
-          fechamento_semanal: false,
-          supervisores: false,
-          analistas: false,
-          ranking: true,
-          quizz_relampago: true,
-          avaliacoes: false,
-          war_room: false,
-          manual_supervisor: false,
-          gestao_usuarios: false,
-          logs: false
-        },
+       setPermissionsData({
+         abas_visiveis: userPermissions.abas_visiveis || {
+           dashboard: false,
+           atividades: false,
+           fechamento_semanal: false,
+           supervisores: false,
+           analistas: false,
+           ranking: true,
+           quizz_relampago: true,
+           avaliacoes: false,
+           certificados: false,
+           war_room: false,
+           manual_supervisor: false,
+           gestao_usuarios: false,
+           logs: false
+         },
         permissoes_atividades: userPermissions.permissoes_atividades || { visualizar: false, criar: false, editar: false, deletar: false },
         permissoes_fechamento: userPermissions.permissoes_fechamento || { visualizar: false, criar: false, editar: false, deletar: false },
         permissoes_warroom: userPermissions.permissoes_warroom || { visualizar: false, criar: false, editar: false, deletar: false }
       });
     } else {
-      setPermissionsData({
-        abas_visiveis: {
-          dashboard: false,
-          atividades: false,
-          fechamento_semanal: false,
-          supervisores: false,
-          analistas: false,
-          ranking: true,
-          quizz_relampago: true,
-          avaliacoes: false,
-          war_room: false,
-          manual_supervisor: false,
-          gestao_usuarios: false,
-          logs: false
-        },
+       setPermissionsData({
+         abas_visiveis: {
+           dashboard: false,
+           atividades: false,
+           fechamento_semanal: false,
+           supervisores: false,
+           analistas: false,
+           ranking: true,
+           quizz_relampago: true,
+           avaliacoes: false,
+           certificados: false,
+           war_room: false,
+           manual_supervisor: false,
+           gestao_usuarios: false,
+           logs: false
+         },
         permissoes_atividades: { visualizar: false, criar: false, editar: false, deletar: false },
         permissoes_fechamento: { visualizar: false, criar: false, editar: false, deletar: false },
         permissoes_warroom: { visualizar: false, criar: false, editar: false, deletar: false }
@@ -1111,6 +1116,7 @@ export default function GestaoUsuarios() {
                   { key: 'ranking', label: 'Ranking' },
                   { key: 'quizz_relampago', label: 'Quizz Relâmpago' },
                   { key: 'avaliacoes', label: 'Avaliações' },
+                  { key: 'certificados', label: 'Certificados' },
                   { key: 'war_room', label: 'War Room' },
                   { key: 'manual_supervisor', label: 'Manual do Supervisor' },
                   { key: 'gestao_usuarios', label: 'Gestão de Usuários' },
