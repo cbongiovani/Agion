@@ -20,6 +20,7 @@ export default function QuizzRelampago() {
   const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'participate', 'results'
   const [deleteQuizzId, setDeleteQuizzId] = useState(null);
   const [deletePerguntaId, setDeletePerguntaId] = useState(null);
+  const [deleteParticipanteData, setDeleteParticipanteData] = useState(null);
   
   const [quizzForm, setQuizzForm] = useState({
     titulo: '',
@@ -155,7 +156,27 @@ export default function QuizzRelampago() {
     },
   });
 
+  const deleteParticipanteMutation = useMutation({
+    mutationFn: async ({ quizzId, analistaId }) => {
+      const respostas = await base44.entities.RespostaQuizz.filter({ 
+        quizz_id: quizzId, 
+        analista_id: analistaId 
+      });
+      
+      for (const resposta of respostas) {
+        await base44.entities.RespostaQuizz.delete(resposta.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['respostasQuizz'] });
+      queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
+      toast.success('Participação removida! O analista pode participar novamente.');
+      setDeleteParticipanteData(null);
+    },
+  });
+
   const isCoordOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
+  const isCoord = currentUser?.role === 'admin';
   const isAnalista = currentUser?.role === 'user';
 
   const handleCreateQuizz = () => {
@@ -716,32 +737,47 @@ Formato esperado:
               {ranking.length > 0 ? (
                 <div className="space-y-3">
                   {ranking.map((participante, index) => (
-                    <div key={participante.analista_id} className={`flex items-center gap-4 p-4 rounded-lg border ${
-                      index === 0 ? 'bg-yellow-500/10 border-yellow-500/30' :
-                      index === 1 ? 'bg-gray-400/10 border-gray-400/30' :
-                      index === 2 ? 'bg-amber-600/10 border-amber-600/30' :
-                      'bg-[#1a1a1a] border-gray-700'
-                    }`}>
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#0a0a0a]">
-                        {index === 0 && <Award className="w-6 h-6 text-yellow-400" />}
-                        {index === 1 && <Award className="w-6 h-6 text-gray-400" />}
-                        {index === 2 && <Award className="w-6 h-6 text-amber-600" />}
-                        {index > 2 && <span className="text-gray-400 font-bold">{index + 1}º</span>}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white font-semibold">{getAnalistaNome(participante.analista_id)}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                          <span className="flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4 text-green-400" />
-                            {participante.acertos} acertos
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            {participante.tempoTotal.toFixed(1)}s
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                   <div key={participante.analista_id} className={`flex items-center gap-4 p-4 rounded-lg border ${
+                     index === 0 ? 'bg-yellow-500/10 border-yellow-500/30' :
+                     index === 1 ? 'bg-gray-400/10 border-gray-400/30' :
+                     index === 2 ? 'bg-amber-600/10 border-amber-600/30' :
+                     'bg-[#1a1a1a] border-gray-700'
+                   }`}>
+                     <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#0a0a0a]">
+                       {index === 0 && <Award className="w-6 h-6 text-yellow-400" />}
+                       {index === 1 && <Award className="w-6 h-6 text-gray-400" />}
+                       {index === 2 && <Award className="w-6 h-6 text-amber-600" />}
+                       {index > 2 && <span className="text-gray-400 font-bold">{index + 1}º</span>}
+                     </div>
+                     <div className="flex-1">
+                       <p className="text-white font-semibold">{getAnalistaNome(participante.analista_id)}</p>
+                       <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
+                         <span className="flex items-center gap-1">
+                           <CheckCircle className="w-4 h-4 text-green-400" />
+                           {participante.acertos} acertos
+                         </span>
+                         <span className="flex items-center gap-1">
+                           <Clock className="w-4 h-4" />
+                           {participante.tempoTotal.toFixed(1)}s
+                         </span>
+                       </div>
+                     </div>
+                     {isCoord && (
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         onClick={() => setDeleteParticipanteData({
+                           quizzId: selectedQuizz.id,
+                           analistaId: participante.analista_id,
+                           nome: getAnalistaNome(participante.analista_id)
+                         })}
+                         className="text-red-400 hover:text-red-300"
+                         title="Remover participação"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </Button>
+                     )}
+                   </div>
                   ))}
                 </div>
               ) : (
@@ -830,6 +866,30 @@ Formato esperado:
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteParticipanteData} onOpenChange={() => setDeleteParticipanteData(null)}>
+        <AlertDialogContent className="bg-[#242424] border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Remover Participação?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Isso permitirá que <span className="font-semibold text-white">{deleteParticipanteData?.nome}</span> participe novamente deste quizz.
+              Todas as respostas anteriores serão excluídas permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteParticipanteMutation.mutate({
+                quizzId: deleteParticipanteData?.quizzId,
+                analistaId: deleteParticipanteData?.analistaId
+              })}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remover Participação
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
