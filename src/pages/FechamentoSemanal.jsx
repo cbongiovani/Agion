@@ -524,7 +524,6 @@ export default function FechamentoSemanal() {
             </Dialog>
           </div>
         )}
-      </div>
 
       {/* Alerta de supervisores sem fechamento */}
       {supervisoresSemFechamento.length > 0 && (
