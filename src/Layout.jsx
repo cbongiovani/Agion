@@ -19,7 +19,8 @@ import {
   Info,
   Zap,
   HelpCircle,
-  Award
+  Award,
+  CheckCircle2
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,17 @@ export default function Layout({ children }) {
     queryKey: ['pendingRequests'],
     queryFn: () => base44.entities.SolicitacaoFuncao.filter({ status: 'pendente' }),
     enabled: currentUser?.role === 'admin' || currentUser?.role === 'supervisor',
-    refetchInterval: 30000, // Atualiza a cada 30 segundos
+    refetchInterval: 30000,
+  });
+
+  const { data: aprovacoesPendentes = [] } = useQuery({
+    queryKey: ['aprovacoesPendentes'],
+    queryFn: async () => {
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
+      return aprovacoes;
+    },
+    enabled: currentUser?.role === 'admin',
+    refetchInterval: 30000,
   });
 
   useEffect(() => {
@@ -81,6 +92,7 @@ export default function Layout({ children }) {
       { name: 'Certificados', icon: Award, path: 'Certificados', permKey: 'certificados', tooltip: 'Gerenciar certificados e cursos realizados por analistas e supervisores' },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room', tooltip: 'Gerenciamento de incidentes críticos com rastreamento de atividades' },
       { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', permKey: 'manual_supervisor', tooltip: 'Base de conhecimento e orientações para supervisores' },
+      { name: 'Aprovação', icon: CheckCircle2, path: 'Aprovacao', permKey: 'aprovacao', tooltip: 'Aprovação de atividades, avaliações e quizzes' },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', permKey: 'gestao_usuarios', tooltip: 'Convites, permissões e funções personalizadas do painel' },
       { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', permKey: 'logs', tooltip: 'Rastreamento de todas as ações realizadas no painel' },
     ];
@@ -204,6 +216,9 @@ export default function Layout({ children }) {
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     <span className="font-medium text-sm">{item.name}</span>
+                    {item.path === 'Aprovacao' && aprovacoesPendentes.length > 0 && (
+                      <div className="absolute right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    )}
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="bg-gray-900 text-gray-100 border-gray-700">
