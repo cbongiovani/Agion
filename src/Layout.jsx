@@ -125,18 +125,18 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-72 bg-[#0d0d0d] border-gray-800 border-r z-50 overflow-y-auto
+        fixed top-0 left-0 h-full w-72 bg-[#0d0d0d] border-gray-800 border-r z-50 flex flex-col
         transform transition-transform duration-300 ease-in-out
         lg:w-64 lg:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-6 border-b border-gray-800 lg:p-6 safe-top">
+        <div className="p-4 border-b border-gray-800 flex-shrink-0 safe-top">
           <div className="w-full flex items-center justify-between">
             <Link to={createPageUrl('Dashboard')} className="hover:opacity-80 transition-opacity" onClick={() => setMobileMenuOpen(false)}>
               <img 
                 src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
                 alt="Grupo Agion" 
-                className="h-10 w-auto cursor-pointer"
+                className="h-8 w-auto cursor-pointer"
               />
             </Link>
             <div className="flex items-center gap-2">
@@ -155,14 +155,14 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        <nav className="flex flex-col py-2">
+        <nav className="flex flex-col flex-1 overflow-y-auto py-1">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={createPageUrl(item.path)}
               onClick={() => setMobileMenuOpen(false)}
               className={`
-                flex items-center gap-3 px-6 py-4 transition-all duration-200 border-l-4 relative select-none min-h-[52px]
+                flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none
                 ${isActive(item.path) 
                   ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
                   : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent active:bg-[#151515]'
@@ -170,33 +170,33 @@ export default function Layout({ children }) {
               `}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium text-base">{item.name}</span>
+              <span className="font-medium text-sm">{item.name}</span>
             </Link>
           ))}
         </nav>
 
-        <div className="mt-auto border-t border-gray-800 p-4 space-y-2 safe-bottom">
+        <div className="border-t border-gray-800 p-3 space-y-1.5 flex-shrink-0 safe-bottom">
           <ClockWidget />
           <Link
             to={createPageUrl('MeuPerfil')}
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none min-h-[52px]"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none"
           >
-            <div className="w-10 h-10 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden flex-shrink-0">
               {currentUser?.foto_url ? (
                 <img src={currentUser.foto_url} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <UserIcon className="w-5 h-5 text-[#e74c3c]" />
+                <UserIcon className="w-4 h-4 text-[#e74c3c]" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-white truncate">{currentUser?.full_name || 'Meu Perfil'}</p>
+              <p className="font-medium text-xs text-white truncate">{currentUser?.full_name || 'Meu Perfil'}</p>
               <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
             </div>
             {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && pendingRequests.length > 0 && (
               <div className="relative flex-shrink-0">
-                <Bell className="w-5 h-5 text-[#ADF802]" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#e74c3c] rounded-full text-white text-xs flex items-center justify-center">
+                <Bell className="w-4 h-4 text-[#ADF802]" />
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#e74c3c] rounded-full text-white text-xs flex items-center justify-center">
                   {pendingRequests.length}
                 </span>
               </div>
@@ -208,20 +208,20 @@ export default function Layout({ children }) {
               setMobileMenuOpen(false);
             }}
             variant="ghost"
-            className="w-full justify-start gap-3 text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] select-none min-h-[52px]"
+            className="w-full justify-start gap-2 text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] select-none h-9 px-2"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium text-base">Sair</span>
+            <LogOut className="w-4 h-4" />
+            <span className="font-medium text-sm">Sair</span>
           </Button>
           <div 
             onClick={() => {
               window.open('https://www.grupoagion.com.br', '_blank');
               setMobileMenuOpen(false);
             }}
-            className="rounded-xl p-3 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20 hover:bg-gradient-to-r hover:from-[#ADF802]/10 hover:to-[#ADF802]/15 active:from-[#ADF802]/15 active:to-[#ADF802]/20 transition-colors cursor-pointer"
+            className="rounded-lg p-2 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20 hover:bg-gradient-to-r hover:from-[#ADF802]/10 hover:to-[#ADF802]/15 active:from-[#ADF802]/15 active:to-[#ADF802]/20 transition-colors cursor-pointer"
           >
-            <p className="text-xs font-medium text-gray-500">Grupo Agion</p>
-            <p className="text-sm font-bold mt-1 text-white">Painel de Governança - N1</p>
+            <p className="text-xs font-medium text-gray-500 leading-tight">Grupo Agion</p>
+            <p className="text-xs font-bold text-white leading-tight">Painel de Governança - N1</p>
           </div>
         </div>
       </aside>
