@@ -230,7 +230,11 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        <nav className="flex flex-col flex-1 overflow-y-auto py-1">
+        <nav 
+          ref={navRef}
+          className="flex flex-col flex-1 overflow-y-auto py-1 scrollbar-hide scroll-smooth"
+          onScroll={checkNavScroll}
+        >
           <TooltipProvider>
             {navItems.map((item) => (
               <Tooltip key={item.path}>
