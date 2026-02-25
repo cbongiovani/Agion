@@ -550,21 +550,29 @@ export default function Atividades() {
           <p className="text-gray-400 mt-1">Registre e gerencie as atividades do Suporte N1</p>
         </div>
         {canCreate && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { 
-            if (!open) { 
-              saveDraft(); 
-              resetForm(); 
-            } else {
-              loadDraft();
-            }
-            setIsDialogOpen(open); 
-          }}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-                <Plus className="w-4 h-4" />
-                Nova Atividade
+          <div className="flex gap-2">
+            {hasDraft() && (
+              <Button 
+                variant="outline"
+                onClick={loadDraft}
+                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+              >
+                Carregar Rascunho
               </Button>
-            </DialogTrigger>
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+              if (!open) { 
+                saveDraft(); 
+                resetForm(); 
+              }
+              setIsDialogOpen(open); 
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Atividade
+                </Button>
+              </DialogTrigger>
           <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingAtividade ? (viewOnlyMode ? 'Visualizar Atividade' : 'Editar Atividade') : 'Nova Atividade'}</DialogTitle>
