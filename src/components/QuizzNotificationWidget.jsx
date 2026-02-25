@@ -74,8 +74,7 @@ export default function QuizzNotificationWidget() {
             </div>
           </div>
 
-          {/* Brilho no hover */}
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-400/0 via-white/0 to-orange-400/0 group-hover:via-white/20 transition-all duration-300 pointer-events-none" />
+
         </div>
       </button>
     </div>
