@@ -504,14 +504,14 @@ export default function FechamentoSemanal() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-emerald-400" />
+                  <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-white">
                     {getSupervisorNome(fechamento.supervisor_id)}
                   </h3>
                   <p className="text-sm text-gray-400">
-                    {format(new Date(fechamento.semana_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(fechamento.semana_fim), "dd/MM/yyyy", { locale: ptBR })}
+                    {format(addDays(new Date(fechamento.semana_inicio), 1), "dd/MM/yyyy", { locale: ptBR })} - {format(addDays(new Date(fechamento.semana_fim), 1), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
                   {fechamento.analista_id && (
                     <p className="text-xs text-emerald-400 mt-1">
