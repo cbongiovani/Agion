@@ -1,4 +1,3 @@
-
 import { base44 } from '@/api/base44Client';
 
 /**
@@ -33,22 +32,32 @@ export async function notificarCoordenadores(tipo, titulo, mensagem, link = null
  */
 export async function notificarSupervisor(supervisorId, tipo, titulo, mensagem, link = null) {
   try {
-    const supervisor = await base44.entities.Supervisor.filter({ id: supervisorId });
-    if (supervisor.length > 0 && supervisor[0].usuario_email) {
-      const users = await base44.entities.User.filter({ email: supervisor[0].usuario_email });
-      if (users.length > 0) {
+    const supervisores = await base44.entities.Supervisor.list();
+    const supervisor = supervisores.find(s => s.id === supervisorId);
+    
+    if (supervisor && supervisor.usuario_email) {
+      const users = await base44.entities.User.list();
+      const usuario = users.find(u => u.email === supervisor.usuario_email);
+      
+      if (usuario) {
         await base44.entities.Notificacao.create({
-          destinatario_id: users[0].id,
+          destinatario_id: usuario.id,
           tipo,
           titulo,
           mensagem,
           link,
           lida: false,
         });
+        console.log('Notificação enviada para supervisor:', usuario.email);
+      } else {
+        console.warn('Usuário não encontrado para supervisor:', supervisor.usuario_email);
       }
+    } else {
+      console.warn('Supervisor não encontrado ou sem email vinculado:', supervisorId);
     }
   } catch (error) {
     console.error('Erro ao notificar supervisor:', error);
+    throw error;
   }
 }
 
