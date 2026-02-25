@@ -12,6 +12,7 @@ import { createPageUrl } from '@/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import OnlineUsersCounter from '@/components/OnlineUsersCounter';
 
 export default function MeuPerfil() {
   const queryClient = useQueryClient();
@@ -320,6 +321,13 @@ export default function MeuPerfil() {
               Solicitar Alteração
             </Button>
           </div>
+        </Card>
+      )}
+
+      {user.role === 'admin' && (
+        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Usuários Online</h3>
+          <OnlineUsersCounter currentUser={user} />
         </Card>
       )}
 
