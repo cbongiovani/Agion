@@ -876,9 +876,8 @@ export default function GestaoUsuarios() {
             </thead>
             <tbody>
               {sortedUsers.map((user) => {
-                const supervisorVinculado = user.supervisor_id ? supervisores.find(s => s.id === user.supervisor_id) : null;
-                const nomeExibicao = supervisorVinculado ? supervisorVinculado.nome : (user.full_name || '-');
-                const letraInicial = supervisorVinculado ? supervisorVinculado.nome.charAt(0) : (user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase());
+                const nomeExibicao = user.full_name || '-';
+                const letraInicial = user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase();
 
                 return (
                 <tr key={user.id} className="border-b border-[#1e3a5f]/50 hover:bg-[#1e3a5f]/30">
