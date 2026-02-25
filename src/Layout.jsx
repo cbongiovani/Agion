@@ -39,6 +39,10 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [abasDialogOpen, setAbasDialogOpen] = useState(false);
+  const [navScrollPosition, setNavScrollPosition] = useState(0);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [showScrollUp, setShowScrollUp] = useState(false);
+  const navRef = useRef(null);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
