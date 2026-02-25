@@ -101,6 +101,11 @@ export default function Certificados() {
       return;
     }
 
+    if (!currentUser?.email) {
+      toast.error('Erro: usuário não autenticado');
+      return;
+    }
+
     const analista = analistas.find(a => a.id === formData.analista_id);
     const supervisor = supervisores.find(s => s.id === formData.supervisor_id);
 
@@ -112,7 +117,7 @@ export default function Certificados() {
       supervisor_nome: supervisor?.nome || '',
       data_conclusao: formData.data_conclusao,
       certificado_url: formData.certificado_url,
-      registrado_por: currentUser?.email,
+      registrado_por: currentUser.email,
     });
   };
 
