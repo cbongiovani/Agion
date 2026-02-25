@@ -30,12 +30,8 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import StatCard from '@/components/ui/StatCard';
-import PerformanceBadge from '@/components/ui/PerformanceBadge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-
-const COLORS = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6'];
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
