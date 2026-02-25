@@ -46,6 +46,8 @@ export default function WarRoom() {
   const [deleteId, setDeleteId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [viewingIncidente, setViewingIncidente] = useState(null);
+  const [viewingDraft, setViewingDraft] = useState(null);
+  const [hasDraft, setHasDraft] = useState(false);
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
