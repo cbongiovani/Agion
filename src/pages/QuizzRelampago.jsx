@@ -54,14 +54,16 @@ export default function QuizzRelampago() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: quizzes = [] } = useQuery({
+  const { data: quizzes = [], isLoading: loadingQuizzes } = useQuery({
     queryKey: ['quizzRelampago'],
-    queryFn: () => base44.entities.QuizzRelampago.list('-created_date'),
+    queryFn: () => base44.entities.QuizzRelampago.list('-created_date', 50),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: analistas = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: perguntasQuizz = [] } = useQuery({
