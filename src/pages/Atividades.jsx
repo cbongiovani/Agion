@@ -32,7 +32,7 @@ import {
 import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X, Eye, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/lib/dateUtils';
+import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import NotaBadge from '@/components/ui/NotaBadge';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
