@@ -315,8 +315,43 @@ export default function Atividades() {
     setIsDialogOpen(false);
   };
 
+  const validarFormulario = () => {
+    const camposFaltando = [];
+    
+    // Validações obrigatórias
+    if (!formData.data) camposFaltando.push('Data');
+    if (!formData.tipo) camposFaltando.push('Tipo');
+    if (!formData.analista_id) camposFaltando.push('Analista');
+    
+    // Validações específicas por tipo
+    if (formData.tipo === 'Monitoria Offline') {
+      const topicoKeys = ['saudacao_padrao', 'validacao_loja', 'dominio_problema', 'comunicacao_direta', 'dominio_conclusao', 'tratou_respeito', 'teve_equilibrio', 'ruido_ambiente', 'retorno_loja', 'encerramento_padrao'];
+      const topicosFaltando = topicoKeys.filter(key => !formData.topicos_monitoria_offline[key]);
+      if (topicosFaltando.length > 0) camposFaltando.push('Tópicos de Monitoria Offline (todos devem ser preenchidos)');
+    } else if (formData.tipo === 'Monitoria Assistida') {
+      if (!formData.link_gravacao_teams) camposFaltando.push('Link da Gravação Teams');
+    } else if (formData.tipo === 'Chamados') {
+      if (!formData.ticket_acompanhado) camposFaltando.push('Ticket Acompanhado');
+    } else if (formData.tipo === 'Ligações') {
+      if (!formData.protocolo_gravacao) camposFaltando.push('Protocolo');
+    } else if (formData.tipo === 'Feedback Individual') {
+      if (!formData.tipo_feedback) camposFaltando.push('Tipo de Feedback');
+      if (!formData.nota) camposFaltando.push('Nota');
+    } else {
+      if (!formData.nota) camposFaltando.push('Nota');
+    }
+    
+    if (camposFaltando.length > 0) {
+      toast.error(`Campos obrigatórios faltando:\n${camposFaltando.map(c => `• ${c}`).join('\n')}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!validarFormulario()) return;
     
     let nota = parseFloat(formData.nota);
     
