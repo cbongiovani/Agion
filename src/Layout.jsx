@@ -92,11 +92,11 @@ export default function Layout({ children }) {
     
     // Para todos os outros usuários (incluindo funções personalizadas), verificar permissões
     if (permissoesUsuario?.abas_visiveis) {
-      return baseItems.filter(item => permissoesUsuario.abas_visiveis[item.permKey] === true);
+      return baseItems.filter(item => item.alwaysVisible || permissoesUsuario.abas_visiveis[item.permKey] === true);
     }
     
     // Se não tem permissões configuradas, mostrar apenas Ranking e Quizz Relâmpago
-    return baseItems.filter(item => item.permKey === 'ranking' || item.permKey === 'quizz_relampago');
+    return baseItems.filter(item => item.alwaysVisible || item.permKey === 'ranking');
   };
 
   const navItems = getNavItems();
