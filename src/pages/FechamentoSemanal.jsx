@@ -205,9 +205,19 @@ export default function FechamentoSemanal() {
           } else {
             localStorage.removeItem('draft_fechamento');
           }
+        } else {
+          toast.info('Nenhum rascunho disponível');
         }
       }
     } catch (err) {}
+  };
+
+  const hasDraft = () => {
+    const draft = localStorage.getItem('draft_fechamento');
+    if (!draft) return false;
+    const { timestamp } = JSON.parse(draft);
+    const hoursDiff = (Date.now() - timestamp) / (1000 * 60 * 60);
+    return hoursDiff < 24;
   };
 
   const clearDraft = () => {
