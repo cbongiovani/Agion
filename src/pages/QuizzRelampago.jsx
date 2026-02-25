@@ -858,13 +858,14 @@ Formato esperado:
                          </span>
                        </div>
                      </div>
-                     {isCoordOrSuper && (
+                     {isCoord && (
                        <Button
                          variant="ghost"
                          size="icon"
                          onClick={() => setDeleteParticipanteData({
                            quizzId: selectedQuizz.id,
                            analistaId: participante.analista_id,
+                           usuarioId: participante.usuario_id,
                            nome: getAnalistaNome(participante.analista_id, participante.usuario_id)
                          })}
                          className="text-red-400 hover:text-red-300"
