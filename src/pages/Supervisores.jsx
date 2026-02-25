@@ -175,7 +175,7 @@ export default function Supervisores() {
    const getSupervisorStats = (supervisorId) => {
      // Contar atividades por tipo deste supervisor
      const supervisorActivities = atividades.filter(a => a.supervisor_id === supervisorId);
-     
+
      const atividadesPorTipo = {
        'Chamados': supervisorActivities.filter(a => a.tipo === 'Chamados').length,
        'Ligações': supervisorActivities.filter(a => a.tipo === 'Ligações').length,
@@ -184,8 +184,8 @@ export default function Supervisores() {
        'Feedback Individual': supervisorActivities.filter(a => a.tipo === 'Feedback Individual').length,
      };
 
-     // Contar incidentes (war room) deste supervisor
-     const incidentesCount = incidentes.filter(i => i.registrado_por === supervisores.find(s => s.id === supervisorId)?.usuario_email).length;
+     // Contar incidentes (war room) deste supervisor - por supervisor_id direto (tempo real)
+     const incidentesCount = incidentes.filter(i => i.supervisor_id === supervisorId).length;
 
      // Contar fechamentos semanais do supervisor
      const fechamentosCount = fechamentos.filter(f => f.supervisor_id === supervisorId).length;

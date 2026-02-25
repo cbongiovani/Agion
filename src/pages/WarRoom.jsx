@@ -270,9 +270,12 @@ export default function WarRoom() {
     
     if (!validarFormulario()) return;
     
+    const supervisorDoCriador = supervisores.find(s => s.usuario_email === currentUser?.email);
+    
     const payload = {
       ...formData,
-      registrado_por: currentUser?.email || 'Sistema'
+      registrado_por: currentUser?.email || 'Sistema',
+      supervisor_id: supervisorDoCriador?.id || null
     };
     
     if (editingIncidente) {
