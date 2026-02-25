@@ -514,6 +514,14 @@ Formato esperado:
     return respostasParaEsteQuizz.length > 0;
   };
 
+  if (loadingQuizzes) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <QuizzReiDoSuporteWidget />
