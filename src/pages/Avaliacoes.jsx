@@ -18,6 +18,8 @@ export default function Avaliacoes() {
   const queryClient = useQueryClient();
   const [isGerarQuestaoOpen, setIsGerarQuestaoOpen] = useState(false);
   const [isGerarProvaOpen, setIsGerarProvaOpen] = useState(false);
+  const [isVisualizarOpen, setIsVisualizarOpen] = useState(false);
+  const [questaoVisualizar, setQuestaoVisualizar] = useState(null);
   const [arquivos, setArquivos] = useState([]);
   const [contexto, setContexto] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -225,6 +227,11 @@ Formato esperado:
     setContexto('');
     setCategoria('');
     setArquivos([]);
+  };
+
+  const abrirVisualizacao = (questao) => {
+    setQuestaoVisualizar(questao);
+    setIsVisualizarOpen(true);
   };
 
   const questoesAprovadas = questoes.filter(q => q.status === 'Aprovada').length;
@@ -567,6 +574,15 @@ Formato esperado:
                   </div>
                   
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => abrirVisualizacao(questao)}
+                      className="text-blue-400 hover:text-blue-300"
+                      title="Visualizar questão completa"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     {questao.status === 'Pendente' && (
                       <>
                         <Button
@@ -605,6 +621,125 @@ Formato esperado:
           </div>
         )}
       </div>
+
+      {/* Dialog de Visualização da Questão */}
+      <Dialog open={isVisualizarOpen} onOpenChange={setIsVisualizarOpen}>
+        <DialogContent className="bg-[#0d0d0d] border-gray-800 text-white max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-blue-400" />
+              Visualização Completa da Questão
+            </DialogTitle>
+          </DialogHeader>
+
+          {questaoVisualizar && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-3 py-1 rounded font-medium ${
+                  questaoVisualizar.status === 'Aprovada' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                  questaoVisualizar.status === 'Pendente' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                  'bg-red-500/20 text-red-400 border border-red-500/30'
+                }`}>
+                  {questaoVisualizar.status}
+                </span>
+                <span className={`text-xs px-3 py-1 rounded font-medium ${
+                  questaoVisualizar.dificuldade === 'Fácil' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                  questaoVisualizar.dificuldade === 'Média' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                  'bg-red-500/20 text-red-400 border border-red-500/30'
+                }`}>
+                  {questaoVisualizar.dificuldade}
+                </span>
+                <span className="text-xs px-3 py-1 rounded font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  {questaoVisualizar.categoria}
+                </span>
+              </div>
+
+              <div className="bg-[#1a1a1a] rounded-xl p-6 border border-gray-700">
+                <p className="font-semibold text-white text-lg mb-6">{questaoVisualizar.enunciado}</p>
+                
+                <div className="space-y-3">
+                  {['a', 'b', 'c', 'd'].map((letra) => (
+                    <div
+                      key={letra}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        questaoVisualizar.resposta_correta === letra.toUpperCase()
+                          ? 'bg-green-500/20 border-green-500'
+                          : 'bg-[#0a0a0a] border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className={`font-bold text-lg ${
+                          questaoVisualizar.resposta_correta === letra.toUpperCase()
+                            ? 'text-green-400'
+                            : 'text-[#ADF802]'
+                        }`}>
+                          {letra.toUpperCase()})
+                        </span>
+                        <span className={`text-base flex-1 ${
+                          questaoVisualizar.resposta_correta === letra.toUpperCase()
+                            ? 'text-white font-medium'
+                            : 'text-gray-300'
+                        }`}>
+                          {questaoVisualizar[`alternativa_${letra}`]}
+                        </span>
+                        {questaoVisualizar.resposta_correta === letra.toUpperCase() && (
+                          <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-gray-700">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-400">Resposta Correta:</span>
+                      <span className="ml-2 font-bold text-green-400">{questaoVisualizar.resposta_correta}</span>
+                    </div>
+                    {questaoVisualizar.fonte && (
+                      <div>
+                        <span className="text-gray-400">Fonte:</span>
+                        <span className="ml-2 text-gray-300">{questaoVisualizar.fonte}</span>
+                      </div>
+                    )}
+                  </div>
+                  {questaoVisualizar.criado_por && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Criado por: {questaoVisualizar.criado_por}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {questaoVisualizar.status === 'Pendente' && (
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => {
+                      aprovarQuestaoMutation.mutate({ id: questaoVisualizar.id, data: { status: 'Recusada' } });
+                      setIsVisualizarOpen(false);
+                    }}
+                    variant="outline"
+                    className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/20"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Recusar Questão
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      aprovarQuestaoMutation.mutate({ id: questaoVisualizar.id, data: { status: 'Aprovada' } });
+                      setIsVisualizarOpen(false);
+                    }}
+                    className="flex-1 bg-[#ADF802] hover:bg-[#9DE002] text-black font-bold"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Aprovar Questão
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
