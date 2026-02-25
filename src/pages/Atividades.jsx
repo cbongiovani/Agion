@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X, Eye, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import NotaBadge from '@/components/ui/NotaBadge';
@@ -37,6 +37,7 @@ import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
 import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 import { Checkbox } from '@/components/ui/checkbox';
+import { notificarCoordenadores, alertarAtividade } from '@/components/notificationHelper';
 
 const TIPOS = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', 'Feedback Individual'];
 const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
