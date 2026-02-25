@@ -81,6 +81,34 @@ export default function Layout({ children }) {
     document.documentElement.classList.add('dark');
   }, []);
 
+  const checkNavScroll = () => {
+    if (navRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = navRef.current;
+      setNavScrollPosition(scrollTop);
+      setShowScrollDown(scrollTop + clientHeight < scrollHeight);
+      setShowScrollUp(scrollTop > 0);
+    }
+  };
+
+  useEffect(() => {
+    const navElement = navRef.current;
+    if (navElement) {
+      navElement.addEventListener('scroll', checkNavScroll);
+      checkNavScroll();
+      return () => navElement.removeEventListener('scroll', checkNavScroll);
+    }
+  }, []);
+
+  const scrollNav = (direction) => {
+    if (navRef.current) {
+      const scrollAmount = 150;
+      navRef.current.scrollBy({
+        top: direction === 'down' ? scrollAmount : -scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const getNavItems = () => {
     const role = currentUser?.role;
     
