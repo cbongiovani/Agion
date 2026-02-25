@@ -118,11 +118,6 @@ export default function Dashboard() {
     );
   }
 
-  // Mostrar intro para NOC e Usuário
-  if (currentUser?.role === 'noc' || currentUser?.role === 'user') {
-    return <DashboardIntro />;
-  }
-
   return (
     <div className="space-y-8">
       {/* Header */}
