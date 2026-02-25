@@ -272,45 +272,41 @@ export default function Layout({ children }) {
 
       {/* Footer - Desktop and Mobile */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50 safe-bottom">
-        <div className="flex items-center justify-start gap-6 min-h-[80px]">
-          {/* Widgets */}
-          <div className="flex items-center gap-4">
-            <QuizzNotificationWidget />
-            <div className="hidden lg:block h-8 w-px bg-gray-700"></div>
+        <div className="flex items-center justify-between px-4 py-2 gap-4">
+          {/* Widgets - Left Side */}
+          <div className="flex items-center gap-3 flex-1">
             <ClockWidget />
+            <div className="h-6 w-px bg-gray-700"></div>
+            <QuizzNotificationWidget />
           </div>
 
-          {/* User Info */}
-          <div className="flex-1 flex items-center justify-center px-4">
+          {/* User Info and Actions - Right Side */}
+          <div className="flex items-center gap-2">
             <Link
               to={createPageUrl('MeuPerfil')}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none"
             >
-              <div className="w-8 h-8 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {currentUser?.foto_url ? (
                   <img src={currentUser.foto_url} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <UserIcon className="w-4 h-4 text-[#e74c3c]" />
+                  <UserIcon className="w-3.5 h-3.5 text-[#e74c3c]" />
                 )}
               </div>
-              <span className="text-sm font-medium text-white">{currentUser?.full_name}</span>
             </Link>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
             {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && pendingRequests.length > 0 && (
-              <div className="relative flex items-center gap-2 px-3 py-2 bg-[#0a0a0a] rounded-lg">
-                <Bell className="w-4 h-4 text-[#ADF802]" />
+              <div className="relative flex items-center gap-1 px-2 py-1.5 bg-[#0a0a0a] rounded-lg">
+                <Bell className="w-3.5 h-3.5 text-[#ADF802]" />
                 <span className="text-xs font-medium text-white">{pendingRequests.length}</span>
               </div>
             )}
             <Button
               onClick={() => handleLogout()}
               variant="ghost"
-              className="justify-center gap-2 text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] select-none h-9 px-3 text-sm"
+              className="justify-center gap-2 text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] select-none h-8 px-3 text-xs"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
