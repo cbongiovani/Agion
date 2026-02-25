@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -45,6 +45,7 @@ export default function WarRoom() {
   const [editingIncidente, setEditingIncidente] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [viewingIncidente, setViewingIncidente] = useState(null);
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
@@ -668,6 +669,57 @@ export default function WarRoom() {
           </div>
       </div>
 
+      {/* Guia de Boas Práticas */}
+      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Classificação e Priorização
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Avaliar impacto e urgência imediatamente</li>
+              <li>• Definir prioridade baseada em matriz ITIL</li>
+              <li>• Documentar critérios de classificação</li>
+            </ul>
+          </div>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Comunicação
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Manter stakeholders informados</li>
+              <li>• Documentar todas as comunicações</li>
+              <li>• Definir canais de escalação claros</li>
+            </ul>
+          </div>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Resolução e Recuperação
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Focar na restauração rápida do serviço</li>
+              <li>• Aplicar workarounds quando necessário</li>
+              <li>• Validar resolução com usuários</li>
+            </ul>
+          </div>
+          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+              Pós-Incidente
+            </h4>
+            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li>• Realizar revisão pós-incidente (PIR)</li>
+              <li>• Identificar melhorias de processo</li>
+              <li>• Atualizar base de conhecimento</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Métricas ITIL */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
@@ -871,6 +923,15 @@ export default function WarRoom() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => setViewingIncidente(incidente)}
+                    className={isDark ? 'text-gray-400 hover:text-[#ADF802]' : 'text-gray-600 hover:text-green-600'}
+                    title="Visualizar detalhes"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => openEdit(incidente)}
                     className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}
                   >
@@ -919,6 +980,126 @@ export default function WarRoom() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Visualização */}
+      <Dialog open={!!viewingIncidente} onOpenChange={() => setViewingIncidente(null)}>
+        <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-4xl max-h-[90vh] overflow-y-auto`}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-[#ADF802]" />
+              Detalhes do Incidente
+            </DialogTitle>
+          </DialogHeader>
+          {viewingIncidente && (
+            <div className="space-y-6">
+              {/* Cabeçalho */}
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeveridadeColor(viewingIncidente.severidade)}`}>
+                    {viewingIncidente.severidade}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${isDark ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-300'}`}>
+                    {viewingIncidente.categoria}
+                  </span>
+                  <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${
+                    viewingIncidente.status === 'Fechado' || viewingIncidente.status === 'Resolvido' 
+                      ? isDark ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-green-100 text-green-800 border-green-300'
+                      : isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}>
+                    {getStatusIcon(viewingIncidente.status)}
+                    {viewingIncidente.status}
+                  </span>
+                </div>
+                <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {viewingIncidente.titulo}
+                </h3>
+              </div>
+
+              {/* Informações Gerais */}
+              <div className={`grid grid-cols-2 gap-4 p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                {viewingIncidente.unidade_afetada && (
+                  <div>
+                    <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Unidade Afetada:</p>
+                    <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingIncidente.unidade_afetada}</p>
+                  </div>
+                )}
+                {viewingIncidente.responsavel && (
+                  <div>
+                    <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Responsável:</p>
+                    <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingIncidente.responsavel}</p>
+                  </div>
+                )}
+                <div>
+                  <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Data/Hora de Início:</p>
+                  <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {format(new Date(viewingIncidente.data_inicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+                {viewingIncidente.data_resolucao && (
+                  <div>
+                    <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Data/Hora de Resolução:</p>
+                    <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {format(new Date(viewingIncidente.data_resolucao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>Descrição do Incidente:</p>
+                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingIncidente.descricao}</p>
+              </div>
+
+              {/* Impacto */}
+              {viewingIncidente.impacto && (
+                <div>
+                  <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>Impacto nos Serviços:</p>
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingIncidente.impacto}</p>
+                </div>
+              )}
+
+              {/* Linha do Tempo */}
+              {viewingIncidente.atividades && viewingIncidente.atividades.length > 0 && (
+                <div>
+                  <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+                    Linha do Tempo de Atividades ({viewingIncidente.atividades.length}):
+                  </p>
+                  <div className="space-y-2">
+                    {viewingIncidente.atividades.map((atividade, index) => (
+                      <div key={index} className={`flex items-start gap-3 p-3 rounded border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'}`}>
+                        <span className={`font-mono text-sm font-bold min-w-[60px] ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>
+                          {atividade.hora}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium min-w-[120px] text-center ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                          {atividade.setor}
+                        </span>
+                        <p className={`text-sm flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {atividade.acao}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ações Tomadas */}
+              {viewingIncidente.acoes_tomadas && (
+                <div>
+                  <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>Ações Tomadas:</p>
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingIncidente.acoes_tomadas}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-gray-800">
+                <Button onClick={() => setViewingIncidente(null)} className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-black' : 'bg-green-600 hover:bg-green-700 text-white'}>
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
