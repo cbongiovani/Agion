@@ -18,7 +18,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Settings, Loader2, Mail, Shield, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Settings, Loader2, Mail, Shield, Trash2, Lock } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -36,13 +37,32 @@ export default function GestaoUsuarios() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isInviteAnalistaOpen, setIsInviteAnalistaOpen] = useState(false);
+  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '', email: '' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
+  const [permissionsData, setPermissionsData] = useState({
+    abas_visiveis: {
+      dashboard: false,
+      atividades: false,
+      fechamento_semanal: false,
+      supervisores: false,
+      analistas: false,
+      ranking: true,
+      war_room: false,
+      manual_supervisor: false,
+      gestao_usuarios: false,
+      logs: false
+    },
+    permissoes_atividades: { visualizar: false, criar: false, editar: false, deletar: false },
+    permissoes_fechamento: { visualizar: false, criar: false, editar: false, deletar: false },
+    permissoes_warroom: { visualizar: false, criar: false, editar: false, deletar: false }
+  });
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -57,6 +77,16 @@ export default function GestaoUsuarios() {
   const { data: supervisores = [] } = useQuery({
     queryKey: ['supervisores'],
     queryFn: () => base44.entities.Supervisor.list(),
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: permissoes = [] } = useQuery({
+    queryKey: ['permissoes'],
+    queryFn: () => base44.entities.PermissaoUsuario.list(),
   });
 
   const updateMutation = useMutation({
@@ -159,6 +189,36 @@ export default function GestaoUsuarios() {
     },
   });
 
+  const savePermissionsMutation = useMutation({
+    mutationFn: async ({ userEmail, data }) => {
+      const existing = permissoes.find(p => p.usuario_email === userEmail);
+      const user = await base44.auth.me();
+      
+      if (existing) {
+        await base44.entities.PermissaoUsuario.update(existing.id, data);
+      } else {
+        await base44.entities.PermissaoUsuario.create({ usuario_email: userEmail, ...data });
+      }
+      
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'Usuário',
+        detalhes: `Atualizou permissões do usuário ${userEmail}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['permissoes'] });
+      toast.success('Permissões atualizadas com sucesso!');
+      setIsPermissionsDialogOpen(false);
+      setSelectedUserForPermissions(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar permissões: ' + error.message);
+    },
+  });
+
   const resetForm = () => {
     setFormData({ full_name: '', role: '' });
     setEditingUser(null);
@@ -241,6 +301,59 @@ export default function GestaoUsuarios() {
   const openDeleteDialog = (user) => {
     setUserToDelete(user);
     setDeleteUserOpen(true);
+  };
+
+  const openPermissionsDialog = (user) => {
+    setSelectedUserForPermissions(user);
+    const userPermissions = permissoes.find(p => p.usuario_email === user.email);
+    
+    if (userPermissions) {
+      setPermissionsData({
+        abas_visiveis: userPermissions.abas_visiveis || {
+          dashboard: false,
+          atividades: false,
+          fechamento_semanal: false,
+          supervisores: false,
+          analistas: false,
+          ranking: true,
+          war_room: false,
+          manual_supervisor: false,
+          gestao_usuarios: false,
+          logs: false
+        },
+        permissoes_atividades: userPermissions.permissoes_atividades || { visualizar: false, criar: false, editar: false, deletar: false },
+        permissoes_fechamento: userPermissions.permissoes_fechamento || { visualizar: false, criar: false, editar: false, deletar: false },
+        permissoes_warroom: userPermissions.permissoes_warroom || { visualizar: false, criar: false, editar: false, deletar: false }
+      });
+    } else {
+      setPermissionsData({
+        abas_visiveis: {
+          dashboard: false,
+          atividades: false,
+          fechamento_semanal: false,
+          supervisores: false,
+          analistas: false,
+          ranking: true,
+          war_room: false,
+          manual_supervisor: false,
+          gestao_usuarios: false,
+          logs: false
+        },
+        permissoes_atividades: { visualizar: false, criar: false, editar: false, deletar: false },
+        permissoes_fechamento: { visualizar: false, criar: false, editar: false, deletar: false },
+        permissoes_warroom: { visualizar: false, criar: false, editar: false, deletar: false }
+      });
+    }
+    
+    setIsPermissionsDialogOpen(true);
+  };
+
+  const handleSavePermissions = () => {
+    if (!selectedUserForPermissions) return;
+    savePermissionsMutation.mutate({
+      userEmail: selectedUserForPermissions.email,
+      data: permissionsData
+    });
   };
 
   if (isLoading) {
@@ -432,6 +545,17 @@ export default function GestaoUsuarios() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-1">
+                      {currentUser?.role === 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openPermissionsDialog(user)}
+                          className="text-gray-400 hover:text-[#ADF802]"
+                          title="Gerenciar Permissões"
+                        >
+                          <Lock className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -584,6 +708,145 @@ export default function GestaoUsuarios() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Permissions Dialog */}
+      <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
+        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-[#ADF802]" />
+              Gerenciar Permissões - {selectedUserForPermissions?.full_name || selectedUserForPermissions?.email}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Abas Visíveis */}
+            <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+              <h3 className="text-lg font-semibold text-white mb-4">Abas Visíveis no Sistema</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  { key: 'dashboard', label: 'Dashboard' },
+                  { key: 'atividades', label: 'Atividades' },
+                  { key: 'fechamento_semanal', label: 'Fechamento Semanal' },
+                  { key: 'supervisores', label: 'Supervisores' },
+                  { key: 'analistas', label: 'Analistas' },
+                  { key: 'ranking', label: 'Ranking' },
+                  { key: 'war_room', label: 'War Room' },
+                  { key: 'manual_supervisor', label: 'Manual do Supervisor' },
+                  { key: 'gestao_usuarios', label: 'Gestão de Usuários' },
+                  { key: 'logs', label: 'Logs do Sistema' }
+                ].map((aba) => (
+                  <div key={aba.key} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`aba_${aba.key}`}
+                      checked={permissionsData.abas_visiveis[aba.key]}
+                      onCheckedChange={(checked) => 
+                        setPermissionsData({
+                          ...permissionsData,
+                          abas_visiveis: { ...permissionsData.abas_visiveis, [aba.key]: checked }
+                        })
+                      }
+                    />
+                    <Label htmlFor={`aba_${aba.key}`} className="text-sm text-gray-300 cursor-pointer">
+                      {aba.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Permissões de Atividades */}
+            <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+              <h3 className="text-lg font-semibold text-white mb-4">Permissões - Atividades</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {['visualizar', 'criar', 'editar', 'deletar'].map((perm) => (
+                  <div key={perm} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`atividades_${perm}`}
+                      checked={permissionsData.permissoes_atividades[perm]}
+                      onCheckedChange={(checked) => 
+                        setPermissionsData({
+                          ...permissionsData,
+                          permissoes_atividades: { ...permissionsData.permissoes_atividades, [perm]: checked }
+                        })
+                      }
+                    />
+                    <Label htmlFor={`atividades_${perm}`} className="text-sm text-gray-300 cursor-pointer capitalize">
+                      {perm}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Permissões de Fechamento Semanal */}
+            <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+              <h3 className="text-lg font-semibold text-white mb-4">Permissões - Fechamento Semanal</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {['visualizar', 'criar', 'editar', 'deletar'].map((perm) => (
+                  <div key={perm} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`fechamento_${perm}`}
+                      checked={permissionsData.permissoes_fechamento[perm]}
+                      onCheckedChange={(checked) => 
+                        setPermissionsData({
+                          ...permissionsData,
+                          permissoes_fechamento: { ...permissionsData.permissoes_fechamento, [perm]: checked }
+                        })
+                      }
+                    />
+                    <Label htmlFor={`fechamento_${perm}`} className="text-sm text-gray-300 cursor-pointer capitalize">
+                      {perm}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Permissões de War Room */}
+            <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+              <h3 className="text-lg font-semibold text-white mb-4">Permissões - War Room</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {['visualizar', 'criar', 'editar', 'deletar'].map((perm) => (
+                  <div key={perm} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`warroom_${perm}`}
+                      checked={permissionsData.permissoes_warroom[perm]}
+                      onCheckedChange={(checked) => 
+                        setPermissionsData({
+                          ...permissionsData,
+                          permissoes_warroom: { ...permissionsData.permissoes_warroom, [perm]: checked }
+                        })
+                      }
+                    />
+                    <Label htmlFor={`warroom_${perm}`} className="text-sm text-gray-300 cursor-pointer capitalize">
+                      {perm}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#1e3a5f]">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsPermissionsDialogOpen(false)}
+              className="border-[#1e3a5f]"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSavePermissions}
+              className="bg-[#ADF802] hover:bg-[#9DE002] text-black font-bold"
+              disabled={savePermissionsMutation.isPending}
+            >
+              {savePermissionsMutation.isPending ? 'Salvando...' : 'Salvar Permissões'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
