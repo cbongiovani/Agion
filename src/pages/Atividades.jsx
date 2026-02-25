@@ -863,7 +863,11 @@ export default function Atividades() {
                     {getSupervisorNome(atividade.supervisor_id)}
                   </td>
                   <td className="px-6 py-4 text-gray-400">
-                    {getAnalistaNome(atividade.analista_id)}
+                    {(() => {
+                      const analista = analistas.find(a => a.id === atividade.analista_id);
+                      const usuario = usuarios.find(u => u.email === analista?.usuario_email);
+                      return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+                    })()}
                   </td>
                   <td className="px-6 py-4 text-gray-400 text-sm">
                     {(() => {
@@ -887,27 +891,6 @@ export default function Atividades() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-1">
-                      {currentUser?.role === 'admin' && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => alertarAtividadeMutation.mutate({ 
-                            atividade, 
-                            marcar: !atividade.alerta_coordenador 
-                          })}
-                          className={`min-w-[44px] min-h-[44px] ${
-                            atividade.alerta_coordenador 
-                              ? 'text-[#e74c3c] hover:text-[#c0392b]' 
-                              : 'text-gray-400 hover:text-[#e74c3c]'
-                          }`}
-                          title={atividade.alerta_coordenador ? 'Remover alerta' : 'Alertar supervisor'}
-                        >
-                          <AlertTriangle 
-                            className="w-4 h-4" 
-                            fill={atividade.alerta_coordenador ? '#e74c3c' : 'none'} 
-                          />
-                        </Button>
-                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -971,7 +954,13 @@ export default function Atividades() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Analista</span>
-                <span className="text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</span>
+                <span className="text-sm text-gray-300">
+                  {(() => {
+                    const analista = analistas.find(a => a.id === atividade.analista_id);
+                    const usuario = usuarios.find(u => u.email === analista?.usuario_email);
+                    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+                  })()}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Registrado Por</span>
@@ -997,27 +986,6 @@ export default function Atividades() {
             </div>
 
             <div className="flex justify-center gap-2">
-               {currentUser?.role === 'admin' && (
-                 <Button
-                   variant="outline"
-                   size="icon"
-                   onClick={() => alertarAtividadeMutation.mutate({ 
-                     atividade, 
-                     marcar: !atividade.alerta_coordenador 
-                   })}
-                   className={`border-gray-700 min-w-[44px] min-h-[44px] ${
-                     atividade.alerta_coordenador 
-                       ? 'text-[#e74c3c] hover:text-[#c0392b] bg-[#1a1a1a]' 
-                       : 'text-gray-400 hover:text-[#e74c3c]'
-                   }`}
-                   title={atividade.alerta_coordenador ? 'Remover alerta' : 'Alertar supervisor'}
-                 >
-                   <AlertTriangle 
-                     className="w-4 h-4" 
-                     fill={atividade.alerta_coordenador ? '#e74c3c' : 'none'} 
-                   />
-                 </Button>
-               )}
                <Button
                  variant="outline"
                  size="icon"
