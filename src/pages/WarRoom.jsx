@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import ExportButton from '@/components/ExportButton';
+import CallTranscriptionAnalyzer from '@/components/CallTranscriptionAnalyzer';
 import {
   Select,
   SelectContent,
@@ -225,6 +226,19 @@ export default function WarRoom() {
       setor: 'Suporte'
     });
     toast.success('Atividade adicionada!');
+  };
+
+  const handleActivitiesFromAnalysis = (extractedActivities) => {
+    const novasAtividades = extractedActivities.map(activity => ({
+      hora: activity.hora || format(new Date(), 'HH:mm'),
+      acao: activity.acao,
+      setor: activity.setor || 'Suporte'
+    }));
+    
+    setFormData({
+      ...formData,
+      atividades: [...(formData.atividades || []), ...novasAtividades]
+    });
   };
 
   const removerAtividade = (index) => {
@@ -550,7 +564,16 @@ export default function WarRoom() {
 
                 {/* Linha do Tempo de Atividades */}
                 <div className="md:col-span-2">
-                  <Label className="mb-3 block">Linha do Tempo de Atividades</Label>
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="block">Linha do Tempo de Atividades</Label>
+                    {!editingIncidente && (
+                      <CallTranscriptionAnalyzer 
+                        incidentId={editingIncidente?.id}
+                        onActivitiesExtracted={handleActivitiesFromAnalysis}
+                        isDark={isDark}
+                      />
+                    )}
+                  </div>
                   <div className={`border rounded-lg p-4 space-y-4 ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-300'}`}>
                     {/* Lista de Atividades Adicionadas */}
                     {formData.atividades && formData.atividades.length > 0 && (
