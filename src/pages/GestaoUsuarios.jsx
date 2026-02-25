@@ -1030,9 +1030,9 @@ export default function GestaoUsuarios() {
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
                   <SelectItem value={null}>Nenhum</SelectItem>
-                  {supervisores.map((sup) => (
-                    <SelectItem key={sup.id} value={sup.id}>
-                      {sup.nome} ({sup.equipe})
+                  {analistas.map((analista) => (
+                    <SelectItem key={analista.id} value={analista.id}>
+                      {analista.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
