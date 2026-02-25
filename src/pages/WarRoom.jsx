@@ -74,7 +74,12 @@ export default function WarRoom() {
   const isDark = document.documentElement.classList.contains('dark');
 
   useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
+    base44.auth.me().then(user => {
+      setCurrentUser(user);
+      if (user?.role === 'admin' || user?.role === 'supervisor') {
+        checkDraft();
+      }
+    }).catch(() => {});
   }, []);
 
   const { data: incidentes = [], isLoading } = useQuery({
