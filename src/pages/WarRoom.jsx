@@ -51,11 +51,19 @@ export default function WarRoom() {
     severidade: 'Média',
     categoria: 'Infraestrutura',
     status: 'Aberto',
+    unidade_afetada: '',
+    atividades: [],
     impacto: '',
     acoes_tomadas: '',
     responsavel: '',
     data_inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
     data_resolucao: '',
+  });
+
+  const [novaAtividade, setNovaAtividade] = useState({
+    hora: format(new Date(), 'HH:mm'),
+    acao: '',
+    setor: 'Suporte'
   });
 
   const isDark = document.documentElement.classList.contains('dark');
@@ -163,14 +171,45 @@ export default function WarRoom() {
       severidade: 'Média',
       categoria: 'Infraestrutura',
       status: 'Aberto',
+      unidade_afetada: '',
+      atividades: [],
       impacto: '',
       acoes_tomadas: '',
       responsavel: '',
       data_inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
       data_resolucao: '',
     });
+    setNovaAtividade({
+      hora: format(new Date(), 'HH:mm'),
+      acao: '',
+      setor: 'Suporte'
+    });
     setEditingIncidente(null);
     setIsDialogOpen(false);
+  };
+
+  const adicionarAtividade = () => {
+    if (!novaAtividade.acao.trim()) {
+      toast.error('Descreva a ação realizada');
+      return;
+    }
+    setFormData({
+      ...formData,
+      atividades: [...(formData.atividades || []), novaAtividade]
+    });
+    setNovaAtividade({
+      hora: format(new Date(), 'HH:mm'),
+      acao: '',
+      setor: 'Suporte'
+    });
+    toast.success('Atividade adicionada!');
+  };
+
+  const removerAtividade = (index) => {
+    setFormData({
+      ...formData,
+      atividades: formData.atividades.filter((_, i) => i !== index)
+    });
   };
 
   const handleSubmit = (e) => {
@@ -195,6 +234,8 @@ export default function WarRoom() {
       severidade: incidente.severidade,
       categoria: incidente.categoria,
       status: incidente.status,
+      unidade_afetada: incidente.unidade_afetada || '',
+      atividades: incidente.atividades || [],
       impacto: incidente.impacto || '',
       acoes_tomadas: incidente.acoes_tomadas || '',
       responsavel: incidente.responsavel || '',
@@ -454,6 +495,106 @@ export default function WarRoom() {
                   />
                 </div>
                 <div className="md:col-span-2">
+                  <Label>Unidade Afetada</Label>
+                  <Input
+                    value={formData.unidade_afetada}
+                    onChange={(e) => setFormData({ ...formData, unidade_afetada: e.target.value })}
+                    className={isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-white border-gray-300'}
+                    placeholder="Ex: TI - São Paulo, Suporte Nacional, etc."
+                  />
+                </div>
+
+                {/* Linha do Tempo de Atividades */}
+                <div className="md:col-span-2">
+                  <Label className="mb-3 block">Linha do Tempo de Atividades</Label>
+                  <div className={`border rounded-lg p-4 space-y-4 ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-300'}`}>
+                    {/* Lista de Atividades Adicionadas */}
+                    {formData.atividades && formData.atividades.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        {formData.atividades.map((atividade, index) => (
+                          <div key={index} className={`flex items-start gap-3 p-3 rounded border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'}`}>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`font-mono text-sm font-semibold ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>
+                                  {atividade.hora}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-xs ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                                  {atividade.setor}
+                                </span>
+                              </div>
+                              <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{atividade.acao}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removerAtividade(index)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Formulário de Nova Atividade */}
+                    <div className="grid grid-cols-12 gap-3">
+                      <div className="col-span-2">
+                        <Label className="text-xs">Hora</Label>
+                        <Input
+                          type="time"
+                          value={novaAtividade.hora}
+                          onChange={(e) => setNovaAtividade({ ...novaAtividade, hora: e.target.value })}
+                          className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                        />
+                      </div>
+                      <div className="col-span-6">
+                        <Label className="text-xs">Ação / Descrição</Label>
+                        <Input
+                          value={novaAtividade.acao}
+                          onChange={(e) => setNovaAtividade({ ...novaAtividade, acao: e.target.value })}
+                          className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}
+                          placeholder="Descreva a ação realizada..."
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="text-xs">Setor</Label>
+                        <Select
+                          value={novaAtividade.setor}
+                          onValueChange={(value) => setNovaAtividade({ ...novaAtividade, setor: value })}
+                        >
+                          <SelectTrigger className={isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-300'}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className={isDark ? 'bg-[#2a2a2a] border-gray-700' : 'bg-white border-gray-300'}>
+                            <SelectItem value="Suporte">Suporte</SelectItem>
+                            <SelectItem value="Redes">Redes</SelectItem>
+                            <SelectItem value="NOC">NOC</SelectItem>
+                            <SelectItem value="Segurança">Segurança</SelectItem>
+                            <SelectItem value="Sistemas">Sistemas</SelectItem>
+                            <SelectItem value="DevOps">DevOps</SelectItem>
+                            <SelectItem value="Gestão">Gestão</SelectItem>
+                            <SelectItem value="Fornecedor/Terceiro">Fornecedor/Terceiro</SelectItem>
+                            <SelectItem value="Outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-1 flex items-end">
+                        <Button
+                          type="button"
+                          onClick={adicionarAtividade}
+                          size="icon"
+                          className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-black' : 'bg-green-600 hover:bg-green-700 text-white'}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
                   <Label>Descrição do Incidente *</Label>
                   <Textarea
                     value={formData.descricao}
@@ -660,6 +801,11 @@ export default function WarRoom() {
                     {incidente.descricao}
                   </p>
                   <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    {incidente.unidade_afetada && (
+                      <div>
+                        <span className="font-semibold">Unidade Afetada:</span> {incidente.unidade_afetada}
+                      </div>
+                    )}
                     {incidente.impacto && (
                       <div>
                         <span className="font-semibold">Impacto:</span> {incidente.impacto}
@@ -679,6 +825,30 @@ export default function WarRoom() {
                       </div>
                     )}
                   </div>
+
+                  {/* Linha do Tempo de Atividades */}
+                  {incidente.atividades && incidente.atividades.length > 0 && (
+                    <div className={`mt-4 p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                      <p className={`text-xs font-semibold mb-3 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+                        Linha do Tempo de Atividades ({incidente.atividades.length}):
+                      </p>
+                      <div className="space-y-2">
+                        {incidente.atividades.map((atividade, index) => (
+                          <div key={index} className={`flex items-start gap-3 p-2 rounded ${isDark ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+                            <span className={`font-mono text-xs font-bold min-w-[50px] ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>
+                              {atividade.hora}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium min-w-[100px] text-center ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                              {atividade.setor}
+                            </span>
+                            <p className={`text-xs flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {atividade.acao}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {incidente.acoes_tomadas && (
                     <div className={`mt-3 p-3 rounded-lg border ${isDark ? 'bg-[#1a1a1a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
                       <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Ações Tomadas:</p>
