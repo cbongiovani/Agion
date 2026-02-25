@@ -443,21 +443,23 @@ export default function WarRoom() {
              />
            )}
            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
-             <Dialog open={isDialogOpen} onOpenChange={(open) => { 
-               if (!open) { 
-                 saveDraft(); 
-                 resetForm(); 
-               } else {
-                 loadDraft();
-               }
-               setIsDialogOpen(open); 
-             }}>
-               <DialogTrigger asChild>
-               <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
-                 <Plus className="w-4 h-4 mr-2" />
-                 Novo Incidente
-               </Button>
-               </DialogTrigger>
+              <>
+              <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+                if (!open) { 
+                  saveDraft(); 
+                  resetForm(); 
+                } else {
+                  resetForm();
+                  checkDraft();
+                }
+                setIsDialogOpen(open); 
+              }}>
+                <DialogTrigger asChild>
+                <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Incidente
+                </Button>
+                </DialogTrigger>
           <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
             <DialogHeader>
               <DialogTitle>{editingIncidente ? 'Editar Incidente' : 'Registrar Novo Incidente'}</DialogTitle>
