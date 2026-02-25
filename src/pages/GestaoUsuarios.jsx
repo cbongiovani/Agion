@@ -1033,7 +1033,7 @@ export default function GestaoUsuarios() {
                 }}
               >
                 <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
-                  <SelectValue placeholder="Selecione um supervisor (opcional)" />
+                  <SelectValue placeholder="Selecione um analista" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
                   <SelectItem value={null}>Nenhum</SelectItem>
