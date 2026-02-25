@@ -57,17 +57,17 @@ export default function QuizzNotificationWidget() {
             0%, 100% { transform: rotate(-2deg) translateX(-2px); }
             50% { transform: rotate(2deg) translateX(2px); }
           }
-          .quiz-widget { animation: swing 0.6s ease-in-out infinite; }
+          .quiz-widget { animation: swing 0.6s ease-in-out 4s; }
         `}</style>
 
         <div className="quiz-widget bg-gradient-to-r from-orange-500/30 to-red-500/30 border border-orange-500/50 rounded-lg p-3 hover:from-orange-500/40 hover:to-red-500/40 transition-all duration-300 transform origin-top">
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-orange-400 flex-shrink-0 animate-pulse" />
-            <div className="flex-1 text-left">
-              <p className="text-xs font-bold text-orange-300 uppercase truncate">
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-xs font-bold text-orange-300 uppercase break-words">
                 {quizzAtivo.titulo}
               </p>
-              <p className="text-xs text-orange-200 font-semibold">
+              <p className="text-xs text-orange-200 font-semibold break-words">
                 ⏱️ {timeLeft}
               </p>
             </div>
