@@ -327,7 +327,7 @@ export default function Aprovacao() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => aprovarMutation.mutate({ ...item, tipo: 'atividade' })}
+                          onClick={() => aprovarMutation.mutate({ ...item, tipo: 'warroom' })}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
                         >
@@ -341,19 +341,20 @@ export default function Aprovacao() {
                             setIsRejectDialogOpen(true);
                           }}
                           className="text-red-400 hover:text-red-300"
+                          disabled={rejeitarMutation.isPending}
                         >
                           <XCircle className="w-4 h-4" />
                         </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </TabsContent>
+                        </div>
+                        </div>
+                        );
+                        })}
+                        </div>
+                        )}
+                        </div>
+                        </TabsContent>
 
-        {/* Seção Avaliações */}
+                        {/* Seção Avaliações */}
         <TabsContent value="avaliacoes" className="space-y-6">
           {/* Avaliações */}
           <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
