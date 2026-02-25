@@ -121,6 +121,15 @@ export default function Atividades() {
         entidade: 'Atividade',
         detalhes: `Criou atividade do tipo "${data.tipo}" para o analista`,
       });
+      
+      const analista = analistas.find(a => a.id === data.analista_id);
+      await notificarCoordenadores(
+        'nova_atividade',
+        'Nova Atividade Registrada',
+        `${user.full_name} registrou atividade do tipo ${data.tipo} para ${analista?.nome || 'analista'}`,
+        'Atividades'
+      );
+      
       return result;
     },
     onMutate: async (newAtividade) => {
@@ -172,6 +181,18 @@ export default function Atividades() {
       toast.success('Atividade atualizada com sucesso!');
       clearDraft();
       resetForm();
+    },
+  });
+
+  const alertarAtividadeMutation = useMutation({
+    mutationFn: async (atividade) => {
+      const analista = analistas.find(a => a.id === atividade.analista_id);
+      await alertarAtividade(atividade.id, analista?.nome, atividade.supervisor_id);
+      await base44.entities.Atividade.update(atividade.id, { ...atividade, alerta_coordenador: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      toast.success('Alerta enviado ao supervisor!');
     },
   });
 
@@ -767,6 +788,22 @@ export default function Atividades() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-1">
+                      {currentUser?.role === 'admin' && !atividade.alerta_coordenador && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => alertarAtividadeMutation.mutate(atividade)}
+                          className="text-gray-400 hover:text-[#e74c3c] min-w-[44px] min-h-[44px]"
+                          title="Alertar supervisor sobre esta atividade"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {atividade.alerta_coordenador && (
+                        <div className="flex items-center justify-center min-w-[44px] min-h-[44px]">
+                          <AlertTriangle className="w-4 h-4 text-[#e74c3c]" fill="#e74c3c" />
+                        </div>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -851,6 +888,22 @@ export default function Atividades() {
             </div>
 
             <div className="flex justify-center gap-2">
+               {currentUser?.role === 'admin' && !atividade.alerta_coordenador && (
+                 <Button
+                   variant="outline"
+                   size="icon"
+                   onClick={() => alertarAtividadeMutation.mutate(atividade)}
+                   className="text-gray-400 hover:text-[#e74c3c] border-gray-700 min-w-[44px] min-h-[44px]"
+                   title="Alertar supervisor"
+                 >
+                   <AlertTriangle className="w-4 h-4" />
+                 </Button>
+               )}
+               {atividade.alerta_coordenador && (
+                 <div className="flex items-center justify-center min-w-[44px] min-h-[44px] border border-gray-700 rounded-md bg-[#1a1a1a]">
+                   <AlertTriangle className="w-4 h-4 text-[#e74c3c]" fill="#e74c3c" />
+                 </div>
+               )}
                <Button
                  variant="outline"
                  size="icon"
