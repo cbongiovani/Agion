@@ -201,7 +201,10 @@ export default function Aprovacao() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => aprovarMutation.mutate(item.id)}
+                          onClick={() => {
+                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
+                         aprovarMutation.mutate({ ...item, tipo });
+                       }}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
                         >
@@ -263,7 +266,10 @@ export default function Aprovacao() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => aprovarMutation.mutate(item.id)}
+                          onClick={() => {
+                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
+                         aprovarMutation.mutate({ ...item, tipo });
+                       }}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
                         >
@@ -324,7 +330,10 @@ export default function Aprovacao() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => aprovarMutation.mutate(item.id)}
+                          onClick={() => {
+                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
+                         aprovarMutation.mutate({ ...item, tipo });
+                       }}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
                         >
@@ -374,7 +383,10 @@ export default function Aprovacao() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => aprovarMutation.mutate(item.id)}
+                        onClick={() => {
+                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
+                         aprovarMutation.mutate({ ...item, tipo });
+                       }}
                         className="text-green-400 hover:text-green-300"
                         disabled={aprovarMutation.isPending}
                       >
@@ -421,7 +433,10 @@ export default function Aprovacao() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => aprovarMutation.mutate(item.id)}
+                        onClick={() => {
+                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
+                         aprovarMutation.mutate({ ...item, tipo });
+                       }}
                         className="text-green-400 hover:text-green-300"
                         disabled={aprovarMutation.isPending}
                       >
@@ -468,7 +483,10 @@ export default function Aprovacao() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => aprovarMutation.mutate(item.id)}
+                        onClick={() => {
+                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
+                         aprovarMutation.mutate({ ...item, tipo });
+                       }}
                         className="text-green-400 hover:text-green-300"
                         disabled={aprovarMutation.isPending}
                       >
