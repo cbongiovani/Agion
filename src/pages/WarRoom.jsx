@@ -70,7 +70,17 @@ export default function WarRoom() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Incidente.create(data),
+    mutationFn: async (data) => {
+      const result = await base44.entities.Incidente.create(data);
+      const user = await base44.auth.me();
+      await notificarCoordenadores(
+        'novo_incidente',
+        'Novo Incidente Registrado',
+        `${user.full_name} registrou incidente: ${data.titulo} (${data.severidade})`,
+        'WarRoom'
+      );
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
       toast.success('Incidente registrado com sucesso!');
