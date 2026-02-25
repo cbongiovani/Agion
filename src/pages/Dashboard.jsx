@@ -10,7 +10,9 @@ import {
   Activity,
   Calendar,
   FileDown,
-  Loader2
+  Loader2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
@@ -39,10 +41,21 @@ const COLORS = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6'];
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [expandedCharts, setExpandedCharts] = useState({
+    chamadosSupervisor: false,
+    ligacoesSupervisor: false,
+    evolucao: false,
+    distribuicao: false,
+    performance: false,
+  });
 
   useEffect(() => {
     base44.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
+
+  const toggleChart = (chartName) => {
+    setExpandedCharts(prev => ({ ...prev, [chartName]: !prev[chartName] }));
+  };
 
   const { data: fechamentos = [], isLoading: loadingFechamentos } = useQuery({
     queryKey: ['fechamentos'],
@@ -174,131 +187,201 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Gráficos */}
+      {/* Gráficos Expansíveis */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Chamados por Supervisor */}
-        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
-          <h3 className="text-lg font-semibold mb-6 text-white">Chamados por Supervisor</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dadosPorSupervisor}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
-              <YAxis stroke="#888" tick={{ fill: '#888' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                labelStyle={{ color: '#fff' }}
-                itemStyle={{ color: '#fff' }}
-              />
-              <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
+          <button
+            onClick={() => toggleChart('chamadosSupervisor')}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-white">Chamados por Supervisor</h3>
+            {expandedCharts.chamadosSupervisor ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          {expandedCharts.chamadosSupervisor && (
+            <div className="px-6 pb-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={dadosPorSupervisor}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
+                  <YAxis stroke="#888" tick={{ fill: '#888' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Ligações por Supervisor */}
-        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
-          <h3 className="text-lg font-semibold mb-6 text-white">Ligações por Supervisor</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dadosPorSupervisor}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
-              <YAxis stroke="#888" tick={{ fill: '#888' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                labelStyle={{ color: '#fff' }}
-                itemStyle={{ color: '#fff' }}
-              />
-              <Bar dataKey="ligacoes" fill="#e74c3c" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
+          <button
+            onClick={() => toggleChart('ligacoesSupervisor')}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-white">Ligações por Supervisor</h3>
+            {expandedCharts.ligacoesSupervisor ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          {expandedCharts.ligacoesSupervisor && (
+            <div className="px-6 pb-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={dadosPorSupervisor}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
+                  <YAxis stroke="#888" tick={{ fill: '#888' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Bar dataKey="ligacoes" fill="#e74c3c" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Evolução Semanal */}
-        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
-          <h3 className="text-lg font-semibold mb-6 text-white">Evolução Semanal</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={evolucaoPorSemana}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="semana" stroke="#888" tick={{ fill: '#888' }} />
-              <YAxis stroke="#888" tick={{ fill: '#888' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                labelStyle={{ color: '#fff' }}
-                itemStyle={{ color: '#fff' }}
-              />
-              <Legend />
-              <Line type="monotone" dataKey="ligacoes" stroke="#e74c3c" strokeWidth={2} name="Ligações" />
-              <Line type="monotone" dataKey="chamados" stroke="#3498db" strokeWidth={2} name="Chamados" />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
+          <button
+            onClick={() => toggleChart('evolucao')}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-white">Evolução Semanal</h3>
+            {expandedCharts.evolucao ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          {expandedCharts.evolucao && (
+            <div className="px-6 pb-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={evolucaoPorSemana}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="semana" stroke="#888" tick={{ fill: '#888' }} />
+                  <YAxis stroke="#888" tick={{ fill: '#888' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="ligacoes" stroke="#e74c3c" strokeWidth={2} name="Ligações" />
+                  <Line type="monotone" dataKey="chamados" stroke="#3498db" strokeWidth={2} name="Chamados" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Distribuição por Tipo */}
-        <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
-          <h3 className="text-lg font-semibold mb-6 text-white">Distribuição por Tipo de Atividade</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={distribuicaoTipo}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-              >
-                {distribuicaoTipo.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                itemStyle={{ color: '#fff' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
+          <button
+            onClick={() => toggleChart('distribuicao')}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-white">Distribuição por Tipo de Atividade</h3>
+            {expandedCharts.distribuicao ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          {expandedCharts.distribuicao && (
+            <div className="px-6 pb-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={distribuicaoTipo}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {distribuicaoTipo.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Top Analistas */}
-      <div className="rounded-2xl border p-6 bg-[#0d0d0d] border-gray-800">
-        <h3 className="text-lg font-semibold mb-6 text-white">Performance dos Analistas</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm border-b text-gray-400 border-gray-800">
-                <th className="pb-4 font-medium">Posição</th>
-                <th className="pb-4 font-medium">Analista</th>
-                <th className="pb-4 font-medium">Média</th>
-                <th className="pb-4 font-medium">Classificação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mediaPorAnalista.slice(0, 10).map((an, index) => (
-                <tr key={an.nome} className="border-b border-gray-800/50">
-                  <td className="py-4">
-                    <span className={`
-                      inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
-                      ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' : 
-                        index === 1 ? 'bg-gray-400/20 text-gray-300' :
-                        index === 2 ? 'bg-amber-600/20 text-amber-500' : 
-                        'bg-gray-800 text-gray-400'}
-                    `}>
-                      {index + 1}
-                    </span>
-                  </td>
-                  <td className="py-4 font-medium text-white">{an.nome}</td>
-                  <td className="py-4">
-                    <span className="font-semibold text-white">{an.media.toFixed(1)}</span>
-                  </td>
-                  <td className="py-4">
-                    <PerformanceBadge media={an.media} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
+        <button
+          onClick={() => toggleChart('performance')}
+          className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
+        >
+          <h3 className="text-lg font-semibold text-white">Performance dos Analistas</h3>
+          {expandedCharts.performance ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+        {expandedCharts.performance && (
+          <div className="px-6 pb-6">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm border-b text-gray-400 border-gray-800">
+                    <th className="pb-4 font-medium">Posição</th>
+                    <th className="pb-4 font-medium">Analista</th>
+                    <th className="pb-4 font-medium">Média</th>
+                    <th className="pb-4 font-medium">Classificação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mediaPorAnalista.slice(0, 10).map((an, index) => (
+                    <tr key={an.nome} className="border-b border-gray-800/50">
+                      <td className="py-4">
+                        <span className={`
+                          inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
+                          ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' : 
+                            index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                            index === 2 ? 'bg-amber-600/20 text-amber-500' : 
+                            'bg-gray-800 text-gray-400'}
+                        `}>
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className="py-4 font-medium text-white">{an.nome}</td>
+                      <td className="py-4">
+                        <span className="font-semibold text-white">{an.media.toFixed(1)}</span>
+                      </td>
+                      <td className="py-4">
+                        <PerformanceBadge media={an.media} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
