@@ -573,6 +573,7 @@ export default function GestaoUsuarios() {
           </DialogContent>
         </Dialog>
         </div>
+        </div>
 
         {/* Carrossel de Abas do Sistema */}
         <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
