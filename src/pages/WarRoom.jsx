@@ -971,6 +971,46 @@ export default function WarRoom() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog de Visualização de Rascunho */}
+      <Dialog open={!!viewingDraft} onOpenChange={() => setViewingDraft(null)}>
+        <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
+          <DialogHeader>
+            <DialogTitle>Visualizar Rascunho</DialogTitle>
+          </DialogHeader>
+          {viewingDraft && (
+            <div className="space-y-4">
+              <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Título:</p>
+                <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingDraft.titulo || '(Vazio)'}</p>
+              </div>
+              <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Severidade:</p>
+                <p className={`${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingDraft.severidade}</p>
+              </div>
+              <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</p>
+                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingDraft.descricao || '(Vazio)'}</p>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                <Button 
+                  variant="outline"
+                  onClick={() => setViewingDraft(null)}
+                  className={isDark ? 'border-gray-700' : 'border-gray-300'}
+                >
+                  Fechar
+                </Button>
+                <Button 
+                  onClick={() => { loadDraft(); setIsDialogOpen(true); }}
+                  className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-black' : 'bg-[#ADF802] hover:bg-[#9DE002] text-black'}
+                >
+                  Usar Rascunho
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog de Visualização */}
       <Dialog open={!!viewingIncidente} onOpenChange={() => setViewingIncidente(null)}>
         <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-4xl max-h-[90vh] overflow-y-auto`}>
