@@ -721,13 +721,13 @@ export default function WarRoom() {
             Pós-Incidente
             </h4>
             <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <li>• Realizar revisão pós-incidente (PIR)</li>
-              <li>• Identificar melhorias de processo</li>
-              <li>• Atualizar base de conhecimento</li>
+             <li>• Realizar revisão pós-incidente (PIR)</li>
+             <li>• Identificar melhorias de processo</li>
+             <li>• Atualizar base de conhecimento</li>
             </ul>
-          </div>
-        </div>
-        )}
+            </div>
+            </div>
+            )}
       </div>
 
       {/* Métricas ITIL */}
