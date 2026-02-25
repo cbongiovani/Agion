@@ -245,6 +245,12 @@ export default function QuizzRelampago() {
   };
 
   const iniciarParticipacao = (quizz) => {
+    // Verificar se já participou antes de iniciar
+    if (jaParticipou(quizz.id)) {
+      toast.error('Você já participou deste quizz!');
+      return;
+    }
+    
     setSelectedQuizz(quizz);
     setViewMode('participate');
     setParticipacaoState({
@@ -449,7 +455,25 @@ Formato esperado:
 
   const jaParticipou = (quizzId) => {
     if (!currentUser) return false;
-    return todasRespostas.some(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
+    const respostasDoUsuario = todasRespostas.filter(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
+    const perguntasDoQuizz = quizzes.find(q => q.id === quizzId);
+    if (!perguntasDoQuizz) return false;
+    
+    // Conta quantas perguntas tem o quizz
+    const totalPerguntas = respostasQuizz.filter(r => r.quizz_id === quizzId)
+      .reduce((acc, r) => {
+        if (!acc.includes(r.pergunta_id)) acc.push(r.pergunta_id);
+        return acc;
+      }, []).length;
+    
+    // Se não há perguntas ainda registradas, verifica de forma simplificada
+    if (totalPerguntas === 0) {
+      return respostasDoUsuario.length > 0;
+    }
+    
+    // Verifica se o usuário respondeu todas as perguntas
+    const perguntasRespondidas = [...new Set(respostasDoUsuario.map(r => r.pergunta_id))];
+    return perguntasRespondidas.length >= totalPerguntas;
   };
 
   return (
@@ -670,7 +694,7 @@ Formato esperado:
                   {(isAnalista || currentUser?.role === 'user') && jaParticipou(quizz.id) && (
                     <Button disabled className="flex-1 bg-gray-600 cursor-not-allowed">
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Já Participou
+                      Realizado
                     </Button>
                   )}
                   <Button onClick={() => visualizarResultados(quizz)} variant="outline" className="flex-1 border-gray-700">
