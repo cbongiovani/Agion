@@ -500,15 +500,24 @@ export default function Aprovacao() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes do Registro</DialogTitle>
+            <DialogTitle>Visualizar Registro</DialogTitle>
           </DialogHeader>
-          {selectedItem && (
+          {selectedItem?.data && (
             <div className="space-y-4">
-              <pre className="bg-[#0f1f35] rounded-lg p-4 text-sm overflow-auto max-h-96">
-                {JSON.stringify(selectedItem.data, null, 2)}
-              </pre>
+              <div className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(selectedItem.data).map(([key, value]) => (
+                    <div key={key} className="border-b border-[#1e3a5f] pb-3 last:border-0">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">{key.replace(/_/g, ' ')}</p>
+                      <p className="text-white font-medium mt-1 break-words">
+                        {typeof value === 'object' ? JSON.stringify(value) : String(value || '-')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
