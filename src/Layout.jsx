@@ -27,6 +27,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NotificationBell from '@/components/NotificationBell';
 import ClockWidget from '@/components/ClockWidget';
+import QuizzNotificationWidget from '@/components/QuizzNotificationWidget';
 import ManualPopup from '@/components/ManualPopup';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AbasCarrossel from '@/components/AbasCarrossel';
