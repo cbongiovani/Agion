@@ -42,21 +42,15 @@ const COLORS = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6'];
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
   const [expandedCharts, setExpandedCharts] = useState({
-    chamadosSupervisor: false,
-    ligacoesSupervisor: false,
-    evolucao: false,
-    distribuicao: false,
-    performance: false,
+    kpiTendencia: false,
+    okrProgresso: false,
   });
 
   useEffect(() => {
     base44.auth.me().then(user => {
-      window.location.href = createPageUrl('Home');
+      setCurrentUser(user);
     }).catch(() => {});
   }, []);
-
-  // Retorna null enquanto redireciona para evitar renderizar o dashboard
-  return null;
 
   const toggleChart = (chartName) => {
     setExpandedCharts(prev => ({ ...prev, [chartName]: !prev[chartName] }));
