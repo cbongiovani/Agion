@@ -47,9 +47,9 @@ export default function GestaoUsuarios() {
   const [funcaoToDelete, setFuncaoToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null);
-  const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
+  const [inviteData, setInviteData] = useState({ email: '', role: 'analyst' });
   const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '', email: '' });
-  const [formData, setFormData] = useState({ full_name: '', role: '', supervisor_id: '' });
+  const [formData, setFormData] = useState({ full_name: '', role: 'analyst', supervisor_id: '' });
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [permissionsData, setPermissionsData] = useState({
     abas_visiveis: {
@@ -301,7 +301,7 @@ export default function GestaoUsuarios() {
   });
 
   const resetForm = () => {
-    setFormData({ full_name: '', role: '', supervisor_id: '' });
+    setFormData({ full_name: '', role: 'analyst', supervisor_id: '' });
     setEditingUser(null);
     setIsDialogOpen(false);
   };
@@ -338,7 +338,7 @@ export default function GestaoUsuarios() {
     setEditingUser(user);
     setFormData({ 
       full_name: user.full_name || '',
-      role: user.role || 'user',
+      role: user.role || 'analyst',
       supervisor_id: user.supervisor_id || ''
     });
     setIsDialogOpen(true);
@@ -353,7 +353,7 @@ export default function GestaoUsuarios() {
     const colors = {
       admin: 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30',
       supervisor: 'bg-[#ADF802]/20 text-[#ADF802] border-[#ADF802]/30',
-      user: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      analyst: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       noc: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     };
     return colors[role] || colors.user;
@@ -368,7 +368,7 @@ export default function GestaoUsuarios() {
     const labels = {
       admin: 'Coordenador',
       supervisor: 'Supervisor',
-      user: 'Usuário',
+      analyst: 'Analista',
       noc: 'NOC',
     };
     return labels[role] || role;
@@ -614,9 +614,9 @@ export default function GestaoUsuarios() {
                     <div className="space-y-2">
                       {[
                         { role: 'admin', label: 'Coordenador' },
-                        { role: 'supervisor', label: 'Supervisor' },
-                        { role: 'user', label: 'Usuário' },
-                        { role: 'noc', label: 'NOC' }
+                          { role: 'supervisor', label: 'Supervisor' },
+                          { role: 'analyst', label: 'Analista' },
+                          { role: 'noc', label: 'NOC' }
                       ].map((funcao) => (
                         <div key={funcao.role} className="flex items-center justify-between p-3 bg-[#0a1628] rounded-lg border border-[#1e3a5f]/50">
                           <div className="flex items-center gap-3">
@@ -771,7 +771,7 @@ export default function GestaoUsuarios() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="analyst">Analista</SelectItem>
                       <SelectItem value="supervisor">Supervisor</SelectItem>
                       <SelectItem value="admin">Coordenador</SelectItem>
                       <SelectItem value="noc">NOC</SelectItem>
@@ -1007,7 +1007,7 @@ export default function GestaoUsuarios() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="analyst">Analista</SelectItem>
                   <SelectItem value="supervisor">Supervisor</SelectItem>
                   <SelectItem value="admin">Coordenador</SelectItem>
                   <SelectItem value="noc">NOC</SelectItem>
