@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Plus, Trophy, Clock, CheckCircle, XCircle, Pencil, Trash2, Eye, Play, Calendar, User, Award, Timer, Sparkles, Upload, X, Loader2 } from 'lucide-react';
+import { Zap, Plus, Trophy, Clock, CheckCircle, XCircle, Pencil, Trash2, Eye, Play, Calendar, User, Award, Timer, Sparkles, Upload, X, Loader2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
