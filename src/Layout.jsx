@@ -267,7 +267,10 @@ export default function Layout({ children }) {
           </TooltipProvider>
         </nav>
 
-        {/* Mobile Menu Footer - Removed, moved to footer */}
+        {/* Clock Widget - Bottom of Sidebar */}
+        <div className="p-3 border-t border-gray-800 flex-shrink-0 safe-bottom">
+          <ClockWidget />
+        </div>
       </aside>
 
       {/* Footer - Desktop and Mobile */}
