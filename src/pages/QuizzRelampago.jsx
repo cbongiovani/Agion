@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Zap, Plus, Trophy, Clock, CheckCircle, XCircle, Pencil, Trash2, Eye, Play, Calendar, User, Award, Timer, Sparkles, Upload, X, Loader2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import QuizzReiDoSuporteWidget from '@/components/QuizzReiDoSuporteWidget';
+import QuizzCarrosselTop3 from '@/components/QuizzCarrosselTop3';
 
 export default function QuizzRelampago() {
   const queryClient = useQueryClient();
