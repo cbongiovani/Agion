@@ -52,9 +52,7 @@ export default function Dashboard() {
   useEffect(() => {
     base44.auth.me().then(user => {
       setCurrentUser(user);
-      if (user?.role === 'user') {
-        window.location.href = createPageUrl('Home');
-      }
+      window.location.href = createPageUrl('Home');
     }).catch(() => {});
   }, []);
 
