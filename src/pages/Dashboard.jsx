@@ -247,29 +247,30 @@ export default function Dashboard() {
               
               <div className="space-y-4">
                 {okr.keyResults.map((kr, krIdx) => {
-                  const statusColor = kr.progresso >= 100 ? 'border-green-500/30' : kr.progresso >= 75 ? 'border-blue-500/30' : 'border-amber-500/30';
-                  
-                  return (
-                    <div key={krIdx} className={`border rounded-lg p-4 bg-[#1a1a1a] ${statusColor}`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <p className="text-sm text-gray-300 flex-1">{kr.resultado}</p>
-                        <span className="text-xs font-bold text-[#ADF802] ml-2">{kr.progresso.toFixed(0)}%</span>
-                      </div>
-                      
-                      <div className="w-full bg-gray-700 rounded-full h-2 mb-2 overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-[#ADF802] to-[#9DE002] h-full transition-all duration-300"
-                          style={{ width: `${Math.min(kr.progresso, 100)}%` }}
-                        />
-                      </div>
-                      
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>Atual: {kr.atual}</span>
-                        <span>Meta: {kr.meta}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                   const progresso = typeof kr.progresso === 'number' ? kr.progresso : 0;
+                   const statusColor = progresso >= 100 ? 'border-green-500/30' : progresso >= 75 ? 'border-blue-500/30' : 'border-amber-500/30';
+
+                   return (
+                     <div key={krIdx} className={`border rounded-lg p-4 bg-[#1a1a1a] ${statusColor}`}>
+                       <div className="flex items-start justify-between mb-2">
+                         <p className="text-sm text-gray-300 flex-1">{kr.resultado}</p>
+                         <span className="text-xs font-bold text-[#ADF802] ml-2">{Math.round(progresso)}%</span>
+                       </div>
+
+                       <div className="w-full bg-gray-700 rounded-full h-2 mb-2 overflow-hidden">
+                         <div 
+                           className="bg-gradient-to-r from-[#ADF802] to-[#9DE002] h-full transition-all duration-300"
+                           style={{ width: `${Math.min(progresso, 100)}%` }}
+                         />
+                       </div>
+
+                       <div className="flex justify-between text-xs text-gray-500">
+                         <span>Atual: {kr.atual}</span>
+                         <span>Meta: {kr.meta}</span>
+                       </div>
+                     </div>
+                   );
+                 })}
               </div>
             </div>
           ))}
