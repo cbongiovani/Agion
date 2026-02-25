@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle, Eye, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
