@@ -103,9 +103,16 @@ export default function Ranking() {
                  ativDate >= monthStart && 
                  ativDate <= monthEnd;
         });
-      } else {
-        // Total - todas as atividades
-        filteredAtividades = atividades.filter(a => a.analista_id === analista.id);
+      } else if (viewMode === 'anual') {
+        // Anual - apenas do ano atual
+        const yearStart = new Date(currentYear, 0, 1);
+        const yearEnd = new Date(currentYear, 11, 31);
+        filteredAtividades = atividades.filter(a => {
+          const ativDate = new Date(a.data);
+          return a.analista_id === analista.id && 
+                 ativDate >= yearStart && 
+                 ativDate <= yearEnd;
+        });
       }
 
       const totalAtividades = filteredAtividades.length;
