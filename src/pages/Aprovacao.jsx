@@ -85,7 +85,10 @@ export default function Aprovacao() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['aprovacoes', 'avaliacoes', 'questoes', 'quizzes'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['questoes'] });
+      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
       toast.success('Registro aprovado com sucesso!');
       setSelectedItem(null);
       setIsViewDialogOpen(false);
@@ -374,10 +377,7 @@ export default function Aprovacao() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
-                         aprovarMutation.mutate({ ...item, tipo });
-                       }}
+                        onClick={() => aprovarMutation.mutate({ ...item, tipo: 'avaliacao' })}
                         className="text-green-400 hover:text-green-300"
                         disabled={aprovarMutation.isPending}
                       >
@@ -392,6 +392,7 @@ export default function Aprovacao() {
                           setIsRejectDialogOpen(true);
                         }}
                         className="text-red-400 hover:text-red-300"
+                        disabled={rejeitarMutation.isPending}
                       >
                         <XCircle className="w-4 h-4" />
                       </Button>
@@ -424,10 +425,7 @@ export default function Aprovacao() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
-                         aprovarMutation.mutate({ ...item, tipo });
-                       }}
+                        onClick={() => aprovarMutation.mutate({ ...item, tipo: 'questao' })}
                         className="text-green-400 hover:text-green-300"
                         disabled={aprovarMutation.isPending}
                       >
@@ -474,10 +472,7 @@ export default function Aprovacao() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                         const tipo = item.periodo ? 'avaliacao' : item.enunciado ? 'questao' : 'quizz';
-                         aprovarMutation.mutate({ ...item, tipo });
-                       }}
+                        onClick={() => aprovarMutation.mutate({ ...item, tipo: 'avaliacao' })}
                         className="text-green-400 hover:text-green-300"
                         disabled={aprovarMutation.isPending}
                       >
@@ -492,6 +487,7 @@ export default function Aprovacao() {
                           setIsRejectDialogOpen(true);
                         }}
                         className="text-red-400 hover:text-red-300"
+                        disabled={rejeitarMutation.isPending}
                       >
                         <XCircle className="w-4 h-4" />
                       </Button>
