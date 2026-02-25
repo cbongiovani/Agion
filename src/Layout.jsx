@@ -17,10 +17,8 @@ import {
   Bell,
   BookOpen,
   Info,
-  Zap,
-  HelpCircle
+  Zap
 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
