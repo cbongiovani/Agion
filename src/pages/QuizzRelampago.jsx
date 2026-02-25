@@ -83,6 +83,11 @@ export default function QuizzRelampago() {
     queryFn: () => base44.entities.PerguntaQuizz.list(),
   });
 
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
   const createQuizzMutation = useMutation({
     mutationFn: async (data) => {
       const quizz = await base44.entities.QuizzRelampago.create(data.quizz);
@@ -339,7 +344,14 @@ export default function QuizzRelampago() {
     return ranking;
   };
 
-  const getAnalistaNome = (analistaId) => {
+  const getAnalistaNome = (analistaId, usuarioId) => {
+    // Primeiro tenta buscar pelo usuário ID para pegar o full_name
+    const usuario = usuarios.find(u => u.id === usuarioId);
+    if (usuario?.full_name) {
+      return usuario.full_name;
+    }
+    
+    // Fallback: busca o nome do analista
     const analista = analistas.find(a => a.id === analistaId);
     return analista?.nome || 'Usuário';
   };
@@ -776,7 +788,7 @@ Formato esperado:
                        {index > 2 && <span className="text-gray-400 font-bold">{index + 1}º</span>}
                      </div>
                      <div className="flex-1">
-                       <p className="text-white font-semibold">{getAnalistaNome(participante.analista_id)}</p>
+                       <p className="text-white font-semibold">{getAnalistaNome(participante.analista_id, participante.usuario_id)}</p>
                        <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                          <span className="flex items-center gap-1">
                            <CheckCircle className="w-4 h-4 text-green-400" />
@@ -795,7 +807,7 @@ Formato esperado:
                          onClick={() => setDeleteParticipanteData({
                            quizzId: selectedQuizz.id,
                            analistaId: participante.analista_id,
-                           nome: getAnalistaNome(participante.analista_id)
+                           nome: getAnalistaNome(participante.analista_id, participante.usuario_id)
                          })}
                          className="text-red-400 hover:text-red-300"
                          title="Remover participação"
