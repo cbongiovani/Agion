@@ -78,15 +78,20 @@ export default function ClockWidget() {
   };
 
   return (
-    <div className="bg-[#0f1f35] border border-gray-700 rounded-lg px-3 py-2 flex items-center gap-3 h-9">
-      <div className="flex items-center gap-1.5">
-        <Clock className="w-3.5 h-3.5 text-[#ADF802]" />
-        <span className="text-sm font-bold text-white tabular-nums">
-          {formatTime(dateTime)}
-        </span>
-        <span className="text-xs text-gray-400 ml-1">
-          {location}
-        </span>
+    <div className="bg-[#0f1f35] border border-gray-700 rounded-lg px-3 py-2 space-y-1.5 w-48">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-[#ADF802]" />
+          <span className="text-sm font-bold text-white tabular-nums">
+            {formatTime(dateTime)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <MapPin className="w-3 h-3 text-[#ADF802]" />
+          <span className="text-xs text-gray-400">
+            {location}
+          </span>
+        </div>
       </div>
       <div className="flex items-center gap-1.5">
         <Calendar className="w-3.5 h-3.5 text-gray-400" />
