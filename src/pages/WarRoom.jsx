@@ -780,57 +780,6 @@ export default function WarRoom() {
         </div>
       </div>
 
-      {/* Guia de Boas Práticas */}
-      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
-              <CheckCircle2 className="w-5 h-5" />
-              Classificação e Priorização
-            </h4>
-            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <li>• Avaliar impacto e urgência imediatamente</li>
-              <li>• Definir prioridade baseada em matriz ITIL</li>
-              <li>• Documentar critérios de classificação</li>
-            </ul>
-          </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
-              <CheckCircle2 className="w-5 h-5" />
-              Comunicação
-            </h4>
-            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <li>• Manter stakeholders informados</li>
-              <li>• Documentar todas as comunicações</li>
-              <li>• Definir canais de escalação claros</li>
-            </ul>
-          </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
-              <CheckCircle2 className="w-5 h-5" />
-              Resolução e Recuperação
-            </h4>
-            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <li>• Focar na restauração rápida do serviço</li>
-              <li>• Aplicar workarounds quando necessário</li>
-              <li>• Validar resolução com usuários</li>
-            </ul>
-          </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-            <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
-              <CheckCircle2 className="w-5 h-5" />
-              Pós-Incidente
-            </h4>
-            <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <li>• Realizar revisão pós-incidente (PIR)</li>
-              <li>• Identificar melhorias de processo</li>
-              <li>• Atualizar base de conhecimento</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
       {/* Lista de Incidentes */}
       {incidentes.length > 0 && (
         <div className="space-y-4">
