@@ -267,107 +267,58 @@ export default function Layout({ children }) {
           </TooltipProvider>
         </nav>
 
-        <div className="border-t border-gray-800 p-3 space-y-1.5 flex-shrink-0 safe-bottom">
-          <QuizzNotificationWidget />
-          <ClockWidget />
-          <Link
-            to={createPageUrl('MeuPerfil')}
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-2 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {currentUser?.foto_url ? (
-                <img src={currentUser.foto_url} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <UserIcon className="w-4 h-4 text-[#e74c3c]" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-xs text-white truncate">{currentUser?.full_name}</p>
-            </div>
-            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && pendingRequests.length > 0 && (
-              <div className="relative flex-shrink-0">
-                <Bell className="w-4 h-4 text-[#ADF802]" />
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#e74c3c] rounded-full text-white text-xs flex items-center justify-center">
-                  {pendingRequests.length}
-                </span>
-              </div>
-            )}
-          </Link>
-          <Button
-            onClick={() => {
-              handleLogout();
-              setMobileMenuOpen(false);
-            }}
-            variant="ghost"
-            className="w-full justify-start gap-2 text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] select-none h-9 px-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="font-medium text-sm">Sair</span>
-          </Button>
-          <div 
-            onClick={() => {
-              window.open('https://www.grupoagion.com.br', '_blank');
-              setMobileMenuOpen(false);
-            }}
-            className="rounded-lg p-2 border bg-gradient-to-r from-[#ADF802]/5 to-[#ADF802]/10 border-[#ADF802]/20 hover:bg-gradient-to-r hover:from-[#ADF802]/10 hover:to-[#ADF802]/15 active:from-[#ADF802]/15 active:to-[#ADF802]/20 transition-colors cursor-pointer"
-          >
-            <p className="text-xs font-medium text-gray-500 leading-tight">Grupo Agion</p>
-            <p className="text-xs font-bold text-white leading-tight">Painel de Governança - N1</p>
-          </div>
-        </div>
+        {/* Mobile Menu Footer - Removed, moved to footer */}
       </aside>
 
-      {/* Bottom Navigation - Mobile Only */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50 safe-bottom">
-        <div className="flex items-center justify-around px-2 py-2">
-            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
-              <>
-                <Link
-                  to={createPageUrl('Dashboard')}
-                  className={`flex flex-col items-center gap-1 py-2 px-2 rounded-lg transition-colors select-none min-w-[60px] min-h-[60px] justify-center active:bg-[#0a0a0a] ${
-                    isActive('Dashboard') ? 'text-[#ADF802] bg-[#0a0a0a]' : 'text-gray-400'
-                  }`}
-                >
-                  <LayoutDashboard className="w-6 h-6" />
-                  <span className="text-xs font-medium">Dashboard</span>
-                </Link>
-                <Link
-                  to={createPageUrl('Supervisores')}
-                  className={`flex flex-col items-center gap-1 py-2 px-2 rounded-lg transition-colors select-none min-w-[60px] min-h-[60px] justify-center active:bg-[#0a0a0a] ${
-                    isActive('Supervisores') ? 'text-[#ADF802] bg-[#0a0a0a]' : 'text-gray-400'
-                  }`}
-                >
-                  <Users className="w-6 h-6" />
-                  <span className="text-xs font-medium">Supervisores</span>
-                </Link>
-              </>
-            )}
-            <Link
-              to={createPageUrl('Ranking')}
-              className={`flex flex-col items-center gap-1 py-2 px-2 rounded-lg transition-colors select-none min-w-[60px] min-h-[60px] justify-center active:bg-[#0a0a0a] ${
-                isActive('Ranking') ? 'text-[#ADF802] bg-[#0a0a0a]' : 'text-gray-400'
-              }`}
-            >
-              <Trophy className="w-6 h-6" />
-              <span className="text-xs font-medium">Ranking</span>
-            </Link>
-            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') && (
-              <Link
-                to={createPageUrl('WarRoom')}
-                className={`flex flex-col items-center gap-1 py-2 px-2 rounded-lg transition-colors select-none min-w-[60px] min-h-[60px] justify-center active:bg-[#0a0a0a] ${
-                  isActive('WarRoom') ? 'text-[#ADF802] bg-[#0a0a0a]' : 'text-gray-400'
-                }`}
-              >
-                <AlertTriangle className="w-6 h-6" />
-                <span className="text-xs font-medium">War Room</span>
-              </Link>
-            )}
+      {/* Footer - Desktop and Mobile */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50 safe-bottom">
+        <div className="flex items-center justify-start gap-6 min-h-[80px]">
+          {/* Widgets */}
+          <div className="flex items-center gap-4">
+            <QuizzNotificationWidget />
+            <div className="hidden lg:block h-8 w-px bg-gray-700"></div>
+            <ClockWidget />
           </div>
-      </div>
+
+          {/* User Info */}
+          <div className="flex-1 flex items-center justify-center px-4">
+            <Link
+              to={createPageUrl('MeuPerfil')}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none"
+            >
+              <div className="w-8 h-8 rounded-full bg-[#e74c3c]/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {currentUser?.foto_url ? (
+                  <img src={currentUser.foto_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon className="w-4 h-4 text-[#e74c3c]" />
+                )}
+              </div>
+              <span className="text-sm font-medium text-white">{currentUser?.full_name}</span>
+            </Link>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && pendingRequests.length > 0 && (
+              <div className="relative flex items-center gap-2 px-3 py-2 bg-[#0a0a0a] rounded-lg">
+                <Bell className="w-4 h-4 text-[#ADF802]" />
+                <span className="text-xs font-medium text-white">{pendingRequests.length}</span>
+              </div>
+            )}
+            <Button
+              onClick={() => handleLogout()}
+              variant="ghost"
+              className="justify-center gap-2 text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] select-none h-9 px-3 text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
+        </div>
+      </footer>
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0 pb-20 lg:pb-0">
+      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0 pb-28 lg:pb-24">
         <div className="p-4 lg:p-8">
           {children}
         </div>
