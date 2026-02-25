@@ -76,7 +76,7 @@ export default function Layout({ children }) {
       { name: 'Supervisores', icon: Users, path: 'Supervisores', permKey: 'supervisores', tooltip: 'Gestão de equipes supervisoras e suas informações' },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', permKey: 'analistas', tooltip: 'Cadastro e acompanhamento de analistas N1' },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', permKey: 'ranking', tooltip: 'Ranking de performance com gamificação MMORPG - Pontos e Medalhas' },
-      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago', tooltip: 'Testes rápidos de conhecimento com questões sobre processos técnicos' },
+      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago', alwaysVisible: true, tooltip: 'Testes rápidos de conhecimento com questões sobre processos técnicos' },
       { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', permKey: 'avaliacoes', tooltip: 'Avaliações periódicas (AT) estruturadas com 20 questões por período' },
       { name: 'Certificados', icon: Award, path: 'Certificados', permKey: 'certificados', tooltip: 'Gerenciar certificados e cursos realizados por analistas e supervisores' },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room', tooltip: 'Gerenciamento de incidentes críticos com rastreamento de atividades' },
