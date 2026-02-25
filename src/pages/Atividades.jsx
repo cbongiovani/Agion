@@ -866,7 +866,10 @@ export default function Atividades() {
                     {getAnalistaNome(atividade.analista_id)}
                   </td>
                   <td className="px-6 py-4 text-gray-400 text-sm">
-                    {getUsuarioNome(atividade.registrado_por)}
+                    {(() => {
+                      const usuario = usuarios.find(u => u.email === atividade.registrado_por);
+                      return usuario?.nome_customizado || usuario?.full_name || atividade.registrado_por || '-';
+                    })()}
                   </td>
                   <td className="px-6 py-4">
                     <NotaBadge nota={atividade.nota} />
@@ -972,7 +975,12 @@ export default function Atividades() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Registrado Por</span>
-                <span className="text-sm text-gray-300">{getUsuarioNome(atividade.registrado_por)}</span>
+                <span className="text-sm text-gray-300">
+                  {(() => {
+                    const usuario = usuarios.find(u => u.email === atividade.registrado_por);
+                    return usuario?.nome_customizado || usuario?.full_name || atividade.registrado_por || '-';
+                  })()}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Status</span>
