@@ -148,13 +148,13 @@ export default function GestaoUsuarios() {
         usuario_nome: user.full_name,
         acao: 'Convidou Usuário',
         entidade: 'Usuário',
-        detalhes: `Convidou ${email} com função ${role === 'admin' ? 'Coordenador' : role === 'supervisor' ? 'Supervisor' : role === 'noc' ? 'NOC' : 'Usuário'}`,
+        detalhes: `Convidou ${email} com função ${role === 'admin' ? 'Coordenador' : role === 'supervisor' ? 'Supervisor' : role === 'noc' ? 'NOC' : 'Analista'}`,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Convite enviado com sucesso!');
-      setInviteData({ email: '', role: 'user' });
+      setInviteData({ email: '', role: 'analyst' });
       setIsInviteDialogOpen(false);
     },
     onError: (error) => {
@@ -165,7 +165,7 @@ export default function GestaoUsuarios() {
   const inviteAnalistaMutation = useMutation({
     mutationFn: async ({ email, analistaId }) => {
       const user = await base44.auth.me();
-      await base44.users.inviteUser(email, 'user');
+      await base44.users.inviteUser(email, 'analyst');
       await base44.entities.Analista.update(analistaId, { usuario_email: email });
       await base44.entities.Log.create({
         usuario_email: user.email,
@@ -271,10 +271,10 @@ export default function GestaoUsuarios() {
       const user = await base44.auth.me();
       const funcao = funcoesPersonalizadas.find(f => f.id === funcaoId);
       
-      // Buscar todos usuários com essa função e alterar para 'user'
+      // Buscar todos usuários com essa função e alterar para 'analyst'
       const usuariosComFuncao = users.filter(u => u.role === funcao.nome_funcao);
       for (const usuario of usuariosComFuncao) {
-        await base44.entities.User.update(usuario.id, { role: 'user' });
+        await base44.entities.User.update(usuario.id, { role: 'analyst' });
       }
       
       // Desativar a função ao invés de deletar
@@ -291,7 +291,7 @@ export default function GestaoUsuarios() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funcoes'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Função removida! Usuários afetados foram alterados para "Usuário".');
+      toast.success('Função removida! Usuários afetados foram alterados para "Analista".');
       setDeleteFuncaoOpen(false);
       setFuncaoToDelete(null);
     },
@@ -1109,7 +1109,7 @@ export default function GestaoUsuarios() {
             <AlertDialogDescription className="text-gray-400">
               Tem certeza que deseja remover a função <strong className="text-white">{funcaoToDelete?.label_exibicao}</strong>?
               <br /><br />
-              <strong className="text-yellow-400">ATENÇÃO:</strong> Todos os usuários com esta função serão automaticamente alterados para "Usuário".
+              <strong className="text-yellow-400">ATENÇÃO:</strong> Todos os usuários com esta função serão automaticamente alterados para "Analista".
               <br /><br />
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
