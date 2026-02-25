@@ -54,10 +54,11 @@ export default function QuizzNotificationWidget() {
         {/* Animação de balanço */}
         <style>{`
           @keyframes swing {
-            0%, 100% { transform: rotate(-2deg) translateX(-2px); }
-            50% { transform: rotate(2deg) translateX(2px); }
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-3deg); }
+            75% { transform: rotate(3deg); }
           }
-          .quiz-widget { animation: swing 0.6s ease-in-out 4s; }
+          .quiz-widget-icon { animation: swing 0.5s ease-in-out 2s; }
         `}</style>
 
         <div className="quiz-widget bg-gradient-to-r from-orange-500/30 to-red-500/30 border border-orange-500/50 rounded-lg p-3 hover:from-orange-500/40 hover:to-red-500/40 transition-all duration-300 transform origin-top">
