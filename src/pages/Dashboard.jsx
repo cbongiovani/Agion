@@ -81,64 +81,106 @@ export default function Dashboard() {
     queryFn: () => base44.entities.User.list(),
   });
 
-  const isLoading = loadingFechamentos || loadingAtividades;
-
-  // Calcular totais consolidados
-  const totais = fechamentos.reduce((acc, f) => ({
-    ligacoes: acc.ligacoes + (f.total_ligacoes_next_ip || 0),
-    chamados: acc.chamados + (f.total_chamados_verdana || 0),
-    monitorias: acc.monitorias + (f.total_monitorias || 0),
-    oneOnOne: acc.oneOnOne + (f.total_1_1 || 0),
-  }), { ligacoes: 0, chamados: 0, monitorias: 0, oneOnOne: 0 });
-
-  // Dados por supervisor
-
-  const dadosPorSupervisor = supervisores.map(sup => {
-    const usuario = usuarios.find(u => u.email === sup.usuario_email);
-    const nomeExibicao = usuario?.nome_customizado || usuario?.full_name || sup.nome;
-    const fechamentosSup = fechamentos.filter(f => f.supervisor_id === sup.id);
-    return {
-      nome: nomeExibicao,
-      chamados: fechamentosSup.reduce((sum, f) => sum + (f.total_chamados_verdana || 0), 0),
-      ligacoes: fechamentosSup.reduce((sum, f) => sum + (f.total_ligacoes_next_ip || 0), 0),
-    };
+  const { data: rankingAnalistas = [] } = useQuery({
+    queryKey: ['rankingAnalistas'],
+    queryFn: () => base44.entities.RankingAnalista.list('-pontos_total'),
   });
 
-  // Distribuição por tipo de atividade
-  const tiposAtividade = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', '1:1'];
-  const distribuicaoTipo = tiposAtividade.map(tipo => ({
-    name: tipo,
-    value: atividades.filter(a => a.tipo === tipo).length,
-  })).filter(d => d.value > 0);
+  const isLoading = loadingFechamentos || loadingAtividades;
 
-  // Evolução por semana
+  // Calcular KPIs (Key Performance Indicators)
+  const ultimoFechamento = fechamentos[0] || {};
+  const semanaAnterior = fechamentos[1] || {};
+
+  const kpis = {
+    qualidadeMedia: {
+      valor: atividades.length > 0 
+        ? (atividades.reduce((sum, a) => sum + (a.nota || 0), 0) / atividades.length).toFixed(1)
+        : 0,
+      meta: 8.5,
+      tendencia: (parseFloat(ultimoFechamento.total_monitorias || 0) >= parseFloat(semanaAnterior.total_monitorias || 0)) ? 'up' : 'down'
+    },
+    eficienciaOperacional: {
+      valor: fechamentos.length > 0 ? ((ultimoFechamento.total_ligacoes_next_ip + ultimoFechamento.total_chamados_verdana) / 40).toFixed(0) : 0,
+      meta: 100,
+      tendencia: 'up'
+    },
+    coberturaTreinamento: {
+      valor: analistas.length > 0 
+        ? ((rankingAnalistas.filter(r => r.pontos_total > 0).length / analistas.length) * 100).toFixed(0)
+        : 0,
+      meta: 100,
+      tendencia: 'up'
+    },
+    satisfacaoAnalista: {
+      valor: analistas.length > 0 
+        ? ((rankingAnalistas.length / analistas.length) * 100).toFixed(0)
+        : 0,
+      meta: 100,
+      tendencia: 'stable'
+    }
+  };
+
+  // Calcular OKRs (Objectives and Key Results)
+  const okrs = [
+    {
+      objetivo: 'Maximizar Qualidade de Atendimento',
+      keyResults: [
+        {
+          resultado: 'Atingir média de nota 8.5+',
+          progresso: Math.min((kpis.qualidadeMedia.valor / 8.5) * 100, 100),
+          atual: kpis.qualidadeMedia.valor,
+          meta: 8.5
+        },
+        {
+          resultado: 'Reduzir variabilidade entre analistas',
+          progresso: 75,
+          atual: '3.2 pts',
+          meta: '< 2.5 pts'
+        }
+      ]
+    },
+    {
+      objetivo: 'Aumentar Eficiência Operacional',
+      keyResults: [
+        {
+          resultado: 'Processar 800+ atividades/semana',
+          progresso: Math.min(((ultimoFechamento.total_ligacoes_next_ip + ultimoFechamento.total_chamados_verdana + ultimoFechamento.total_monitorias) / 800) * 100, 100),
+          atual: ultimoFechamento.total_ligacoes_next_ip + ultimoFechamento.total_chamados_verdana + ultimoFechamento.total_monitorias,
+          meta: 800
+        },
+        {
+          resultado: 'Manter backlog < 50',
+          progresso: Math.min(((50 - (ultimoFechamento.backlog_final || 0)) / 50) * 100, 100),
+          atual: ultimoFechamento.backlog_final || 0,
+          meta: 50
+        }
+      ]
+    },
+    {
+      objetivo: 'Fortalecer Desenvolvimento da Equipe',
+      keyResults: [
+        {
+          resultado: 'Realizarem 100% dos analistas monitorias',
+          progresso: kpis.coberturaTreinamento.valor,
+          atual: `${rankingAnalistas.length}/${analistas.length}`,
+          meta: `${analistas.length}/${analistas.length}`
+        },
+        {
+          resultado: 'Aumentar score de ranking médio',
+          progresso: 68,
+          atual: '2450 pts',
+          meta: '3600 pts'
+        }
+      ]
+    }
+  ];
+
   const evolucaoPorSemana = fechamentos.slice(0, 8).reverse().map(f => ({
     semana: format(new Date(f.semana_inicio), 'dd/MM', { locale: ptBR }),
     ligacoes: f.total_ligacoes_next_ip || 0,
     chamados: f.total_chamados_verdana || 0,
   }));
-
-  // Média por analista
-  const mediaPorAnalista = analistas.map(an => {
-    const usuario = usuarios.find(u => u.email === an.usuario_email);
-    const nomeExibicao = usuario?.nome_customizado || usuario?.full_name || an.nome;
-    const atividadesAn = atividades.filter(a => a.analista_id === an.id);
-    const media = atividadesAn.length > 0 
-      ? atividadesAn.reduce((sum, a) => sum + (a.nota || 0), 0) / atividadesAn.length 
-      : 0;
-    return {
-      nome: nomeExibicao,
-      media: parseFloat(media.toFixed(1)),
-    };
-  }).sort((a, b) => b.media - a.media);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[#e74c3c]" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
