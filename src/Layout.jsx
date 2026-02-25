@@ -56,6 +56,7 @@ export default function Layout({ children }) {
       { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'] },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin', 'supervisor'] },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
+      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', roles: ['admin', 'supervisor'] },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'noc'] },
       { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'] },
       { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
