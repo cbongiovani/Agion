@@ -305,7 +305,7 @@ export default function QuizzRelampago() {
 
   const getAnalistaNome = (analistaId) => {
     const analista = analistas.find(a => a.id === analistaId);
-    return analista?.nome || 'Analista';
+    return analista?.nome || 'Usuário';
   };
 
   const getStatusColor = (status) => {

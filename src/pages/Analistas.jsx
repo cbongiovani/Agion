@@ -277,6 +277,7 @@ export default function Analistas() {
             <thead>
               <tr className="text-left text-gray-400 text-sm border-b border-gray-800 bg-[#1a1a1a]">
                 <th className="px-6 py-4 font-medium">Analista</th>
+                <th className="px-6 py-4 font-medium">E-mail Vinculado</th>
                 <th className="px-6 py-4 font-medium">Supervisor</th>
                 <th className="px-6 py-4 font-medium">Atividades</th>
                 <th className="px-6 py-4 font-medium">Média</th>
@@ -298,6 +299,9 @@ export default function Analistas() {
                         </div>
                         <span className="text-white font-medium">{analista.nome}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-400">
+                      {analista.usuario_email || '-'}
                     </td>
                     <td className="px-6 py-4 text-gray-400">
                       {getSupervisorNome(analista.supervisor_id)}
@@ -361,6 +365,7 @@ export default function Analistas() {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold">{analista.nome}</h3>
+                    <p className="text-xs text-gray-500">{analista.usuario_email || 'Sem e-mail vinculado'}</p>
                     <p className="text-sm text-gray-400">{getSupervisorNome(analista.supervisor_id)}</p>
                   </div>
                 </div>
