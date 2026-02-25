@@ -815,7 +815,6 @@ export default function Atividades() {
             </Dialog>
           </div>
           )}
-          </div>
 
       {/* Filtros */}
       <div className="bg-[#242424] rounded-2xl border border-gray-800 p-4">
