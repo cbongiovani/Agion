@@ -63,6 +63,7 @@ import Ranking from './pages/Ranking';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
+import Certificados from './pages/Certificados';
 import __Layout from './Layout.jsx';
 
 
@@ -83,6 +84,7 @@ export const PAGES = {
     "RelatorioSemanal": RelatorioSemanal,
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
+    "Certificados": Certificados,
 }
 
 export const pagesConfig = {
