@@ -183,23 +183,31 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="flex flex-col flex-1 overflow-y-auto py-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={createPageUrl(item.path)}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`
-                flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none
-                ${isActive(item.path) 
-                  ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
-                  : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent active:bg-[#151515]'
-                }
-              `}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium text-sm">{item.name}</span>
-            </Link>
-          ))}
+          <TooltipProvider>
+            {navItems.map((item) => (
+              <Tooltip key={item.path}>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={createPageUrl(item.path)}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`
+                      flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none
+                      ${isActive(item.path) 
+                        ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
+                        : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent active:bg-[#151515]'
+                      }
+                    `}
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-medium text-sm">{item.name}</span>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-gray-900 text-gray-100 border-gray-700">
+                  {item.tooltip}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
         </nav>
 
         <div className="border-t border-gray-800 p-3 space-y-1.5 flex-shrink-0 safe-bottom">
