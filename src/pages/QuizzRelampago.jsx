@@ -346,13 +346,9 @@ export default function QuizzRelampago() {
   };
 
   const getAnalistaNome = (analistaId, usuarioId) => {
-    // Primeiro tenta buscar pelo usuário ID para pegar o full_name
     const usuario = usuarios.find(u => u.id === usuarioId);
-    if (usuario?.full_name) {
-      return usuario.full_name;
-    }
-    
-    // Fallback: busca o nome do analista
+    if (usuario?.nome_customizado) return usuario.nome_customizado;
+    if (usuario?.full_name) return usuario.full_name;
     const analista = analistas.find(a => a.id === analistaId);
     return analista?.nome || 'Usuário';
   };
