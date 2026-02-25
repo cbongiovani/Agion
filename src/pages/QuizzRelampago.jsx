@@ -799,7 +799,7 @@ Formato esperado:
                          </span>
                        </div>
                      </div>
-                     {isCoord && (
+                     {isCoordOrSuper && (
                        <Button
                          variant="ghost"
                          size="icon"
@@ -835,15 +835,15 @@ Formato esperado:
                       <p className="text-white font-medium">
                         {index + 1}. {pergunta.pergunta}
                       </p>
-                      {currentUser?.role === 'admin' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeletePerguntaId(pergunta.id)}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      {isCoordOrSuper && (
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => setDeletePerguntaId(pergunta.id)}
+                         className="text-red-400 hover:text-red-300"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </Button>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
