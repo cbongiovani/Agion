@@ -24,10 +24,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NotificationBell from '@/components/NotificationBell';
 import ClockWidget from '@/components/ClockWidget';
 import ManualPopup from '@/components/ManualPopup';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import AbasCarrossel from '@/components/AbasCarrossel';
 
 export default function Layout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [abasDialogOpen, setAbasDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -120,13 +123,16 @@ export default function Layout({ children }) {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-between px-4 safe-top">
         <div className="flex items-center gap-3">
-          <Link to={createPageUrl('Dashboard')} className="hover:opacity-80 transition-opacity" onClick={() => setMobileMenuOpen(false)}>
+          <button 
+            onClick={() => setAbasDialogOpen(true)} 
+            className="hover:opacity-80 transition-opacity"
+          >
             <img 
               src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
               alt="Grupo Agion" 
               className="h-8 w-auto cursor-pointer"
             />
-          </Link>
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell currentUser={currentUser} />
@@ -159,13 +165,16 @@ export default function Layout({ children }) {
       `}>
         <div className="p-4 border-b border-gray-800 flex-shrink-0 safe-top">
           <div className="w-full flex items-center justify-between">
-            <Link to={createPageUrl('Dashboard')} className="hover:opacity-80 transition-opacity" onClick={() => setMobileMenuOpen(false)}>
+            <button 
+              onClick={() => setAbasDialogOpen(true)} 
+              className="hover:opacity-80 transition-opacity"
+            >
               <img 
                 src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
                 alt="Grupo Agion" 
                 className="h-8 w-auto cursor-pointer"
               />
-            </Link>
+            </button>
             <div className="flex items-center gap-2">
               <div className="hidden lg:block">
                 <NotificationBell currentUser={currentUser} />
@@ -310,6 +319,19 @@ export default function Layout({ children }) {
 
       {/* Manual Popup for Supervisors */}
       <ManualPopup currentUser={currentUser} />
+
+      {/* Dialog de Abas do Sistema */}
+      <Dialog open={abasDialogOpen} onOpenChange={setAbasDialogOpen}>
+        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-blue-400" />
+              Abas do Sistema - Funções e Boas Práticas
+            </DialogTitle>
+          </DialogHeader>
+          <AbasCarrossel />
+        </DialogContent>
+      </Dialog>
 
       </div>
   );
