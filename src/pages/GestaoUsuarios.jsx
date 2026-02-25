@@ -722,7 +722,25 @@ export default function GestaoUsuarios() {
           <div className="space-y-6">
             {/* Abas Visíveis */}
             <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-              <h3 className="text-lg font-semibold text-white mb-4">Abas Visíveis no Sistema</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Abas Visíveis no Sistema</h3>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select_all_abas"
+                    checked={Object.values(permissionsData.abas_visiveis).every(v => v === true)}
+                    onCheckedChange={(checked) => {
+                      const todasAbas = {};
+                      Object.keys(permissionsData.abas_visiveis).forEach(key => {
+                        todasAbas[key] = checked;
+                      });
+                      setPermissionsData({ ...permissionsData, abas_visiveis: todasAbas });
+                    }}
+                  />
+                  <Label htmlFor="select_all_abas" className="text-sm text-[#ADF802] cursor-pointer font-medium">
+                    Selecionar Todas
+                  </Label>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
                   { key: 'dashboard', label: 'Dashboard' },
@@ -731,6 +749,7 @@ export default function GestaoUsuarios() {
                   { key: 'supervisores', label: 'Supervisores' },
                   { key: 'analistas', label: 'Analistas' },
                   { key: 'ranking', label: 'Ranking' },
+                  { key: 'avaliacoes', label: 'Avaliações' },
                   { key: 'war_room', label: 'War Room' },
                   { key: 'manual_supervisor', label: 'Manual do Supervisor' },
                   { key: 'gestao_usuarios', label: 'Gestão de Usuários' },
@@ -757,7 +776,29 @@ export default function GestaoUsuarios() {
 
             {/* Permissões de Atividades */}
             <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-              <h3 className="text-lg font-semibold text-white mb-4">Permissões - Atividades</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Permissões - Atividades</h3>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select_all_atividades"
+                    checked={Object.values(permissionsData.permissoes_atividades).every(v => v === true)}
+                    onCheckedChange={(checked) => {
+                      setPermissionsData({
+                        ...permissionsData,
+                        permissoes_atividades: {
+                          visualizar: checked,
+                          criar: checked,
+                          editar: checked,
+                          deletar: checked
+                        }
+                      });
+                    }}
+                  />
+                  <Label htmlFor="select_all_atividades" className="text-sm text-[#ADF802] cursor-pointer font-medium">
+                    Todas
+                  </Label>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['visualizar', 'criar', 'editar', 'deletar'].map((perm) => (
                   <div key={perm} className="flex items-center gap-2">
@@ -781,7 +822,29 @@ export default function GestaoUsuarios() {
 
             {/* Permissões de Fechamento Semanal */}
             <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-              <h3 className="text-lg font-semibold text-white mb-4">Permissões - Fechamento Semanal</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Permissões - Fechamento Semanal</h3>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select_all_fechamento"
+                    checked={Object.values(permissionsData.permissoes_fechamento).every(v => v === true)}
+                    onCheckedChange={(checked) => {
+                      setPermissionsData({
+                        ...permissionsData,
+                        permissoes_fechamento: {
+                          visualizar: checked,
+                          criar: checked,
+                          editar: checked,
+                          deletar: checked
+                        }
+                      });
+                    }}
+                  />
+                  <Label htmlFor="select_all_fechamento" className="text-sm text-[#ADF802] cursor-pointer font-medium">
+                    Todas
+                  </Label>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['visualizar', 'criar', 'editar', 'deletar'].map((perm) => (
                   <div key={perm} className="flex items-center gap-2">
@@ -805,7 +868,29 @@ export default function GestaoUsuarios() {
 
             {/* Permissões de War Room */}
             <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-              <h3 className="text-lg font-semibold text-white mb-4">Permissões - War Room</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Permissões - War Room</h3>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select_all_warroom"
+                    checked={Object.values(permissionsData.permissoes_warroom).every(v => v === true)}
+                    onCheckedChange={(checked) => {
+                      setPermissionsData({
+                        ...permissionsData,
+                        permissoes_warroom: {
+                          visualizar: checked,
+                          criar: checked,
+                          editar: checked,
+                          deletar: checked
+                        }
+                      });
+                    }}
+                  />
+                  <Label htmlFor="select_all_warroom" className="text-sm text-[#ADF802] cursor-pointer font-medium">
+                    Todas
+                  </Label>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['visualizar', 'criar', 'editar', 'deletar'].map((perm) => (
                   <div key={perm} className="flex items-center gap-2">

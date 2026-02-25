@@ -75,9 +75,20 @@ export default function Atividades() {
      queryFn: () => base44.auth.me(),
    });
 
-   const canEdit = currentUser?.role === 'admin';
-   const canDelete = currentUser?.role === 'admin';
-   const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
+   const { data: permissoesUsuario } = useQuery({
+     queryKey: ['permissoesUsuario', currentUser?.email],
+     queryFn: async () => {
+       if (!currentUser?.email) return null;
+       const perms = await base44.entities.PermissaoUsuario.filter({ usuario_email: currentUser.email });
+       return perms.length > 0 ? perms[0] : null;
+     },
+     enabled: !!currentUser?.email,
+   });
+
+   const canView = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.visualizar || false;
+   const canEdit = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.editar || false;
+   const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.deletar || false;
+   const canCreate = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.criar || false;
 
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades'],

@@ -35,6 +35,16 @@ export default function Layout({ children }) {
     queryFn: () => base44.auth.me(),
   });
 
+  const { data: permissoesUsuario } = useQuery({
+    queryKey: ['permissoesUsuario', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser?.email) return null;
+      const perms = await base44.entities.PermissaoUsuario.filter({ usuario_email: currentUser.email });
+      return perms.length > 0 ? perms[0] : null;
+    },
+    enabled: !!currentUser?.email,
+  });
+
   const { data: pendingRequests = [] } = useQuery({
     queryKey: ['pendingRequests'],
     queryFn: () => base44.entities.SolicitacaoFuncao.filter({ status: 'pendente' }),
@@ -50,20 +60,36 @@ export default function Layout({ children }) {
     const role = currentUser?.role;
     
     const baseItems = [
-      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor'] },
-      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', roles: ['admin', 'supervisor'] },
-      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', roles: ['admin', 'supervisor'] },
-      { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'] },
-      { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin', 'supervisor'] },
-      { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'] },
-      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', roles: ['admin', 'supervisor'] },
-      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'noc'] },
-      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'] },
-      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'] },
-      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', roles: ['admin'] },
+      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor'], permKey: 'dashboard' },
+      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', roles: ['admin', 'supervisor'], permKey: 'atividades' },
+      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', roles: ['admin', 'supervisor'], permKey: 'fechamento_semanal' },
+      { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'], permKey: 'supervisores' },
+      { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin', 'supervisor'], permKey: 'analistas' },
+      { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'], permKey: 'ranking' },
+      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', roles: ['admin', 'supervisor'], permKey: 'avaliacoes' },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'noc'], permKey: 'war_room' },
+      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'], permKey: 'manual_supervisor' },
+      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'], permKey: 'gestao_usuarios' },
+      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', roles: ['admin'], permKey: 'logs' },
     ];
     
-    return baseItems.filter(item => item.roles.includes(role));
+    // Admin sempre vê tudo
+    if (role === 'admin') {
+      return baseItems.filter(item => item.roles.includes(role));
+    }
+    
+    // Para outros usuários, verificar permissões
+    return baseItems.filter(item => {
+      if (!item.roles.includes(role)) return false;
+      
+      // Se tem permissões configuradas, verificar
+      if (permissoesUsuario?.abas_visiveis) {
+        return permissoesUsuario.abas_visiveis[item.permKey] === true;
+      }
+      
+      // Padrão: apenas Ranking visível para todos
+      return item.permKey === 'ranking';
+    });
   };
 
   const navItems = getNavItems();

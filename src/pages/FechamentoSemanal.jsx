@@ -39,6 +39,25 @@ export default function FechamentoSemanal() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFechamento, setEditingFechamento] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: permissoesUsuario } = useQuery({
+    queryKey: ['permissoesUsuario', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser?.email) return null;
+      const perms = await base44.entities.PermissaoUsuario.filter({ usuario_email: currentUser.email });
+      return perms.length > 0 ? perms[0] : null;
+    },
+    enabled: !!currentUser?.email,
+  });
+
+  const canCreate = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_fechamento?.criar || false;
+  const canEdit = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_fechamento?.editar || false;
+  const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_fechamento?.deletar || false;
   
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -286,21 +305,22 @@ export default function FechamentoSemanal() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Fechamento Semanal</h1>
           <p className="text-gray-400 mt-1">Consolidação semanal por supervisor</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { 
-          if (!open) { 
-            saveDraft(); 
-            resetForm(); 
-          } else {
-            loadDraft();
-          }
-          setIsDialogOpen(open); 
-        }}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Fechamento
-            </Button>
-          </DialogTrigger>
+        {canCreate && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+            if (!open) { 
+              saveDraft(); 
+              resetForm(); 
+            } else {
+              loadDraft();
+            }
+            setIsDialogOpen(open); 
+          }}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Fechamento
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingFechamento ? 'Editar Fechamento' : 'Novo Fechamento Semanal'}</DialogTitle>
@@ -457,7 +477,8 @@ export default function FechamentoSemanal() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </div>
 
       {/* Alerta de supervisores sem fechamento */}
@@ -520,22 +541,26 @@ export default function FechamentoSemanal() {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => openEdit(fechamento)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setDeleteId(fechamento.id)}
-                  className="text-gray-400 hover:text-red-400"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEdit(fechamento)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteId(fechamento.id)}
+                    className="text-gray-400 hover:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
 

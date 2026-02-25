@@ -49,6 +49,7 @@
  */
 import Analistas from './pages/Analistas';
 import Atividades from './pages/Atividades';
+import Avaliacoes from './pages/Avaliacoes';
 import Dashboard from './pages/Dashboard';
 import FechamentoSemanal from './pages/FechamentoSemanal';
 import GestaoUsuarios from './pages/GestaoUsuarios';
@@ -60,13 +61,13 @@ import Ranking from './pages/Ranking';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
-import Avaliacoes from './pages/Avaliacoes';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "Analistas": Analistas,
     "Atividades": Atividades,
+    "Avaliacoes": Avaliacoes,
     "Dashboard": Dashboard,
     "FechamentoSemanal": FechamentoSemanal,
     "GestaoUsuarios": GestaoUsuarios,
@@ -78,7 +79,6 @@ export const PAGES = {
     "RelatorioSemanal": RelatorioSemanal,
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
-    "Avaliacoes": Avaliacoes,
 }
 
 export const pagesConfig = {
