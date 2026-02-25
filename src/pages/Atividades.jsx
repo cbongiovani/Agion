@@ -39,6 +39,7 @@ import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
 import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 import { Checkbox } from '@/components/ui/checkbox';
 import { notificarCoordenadores, alertarAtividade } from '@/components/notificationHelper';
+import AtividadeLimitModal, { checkActivityLimit } from '@/components/AtividadeLimitCheck';
 
 const TIPOS = ['Chamados', 'Ligações', 'Monitoria Offline', 'Monitoria Assistida', 'Feedback Individual'];
 const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
@@ -46,9 +47,11 @@ const STATUS = ['Aberto', 'Em evolução', 'Concluído'];
 export default function Atividades() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-   const [editingAtividade, setEditingAtividade] = useState(null);
-   const [viewOnlyMode, setViewOnlyMode] = useState(false);
-   const [deleteId, setDeleteId] = useState(null);
+    const [editingAtividade, setEditingAtividade] = useState(null);
+    const [viewOnlyMode, setViewOnlyMode] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
+  const [limitError, setLimitError] = useState(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [filters, setFilters] = useState({
     supervisor_id: '',
     analista_id: '',
@@ -353,6 +356,18 @@ export default function Atividades() {
     e.preventDefault();
     
     if (!validarFormulario()) return;
+
+    // Verificar limite de atividades
+    const limitCheck = checkActivityLimit(atividades, formData.analista_id, formData.tipo, formData.data);
+    if (!limitCheck.allowed) {
+      setLimitError({
+        tipo: formData.tipo,
+        message: limitCheck.message,
+        nextAvailableDate: limitCheck.nextAvailableDate
+      });
+      setShowLimitModal(true);
+      return;
+    }
     
     let nota = parseFloat(formData.nota);
     
@@ -1037,24 +1052,32 @@ export default function Atividades() {
       )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-[#242424] border-gray-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja excluir esta atividade? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteMutation.mutate(deleteId)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
+         <AlertDialogContent className="bg-[#242424] border-gray-800">
+           <AlertDialogHeader>
+             <AlertDialogTitle className="text-white">Confirmar exclusão</AlertDialogTitle>
+             <AlertDialogDescription className="text-gray-400">
+               Tem certeza que deseja excluir esta atividade? Esta ação não pode ser desfeita.
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+           <AlertDialogFooter>
+             <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
+             <AlertDialogAction
+               onClick={() => deleteMutation.mutate(deleteId)}
+               className="bg-red-600 hover:bg-red-700"
+             >
+               Excluir
+             </AlertDialogAction>
+           </AlertDialogFooter>
+         </AlertDialogContent>
+       </AlertDialog>
+
+       <AtividadeLimitModal
+         isOpen={showLimitModal}
+         onClose={() => setShowLimitModal(false)}
+         tipo={limitError?.tipo}
+         nextAvailableDate={limitError?.nextAvailableDate}
+         message={limitError?.message}
+       />
+      </div>
+      );
+      }
