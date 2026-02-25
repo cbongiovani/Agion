@@ -82,6 +82,14 @@ export default function Dashboard() {
 
   const isLoading = loadingFechamentos || loadingAtividades;
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ADF802]" />
+      </div>
+    );
+  }
+
   // Calcular KPIs (Key Performance Indicators)
   const ultimoFechamento = fechamentos[0] || {};
   const semanaAnterior = fechamentos[1] || {};
