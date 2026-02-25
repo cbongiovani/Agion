@@ -342,21 +342,29 @@ export default function FechamentoSemanal() {
           <p className="text-gray-400 mt-1">Consolidação semanal por supervisor</p>
         </div>
         {canCreate && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { 
-            if (!open) { 
-              saveDraft(); 
-              resetForm(); 
-            } else {
-              loadDraft();
-            }
-            setIsDialogOpen(open); 
-          }}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-                <Plus className="w-4 h-4" />
-                Novo Fechamento
+          <div className="flex gap-2">
+            {hasDraft() && (
+              <Button 
+                variant="outline"
+                onClick={loadDraft}
+                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+              >
+                Carregar Rascunho
               </Button>
-            </DialogTrigger>
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+              if (!open) { 
+                saveDraft(); 
+                resetForm(); 
+              }
+              setIsDialogOpen(open); 
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                  <Plus className="w-4 h-4" />
+                  Novo Fechamento
+                </Button>
+              </DialogTrigger>
           <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingFechamento ? 'Editar Fechamento' : 'Novo Fechamento Semanal'}</DialogTitle>
