@@ -182,13 +182,21 @@ export default function Dashboard() {
     chamados: f.total_chamados_verdana || 0,
   }));
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-[#e74c3c]" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">Dashboard Executivo</h1>
-          <p className="mt-1 text-gray-500">Visão consolidada do Suporte N1</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">Dashboard KPI & OKR</h1>
+          <p className="mt-1 text-gray-500">Métricas de desempenho e objetivos estratégicos</p>
         </div>
         <Link to={createPageUrl('RelatorioSemanal')}>
           <Button className="bg-[#ADF802] hover:bg-[#9DE002] text-[#0a0a0a] font-bold gap-2">
@@ -198,239 +206,118 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard 
-          title="Ligações Next IP" 
-          value={totais.ligacoes.toLocaleString()} 
-          icon={Phone} 
-          variant="emerald" 
-        />
-        <StatCard 
-          title="Chamados Verdana" 
-          value={totais.chamados.toLocaleString()} 
-          icon={Ticket} 
-          variant="blue" 
-        />
-        <StatCard 
-          title="Monitorias" 
-          value={totais.monitorias.toLocaleString()} 
-          icon={Eye} 
-          variant="amber" 
-        />
-        <StatCard 
-          title="Feedbacks Individuais" 
-          value={totais.oneOnOne.toLocaleString()} 
-          icon={Users} 
-          variant="emerald" 
-        />
-        <StatCard 
-          title="Atividades" 
-          value={atividades.length.toLocaleString()} 
-          icon={Activity} 
-          variant="blue" 
-        />
-        <StatCard 
-          title="Fechamentos" 
-          value={fechamentos.length.toLocaleString()} 
-          icon={Calendar} 
-          variant="amber" 
-        />
+      {/* KPIs Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Qualidade Média', ...kpis.qualidadeMedia, icon: Eye },
+          { label: 'Eficiência Operacional', ...kpis.eficienciaOperacional, icon: Activity },
+          { label: 'Cobertura Treinamento', ...kpis.coberturaTreinamento, icon: Users, suffix: '%' },
+          { label: 'Satisfação Analista', ...kpis.satisfacaoAnalista, icon: Trophy, suffix: '%' },
+        ].map((kpi, idx) => {
+          const Icon = kpi.icon;
+          const progresso = (kpi.valor / kpi.meta) * 100;
+          const statusColor = progresso >= 100 ? 'bg-green-500/10 border-green-500/30' : progresso >= 75 ? 'bg-blue-500/10 border-blue-500/30' : 'bg-amber-500/10 border-amber-500/30';
+          
+          return (
+            <div key={idx} className={`rounded-xl border p-6 ${statusColor}`}>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-gray-400">{kpi.label}</p>
+                  <p className="text-2xl font-bold text-white mt-1">{kpi.valor}{kpi.suffix || ''}</p>
+                </div>
+                <Icon className="w-5 h-5 text-[#ADF802]" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>Progresso</span>
+                  <span>{Math.min(progresso, 100).toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-[#ADF802] to-[#9DE002] h-full transition-all duration-300"
+                    style={{ width: `${Math.min(progresso, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Meta: {kpi.meta}{kpi.suffix || ''}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Gráficos Expansíveis */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Chamados por Supervisor */}
-        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
-          <button
-            onClick={() => toggleChart('chamadosSupervisor')}
-            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-white">Chamados por Supervisor</h3>
-            {expandedCharts.chamadosSupervisor ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          {expandedCharts.chamadosSupervisor && (
-            <div className="px-6 pb-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dadosPorSupervisor}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
-                  <YAxis stroke="#888" tick={{ fill: '#888' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Bar dataKey="chamados" fill="#3498db" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+      {/* OKRs Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-[#ADF802]" />
+          Objetivos & Resultados Chave (OKRs)
+        </h2>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {okrs.map((okr, okrIdx) => (
+            <div key={okrIdx} className="rounded-xl border bg-[#0d0d0d] border-gray-800 p-6 hover:border-gray-700 transition-all">
+              <h3 className="text-lg font-semibold text-white mb-4">{okr.objetivo}</h3>
+              
+              <div className="space-y-4">
+                {okr.keyResults.map((kr, krIdx) => {
+                  const statusColor = kr.progresso >= 100 ? 'border-green-500/30' : kr.progresso >= 75 ? 'border-blue-500/30' : 'border-amber-500/30';
+                  
+                  return (
+                    <div key={krIdx} className={`border rounded-lg p-4 bg-[#1a1a1a] ${statusColor}`}>
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="text-sm text-gray-300 flex-1">{kr.resultado}</p>
+                        <span className="text-xs font-bold text-[#ADF802] ml-2">{kr.progresso.toFixed(0)}%</span>
+                      </div>
+                      
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-2 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-[#ADF802] to-[#9DE002] h-full transition-all duration-300"
+                          style={{ width: `${Math.min(kr.progresso, 100)}%` }}
+                        />
+                      </div>
+                      
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Atual: {kr.atual}</span>
+                        <span>Meta: {kr.meta}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          )}
-        </div>
-
-        {/* Ligações por Supervisor */}
-        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
-          <button
-            onClick={() => toggleChart('ligacoesSupervisor')}
-            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-white">Ligações por Supervisor</h3>
-            {expandedCharts.ligacoesSupervisor ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          {expandedCharts.ligacoesSupervisor && (
-            <div className="px-6 pb-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dadosPorSupervisor}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="nome" stroke="#888" tick={{ fill: '#888', fontSize: 12 }} />
-                  <YAxis stroke="#888" tick={{ fill: '#888' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Bar dataKey="ligacoes" fill="#e74c3c" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-
-        {/* Evolução Semanal */}
-        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
-          <button
-            onClick={() => toggleChart('evolucao')}
-            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-white">Evolução Semanal</h3>
-            {expandedCharts.evolucao ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          {expandedCharts.evolucao && (
-            <div className="px-6 pb-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={evolucaoPorSemana}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="semana" stroke="#888" tick={{ fill: '#888' }} />
-                  <YAxis stroke="#888" tick={{ fill: '#888' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="ligacoes" stroke="#e74c3c" strokeWidth={2} name="Ligações" />
-                  <Line type="monotone" dataKey="chamados" stroke="#3498db" strokeWidth={2} name="Chamados" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-
-        {/* Distribuição por Tipo */}
-        <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
-          <button
-            onClick={() => toggleChart('distribuicao')}
-            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-white">Distribuição por Tipo de Atividade</h3>
-            {expandedCharts.distribuicao ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          {expandedCharts.distribuicao && (
-            <div className="px-6 pb-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={distribuicaoTipo}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  >
-                    {distribuicaoTipo.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* Top Analistas */}
+      {/* Tendência Semanal */}
       <div className="rounded-2xl border bg-[#0d0d0d] border-gray-800 overflow-hidden">
         <button
-          onClick={() => toggleChart('performance')}
+          onClick={() => toggleChart('kpiTendencia')}
           className="w-full p-6 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
         >
-          <h3 className="text-lg font-semibold text-white">Performance dos Analistas</h3>
-          {expandedCharts.performance ? (
+          <h3 className="text-lg font-semibold text-white">Tendência Semanal</h3>
+          {expandedCharts.kpiTendencia ? (
             <ChevronUp className="w-5 h-5 text-gray-400" />
           ) : (
             <ChevronDown className="w-5 h-5 text-gray-400" />
           )}
         </button>
-        {expandedCharts.performance && (
+        {expandedCharts.kpiTendencia && (
           <div className="px-6 pb-6">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm border-b text-gray-400 border-gray-800">
-                    <th className="pb-4 font-medium">Posição</th>
-                    <th className="pb-4 font-medium">Analista</th>
-                    <th className="pb-4 font-medium">Média</th>
-                    <th className="pb-4 font-medium">Classificação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mediaPorAnalista.slice(0, 10).map((an, index) => (
-                    <tr key={an.nome} className="border-b border-gray-800/50">
-                      <td className="py-4">
-                        <span className={`
-                          inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
-                          ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' : 
-                            index === 1 ? 'bg-gray-400/20 text-gray-300' :
-                            index === 2 ? 'bg-amber-600/20 text-amber-500' : 
-                            'bg-gray-800 text-gray-400'}
-                        `}>
-                          {index + 1}
-                        </span>
-                      </td>
-                      <td className="py-4 font-medium text-white">{an.nome}</td>
-                      <td className="py-4">
-                        <span className="font-semibold text-white">{an.media.toFixed(1)}</span>
-                      </td>
-                      <td className="py-4">
-                        <PerformanceBadge media={an.media} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={evolucaoPorSemana}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis dataKey="semana" stroke="#888" tick={{ fill: '#888' }} />
+                <YAxis stroke="#888" tick={{ fill: '#888' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                  labelStyle={{ color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="ligacoes" stroke="#ADF802" strokeWidth={2} name="Ligações" />
+                <Line type="monotone" dataKey="chamados" stroke="#3498db" strokeWidth={2} name="Chamados" />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
