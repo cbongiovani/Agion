@@ -982,7 +982,8 @@ Formato esperado:
             <AlertDialogAction
               onClick={() => deleteParticipanteMutation.mutate({
                 quizzId: deleteParticipanteData?.quizzId,
-                analistaId: deleteParticipanteData?.analistaId
+                analistaId: deleteParticipanteData?.analistaId,
+                usuarioId: deleteParticipanteData?.usuarioId
               })}
               className="bg-red-600 hover:bg-red-700"
             >
