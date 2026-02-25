@@ -33,6 +33,7 @@ import { Plus, Pencil, Trash2, Calendar, Loader2, AlertTriangle } from 'lucide-r
 import { toast } from 'sonner';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { notificarCoordenadores } from '@/components/notificationHelper';
 
 export default function FechamentoSemanal() {
   const queryClient = useQueryClient();
@@ -105,6 +106,15 @@ export default function FechamentoSemanal() {
         entidade: 'FechamentoSemanal',
         detalhes: `Registrou fechamento semanal para supervisor`,
       });
+      
+      const supervisor = supervisores.find(s => s.id === data.supervisor_id);
+      await notificarCoordenadores(
+        'novo_fechamento',
+        'Novo Fechamento Semanal',
+        `${user.full_name} registrou fechamento semanal para ${supervisor?.nome || 'supervisor'}`,
+        'FechamentoSemanal'
+      );
+      
       return result;
     },
     onSuccess: () => {
