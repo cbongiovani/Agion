@@ -562,7 +562,7 @@ export default function Atividades() {
             <form onSubmit={viewOnlyMode ? (e) => { e.preventDefault(); resetForm(); } : handleSubmit} className="space-y-4">
                <div className="grid grid-cols-2 gap-4">
                  <div>
-                   <Label>Data</Label>
+                   <Label className="text-blue-400">Data</Label>
                    <Input
                      type="date"
                      value={formData.data}
@@ -573,7 +573,7 @@ export default function Atividades() {
                    />
                  </div>
                 <div>
-                  <Label>Tipo</Label>
+                  <Label className="text-blue-400">Tipo</Label>
                   <Select
                     value={formData.tipo}
                     onValueChange={(value) => setFormData({ ...formData, tipo: value })}
@@ -591,7 +591,7 @@ export default function Atividades() {
                 </div>
               </div>
               <div>
-                <Label className="text-gray-300">Analista</Label>
+                <Label className="text-blue-400">Analista</Label>
                 <Select
                   value={formData.analista_id}
                   onValueChange={handleAnalistaChange}
@@ -632,7 +632,7 @@ export default function Atividades() {
               )}
               {formData.tipo === 'Chamados' && (
                 <div>
-                  <Label className="text-gray-300">Ticket Acompanhado</Label>
+                  <Label className="text-blue-400">Ticket Acompanhado</Label>
                   <Input
                     type="text"
                     maxLength={10}
@@ -646,7 +646,7 @@ export default function Atividades() {
               )}
               {formData.tipo === 'Ligações' && (
                 <div>
-                  <Label className="text-gray-300">Protocolo</Label>
+                  <Label className="text-blue-400">Protocolo</Label>
                   <Input
                     type="text"
                     value={formData.protocolo_gravacao}
@@ -659,7 +659,7 @@ export default function Atividades() {
               )}
               {formData.tipo === 'Feedback Individual' && (
                 <div>
-                  <Label className="text-gray-300">Tipo de Feedback</Label>
+                  <Label className="text-blue-400">Tipo de Feedback</Label>
                   <div className="flex items-center gap-6 mt-3">
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -689,7 +689,7 @@ export default function Atividades() {
               {!['Monitoria Offline', 'Monitoria Assistida'].includes(formData.tipo) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-gray-300">Nota (0-10)</Label>
+                    <Label className="text-blue-400">Nota (0-10)</Label>
                     <Input
                       type="number"
                       min="0"
@@ -703,7 +703,7 @@ export default function Atividades() {
                     />
                   </div>
                   <div>
-                    <Label className="text-gray-300">Status</Label>
+                    <Label className="text-blue-400">Status</Label>
                     <Select
                       value={formData.status}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
@@ -741,7 +741,7 @@ export default function Atividades() {
                 </div>
               )}
               <div>
-                <Label className="text-gray-300">Comentário</Label>
+                <Label className="text-blue-400">Comentário</Label>
                 <Textarea
                   value={formData.comentario}
                   onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
