@@ -124,30 +124,25 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-between px-4 safe-top">
-        <div className="flex items-center gap-3">
-          <Link 
-            to={createPageUrl('Home')}
-            className="hover:opacity-80 transition-opacity"
-          >
-            <img 
-              src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
-              alt="Grupo Agion" 
-              className="h-8 w-auto cursor-pointer"
-            />
-          </Link>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell currentUser={currentUser} />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px] select-none"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </Button>
-        </div>
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-center px-4 safe-top">
+        <Link 
+          to={createPageUrl('Home')}
+          className="hover:opacity-80 transition-opacity"
+        >
+          <img 
+            src="https://grupoagion.com.br/wp-content/uploads/2023/03/Grupo-Agion-2-3-2048x679.png" 
+            alt="Grupo Agion" 
+            className="h-8 w-auto cursor-pointer"
+          />
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px] select-none absolute right-4"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </Button>
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -167,7 +162,7 @@ export default function Layout({ children }) {
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-4 border-b border-gray-800 flex-shrink-0 safe-top">
-          <div className="w-full flex items-center justify-between">
+          <div className="w-full flex items-center justify-center relative">
             <Link 
               to={createPageUrl('Home')}
               onClick={() => setMobileMenuOpen(false)}
@@ -179,19 +174,14 @@ export default function Layout({ children }) {
                 className="h-8 w-auto cursor-pointer"
               />
             </Link>
-            <div className="flex items-center gap-2">
-              <div className="hidden lg:block">
-                <NotificationBell currentUser={currentUser} />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden text-gray-400 hover:text-white min-w-[44px] min-h-[44px]"
-              >
-                <X className="w-6 h-6" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(false)}
+              className="lg:hidden text-gray-400 hover:text-white min-w-[44px] min-h-[44px] absolute right-0"
+            >
+              <X className="w-6 h-6" />
+            </Button>
           </div>
         </div>
 
