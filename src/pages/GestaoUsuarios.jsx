@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Settings, Loader2, Mail, Shield, Trash2, Lock, Info } from 'lucide-react';
+import { Plus, Pencil, Settings, Loader2, Mail, Shield, Trash2, Lock, Info, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import AbasCarrossel from '@/components/AbasCarrossel';
 import { toast } from 'sonner';
@@ -50,6 +50,7 @@ export default function GestaoUsuarios() {
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '', email: '' });
   const [formData, setFormData] = useState({ full_name: '', role: '' });
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [permissionsData, setPermissionsData] = useState({
     abas_visiveis: {
       dashboard: false,
@@ -470,6 +471,43 @@ export default function GestaoUsuarios() {
     });
   };
 
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedUsers = React.useMemo(() => {
+    let sortableUsers = [...users];
+    if (sortConfig.key) {
+      sortableUsers.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'role') {
+          aValue = getRoleLabel(a.role);
+          bValue = getRoleLabel(b.role);
+        }
+
+        if (sortConfig.key === 'created_date') {
+          aValue = new Date(a.created_date);
+          bValue = new Date(b.created_date);
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableUsers;
+  }, [users, sortConfig]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -760,15 +798,6 @@ export default function GestaoUsuarios() {
         </Dialog>
         </div>
         </div>
-
-        {/* Carrossel de Abas do Sistema */}
-        <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Info className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-semibold text-white">Abas do Sistema - Funções e Boas Práticas</h2>
-          </div>
-          <AbasCarrossel />
-        </div>
       </div>
 
       <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] overflow-hidden">
@@ -776,15 +805,47 @@ export default function GestaoUsuarios() {
           <table className="w-full">
             <thead>
               <tr className="text-left text-gray-400 text-sm border-b border-[#1e3a5f] bg-[#0f1f35]">
-                <th className="px-6 py-4 font-medium">Nome</th>
-                <th className="px-6 py-4 font-medium">E-mail</th>
-                <th className="px-6 py-4 font-medium">Função</th>
-                <th className="px-6 py-4 font-medium">Data de Criação</th>
+                <th 
+                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
+                  onClick={() => handleSort('full_name')}
+                >
+                  <div className="flex items-center gap-2">
+                    Nome
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center gap-2">
+                    E-mail
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
+                  onClick={() => handleSort('role')}
+                >
+                  <div className="flex items-center gap-2">
+                    Função
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
+                  onClick={() => handleSort('created_date')}
+                >
+                  <div className="flex items-center gap-2">
+                    Data de Criação
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </th>
                 <th className="px-6 py-4 font-medium text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr key={user.id} className="border-b border-[#1e3a5f]/50 hover:bg-[#1e3a5f]/30">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
