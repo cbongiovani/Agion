@@ -1,3 +1,4 @@
+
 import { base44 } from '@/api/base44Client';
 
 /**
@@ -52,22 +53,15 @@ export async function notificarSupervisor(supervisorId, tipo, titulo, mensagem, 
 }
 
 /**
- * Alerta coordenador sobre atividade que precisa de atenção
+ * Alerta supervisor sobre atividade que precisa de atenção
  */
 export async function alertarAtividade(atividadeId, analistaNome, supervisorId) {
   try {
-    await notificarCoordenadores(
-      'alerta_atividade',
-      '🔴 Alerta de Atividade',
-      `Coordenador marcou atividade do analista ${analistaNome} para atenção`,
-      'Atividades'
-    );
-    
     await notificarSupervisor(
       supervisorId,
       'alerta_atividade',
       '🔴 Atividade Requer Atenção',
-      `O coordenador marcou uma atividade do analista ${analistaNome} para sua atenção`,
+      `Atividade do analista ${analistaNome} foi marcada para sua atenção`,
       'Atividades'
     );
   } catch (error) {
