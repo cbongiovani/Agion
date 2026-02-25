@@ -699,12 +699,12 @@ export default function WarRoom() {
                 Comunicação
             </h4>
             <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <li>• Manter stakeholders informados</li>
-              <li>• Documentar todas as comunicações</li>
-              <li>• Definir canais de escalação claros</li>
-            </ul>
-          </div>
-          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+               <li>• Manter stakeholders informados</li>
+               <li>• Documentar todas as comunicações</li>
+               <li>• Definir canais de escalação claros</li>
+             </ul>
+            </div>
+            <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
               <CheckCircle2 className="w-5 h-5" />
               Resolução e Recuperação
