@@ -5,9 +5,19 @@ import { base44 } from '@/api/base44Client';
  */
 export async function notificarCoordenadores(tipo, titulo, mensagem, link = null) {
   try {
+    console.log('Iniciando notificação para coordenadores:', { tipo, titulo, mensagem, link });
+    
     // Buscar todos os usuários com role 'admin' (coordenadores)
     const users = await base44.entities.User.list();
+    console.log('Total de usuários:', users.length);
+    
     const coordenadores = users.filter(u => u.role === 'admin');
+    console.log('Coordenadores encontrados:', coordenadores.length, coordenadores.map(c => c.email));
+    
+    if (coordenadores.length === 0) {
+      console.warn('Nenhum coordenador encontrado para notificar');
+      return;
+    }
     
     // Criar notificações para cada coordenador
     const notificacoes = coordenadores.map(coord => ({
@@ -19,11 +29,14 @@ export async function notificarCoordenadores(tipo, titulo, mensagem, link = null
       lida: false,
     }));
     
-    if (notificacoes.length > 0) {
-      await base44.entities.Notificacao.bulkCreate(notificacoes);
-    }
+    console.log('Criando notificações:', notificacoes);
+    const resultado = await base44.entities.Notificacao.bulkCreate(notificacoes);
+    console.log('Notificações criadas com sucesso:', resultado);
+    
+    return resultado;
   } catch (error) {
     console.error('Erro ao notificar coordenadores:', error);
+    throw error;
   }
 }
 

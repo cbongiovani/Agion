@@ -115,6 +115,8 @@ export default function Atividades() {
     mutationFn: async (data) => {
       const result = await base44.entities.Atividade.create(data);
       const user = await base44.auth.me();
+      
+      // Criar log
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
@@ -123,13 +125,27 @@ export default function Atividades() {
         detalhes: `Criou atividade do tipo "${data.tipo}" para o analista`,
       });
       
+      // Notificar coordenadores
       const analista = analistas.find(a => a.id === data.analista_id);
-      await notificarCoordenadores(
-        'nova_atividade',
-        'Nova Atividade Registrada',
-        `${user.full_name} registrou atividade do tipo ${data.tipo} para ${analista?.nome || 'analista'}`,
-        'Atividades'
-      );
+      const analistaNome = analista?.nome || 'analista';
+      
+      console.log('Notificando coordenadores sobre nova atividade:', {
+        tipo: data.tipo,
+        analista: analistaNome,
+        registradoPor: user.full_name
+      });
+      
+      try {
+        await notificarCoordenadores(
+          'nova_atividade',
+          '📋 Nova Atividade Registrada',
+          `${user.full_name} registrou atividade do tipo ${data.tipo} para ${analistaNome}`,
+          'Atividades'
+        );
+        console.log('Coordenadores notificados com sucesso');
+      } catch (error) {
+        console.error('Erro ao notificar coordenadores:', error);
+      }
       
       return result;
     },
@@ -188,14 +204,35 @@ export default function Atividades() {
   const alertarAtividadeMutation = useMutation({
     mutationFn: async ({ atividade, marcar }) => {
       const analista = analistas.find(a => a.id === atividade.analista_id);
+      const analistaNome = analista?.nome || 'analista';
+      
+      console.log('Alerta mutation:', {
+        marcar,
+        atividadeId: atividade.id,
+        analistaNome,
+        supervisorId: atividade.supervisor_id
+      });
+      
       if (marcar) {
-        await alertarAtividade(atividade.id, analista?.nome, atividade.supervisor_id);
+        try {
+          console.log('Enviando alerta para supervisor...');
+          await alertarAtividade(atividade.id, analistaNome, atividade.supervisor_id);
+          console.log('Alerta enviado com sucesso');
+        } catch (error) {
+          console.error('Erro ao alertar supervisor:', error);
+          throw error;
+        }
       }
+      
       await base44.entities.Atividade.update(atividade.id, { alerta_coordenador: marcar });
     },
     onSuccess: (_, { marcar }) => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success(marcar ? 'Alerta enviado ao supervisor!' : 'Alerta removido');
+    },
+    onError: (error) => {
+      console.error('Erro na mutation de alerta:', error);
+      toast.error('Erro ao processar alerta. Verifique o console.');
     },
   });
 
