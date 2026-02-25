@@ -673,8 +673,15 @@ export default function WarRoom() {
 
       {/* Guia de Boas Práticas */}
       <div className={`rounded-2xl border p-6 ${isDark ? 'bg-[#0d0d0d] border-gray-800' : 'bg-white border-gray-200'}`}>
-        <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button 
+          onClick={() => setExpandedPractices(!expandedPractices)}
+          className="flex items-center justify-between w-full mb-4 hover:opacity-80 transition-opacity"
+        >
+          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Boas Práticas ITIL v4 - Gestão de Incidentes</h3>
+          <ChevronDown className={`w-5 h-5 transition-transform ${expandedPractices ? 'rotate-0' : '-rotate-90'} ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+        </button>
+        {expandedPractices && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
             <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
               <CheckCircle2 className="w-5 h-5" />
