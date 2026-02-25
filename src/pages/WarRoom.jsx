@@ -727,6 +727,7 @@ export default function WarRoom() {
             </ul>
           </div>
         </div>
+        )}
       </div>
 
       {/* Métricas ITIL */}
