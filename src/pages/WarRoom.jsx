@@ -234,8 +234,28 @@ export default function WarRoom() {
     });
   };
 
+  const validarFormulario = () => {
+    const camposFaltando = [];
+    
+    if (!formData.titulo) camposFaltando.push('Título do Incidente');
+    if (!formData.descricao) camposFaltando.push('Descrição do Incidente');
+    if (!formData.severidade) camposFaltando.push('Severidade');
+    if (!formData.categoria) camposFaltando.push('Categoria');
+    if (!formData.status) camposFaltando.push('Status');
+    if (!formData.data_inicio) camposFaltando.push('Data/Hora de Início');
+    
+    if (camposFaltando.length > 0) {
+      toast.error(`Campos obrigatórios faltando:\n${camposFaltando.map(c => `• ${c}`).join('\n')}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!validarFormulario()) return;
+    
     const payload = {
       ...formData,
       registrado_por: currentUser?.email || 'Sistema'
