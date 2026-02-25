@@ -3,16 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import DashboardIntro from '@/components/DashboardIntro';
 import { 
-  Phone, 
-  Ticket, 
   Eye, 
   Users, 
   Activity,
-  Calendar,
   FileDown,
   Loader2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
