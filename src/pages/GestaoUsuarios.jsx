@@ -713,7 +713,7 @@ export default function GestaoUsuarios() {
                     required
                   />
                   <p className="text-xs text-gray-400 mt-2">
-                    O analista receberá permissão de "Usuário" e será vinculado automaticamente ao seu perfil.
+                    O analista receberá permissão de "Analista" e será vinculado automaticamente ao seu perfil.
                   </p>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
