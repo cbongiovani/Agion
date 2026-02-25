@@ -61,6 +61,14 @@ export default function NotificationBell({ currentUser }) {
       novo_usuario: '👤',
       solicitacao_aprovada: '✅',
       solicitacao_rejeitada: '❌',
+      nova_atividade: '📝',
+      novo_fechamento: '📊',
+      novo_incidente: '🚨',
+      nova_questao: '❓',
+      nova_avaliacao: '📋',
+      alerta_atividade: '🔴',
+      analista_atencao: '⚠️',
+      prazo_vencendo: '⏰',
     };
     return icons[tipo] || '🔔';
   };
