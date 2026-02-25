@@ -20,7 +20,9 @@ import {
   Zap,
   HelpCircle,
   Award,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
