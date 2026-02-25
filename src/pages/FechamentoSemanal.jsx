@@ -521,11 +521,11 @@ export default function FechamentoSemanal() {
                   {editingFechamento ? 'Atualizar' : 'Registrar'}
                 </Button>
               </div>
-            </form>
-          </DialogContent>
-            </Dialog>
-          </div>
-        )}
+              </form>
+              </DialogContent>
+              </Dialog>
+              </div>
+              )}
 
       {/* Alerta de supervisores sem fechamento */}
       {supervisoresSemFechamento.length > 0 && (

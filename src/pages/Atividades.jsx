@@ -1113,6 +1113,6 @@ export default function Atividades() {
          nextAvailableDate={limitError?.nextAvailableDate}
          message={limitError?.message}
        />
-      </div>
-      );
-      }
+       </div>
+       );
+       }
