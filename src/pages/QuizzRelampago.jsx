@@ -74,15 +74,19 @@ export default function QuizzRelampago() {
     queryKey: ['respostasQuizz', selectedQuizz?.id],
     queryFn: () => base44.entities.RespostaQuizz.filter({ quizz_id: selectedQuizz.id }),
     enabled: !!selectedQuizz,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Usar dados já carregados em perguntasQuizz e respostasQuizz quando necessário
-  const todasPerguntas = perguntasQuizz; // Usar dados do quizz selecionado
-  const todasRespostas = respostasQuizz; // Usar dados do quizz selecionado
+  const { data: todasRespostasQuizz = [] } = useQuery({
+    queryKey: ['todasRespostasQuizz'],
+    queryFn: () => base44.entities.RespostaQuizz.list(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ['usuarios'],
     queryFn: () => base44.entities.User.list(),
+    staleTime: 10 * 60 * 1000,
   });
 
   const createQuizzMutation = useMutation({
