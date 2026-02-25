@@ -973,24 +973,114 @@ export default function WarRoom() {
 
       {/* Dialog de Visualização de Rascunho */}
       <Dialog open={!!viewingDraft} onOpenChange={() => setViewingDraft(null)}>
-        <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-3xl max-h-[90vh] overflow-y-auto`}>
+        <DialogContent className={`${isDark ? 'bg-[#0d0d0d] border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'} max-w-4xl max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
-            <DialogTitle>Visualizar Rascunho</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-[#ADF802]" />
+              Visualizar Rascunho
+            </DialogTitle>
           </DialogHeader>
           {viewingDraft && (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Título:</p>
-                <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingDraft.titulo || '(Vazio)'}</p>
+            <div className="space-y-6">
+              {/* Cabeçalho */}
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeveridadeColor(viewingDraft.severidade)}`}>
+                    {viewingDraft.severidade}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${isDark ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-300'}`}>
+                    {viewingDraft.categoria}
+                  </span>
+                  <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${
+                    viewingDraft.status === 'Fechado' || viewingDraft.status === 'Resolvido' 
+                      ? isDark ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-green-100 text-green-800 border-green-300'
+                      : isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}>
+                    {getStatusIcon(viewingDraft.status)}
+                    {viewingDraft.status}
+                  </span>
+                </div>
+                <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {viewingDraft.titulo}
+                </h3>
               </div>
-              <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Severidade:</p>
-                <p className={`${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingDraft.severidade}</p>
+
+              {/* Informações Gerais */}
+              <div className={`grid grid-cols-2 gap-4 p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                {viewingDraft.unidade_afetada && (
+                  <div>
+                    <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Unidade Afetada:</p>
+                    <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingDraft.unidade_afetada}</p>
+                  </div>
+                )}
+                {viewingDraft.responsavel && (
+                  <div>
+                    <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Responsável:</p>
+                    <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{viewingDraft.responsavel}</p>
+                  </div>
+                )}
+                <div>
+                  <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Data/Hora de Início:</p>
+                  <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {viewingDraft.data_inicio ? format(new Date(viewingDraft.data_inicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '(Não definida)'}
+                  </p>
+                </div>
+                {viewingDraft.data_resolucao && (
+                  <div>
+                    <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Data/Hora de Resolução:</p>
+                    <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {format(new Date(viewingDraft.data_resolucao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#0a0a0a] border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</p>
+
+              {/* Descrição */}
+              <div>
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>Descrição do Incidente:</p>
                 <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingDraft.descricao || '(Vazio)'}</p>
               </div>
+
+              {/* Impacto */}
+              {viewingDraft.impacto && (
+                <div>
+                  <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>Impacto nos Serviços:</p>
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingDraft.impacto}</p>
+                </div>
+              )}
+
+              {/* Ações Tomadas */}
+              {viewingDraft.acoes_tomadas && (
+                <div>
+                  <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>Ações Tomadas:</p>
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{viewingDraft.acoes_tomadas}</p>
+                </div>
+              )}
+
+              {/* Linha do Tempo */}
+              {viewingDraft.atividades && viewingDraft.atividades.length > 0 && (
+                <div>
+                  <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-[#ADF802]' : 'text-green-700'}`}>
+                    Linha do Tempo de Atividades ({viewingDraft.atividades.length}):
+                  </p>
+                  <div className="space-y-2">
+                    {viewingDraft.atividades.map((atividade, index) => (
+                      <div key={index} className={`flex items-start gap-3 p-3 rounded border ${isDark ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'}`}>
+                        <span className={`font-mono text-sm font-bold min-w-[60px] ${isDark ? 'text-[#ADF802]' : 'text-green-600'}`}>
+                          {atividade.hora}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium min-w-[120px] text-center ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                          {atividade.setor}
+                        </span>
+                        <p className={`text-sm flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {atividade.acao}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
                 <Button 
                   variant="outline"
