@@ -66,6 +66,8 @@ export default function WarRoom() {
     acao: '',
     setor: 'Suporte'
   });
+  
+  const [expandedPractices, setExpandedPractices] = useState(true);
 
   const isDark = document.documentElement.classList.contains('dark');
 
