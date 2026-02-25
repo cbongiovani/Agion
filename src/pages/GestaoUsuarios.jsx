@@ -39,9 +39,12 @@ export default function GestaoUsuarios() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isInviteAnalistaOpen, setIsInviteAnalistaOpen] = useState(false);
   const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
+  const [isFuncoesDialogOpen, setIsFuncoesDialogOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
+  const [deleteFuncaoOpen, setDeleteFuncaoOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [funcaoToDelete, setFuncaoToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null);
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
@@ -63,6 +66,12 @@ export default function GestaoUsuarios() {
     permissoes_atividades: { visualizar: false, criar: false, editar: false, deletar: false },
     permissoes_fechamento: { visualizar: false, criar: false, editar: false, deletar: false },
     permissoes_warroom: { visualizar: false, criar: false, editar: false, deletar: false }
+  });
+
+  const [novaFuncao, setNovaFuncao] = useState({
+    nome_funcao: '',
+    label_exibicao: '',
+    cor_badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30'
   });
 
   const { data: users = [], isLoading } = useQuery({
@@ -88,6 +97,11 @@ export default function GestaoUsuarios() {
   const { data: permissoes = [] } = useQuery({
     queryKey: ['permissoes'],
     queryFn: () => base44.entities.PermissaoUsuario.list(),
+  });
+
+  const { data: funcoesPersonalizadas = [] } = useQuery({
+    queryKey: ['funcoes'],
+    queryFn: () => base44.entities.FuncaoUsuario.filter({ ativo: true }),
   });
 
   const updateMutation = useMutation({
@@ -220,6 +234,67 @@ export default function GestaoUsuarios() {
     },
   });
 
+  const criarFuncaoMutation = useMutation({
+    mutationFn: async (data) => {
+      const user = await base44.auth.me();
+      const funcao = await base44.entities.FuncaoUsuario.create({
+        ...data,
+        criado_por: user.email,
+        ativo: true
+      });
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Criou',
+        entidade: 'Sistema',
+        detalhes: `Criou nova função: ${data.label_exibicao}`,
+      });
+      return funcao;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['funcoes'] });
+      toast.success('Função criada com sucesso!');
+      setNovaFuncao({ nome_funcao: '', label_exibicao: '', cor_badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' });
+    },
+    onError: (error) => {
+      toast.error('Erro ao criar função: ' + error.message);
+    },
+  });
+
+  const deleteFuncaoMutation = useMutation({
+    mutationFn: async (funcaoId) => {
+      const user = await base44.auth.me();
+      const funcao = funcoesPersonalizadas.find(f => f.id === funcaoId);
+      
+      // Buscar todos usuários com essa função e alterar para 'user'
+      const usuariosComFuncao = users.filter(u => u.role === funcao.nome_funcao);
+      for (const usuario of usuariosComFuncao) {
+        await base44.entities.User.update(usuario.id, { role: 'user' });
+      }
+      
+      // Desativar a função ao invés de deletar
+      await base44.entities.FuncaoUsuario.update(funcaoId, { ativo: false });
+      
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Sistema',
+        detalhes: `Removeu função: ${funcao.label_exibicao}. ${usuariosComFuncao.length} usuários alterados para 'Usuário'.`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['funcoes'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Função removida! Usuários afetados foram alterados para "Usuário".');
+      setDeleteFuncaoOpen(false);
+      setFuncaoToDelete(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao remover função: ' + error.message);
+    },
+  });
+
   const resetForm = () => {
     setFormData({ full_name: '', role: '' });
     setEditingUser(null);
@@ -264,6 +339,11 @@ export default function GestaoUsuarios() {
   };
 
   const getRoleBadge = (role) => {
+    const funcaoCustom = funcoesPersonalizadas.find(f => f.nome_funcao === role);
+    if (funcaoCustom) {
+      return funcaoCustom.cor_badge;
+    }
+    
     const colors = {
       admin: 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30',
       supervisor: 'bg-[#ADF802]/20 text-[#ADF802] border-[#ADF802]/30',
@@ -274,6 +354,11 @@ export default function GestaoUsuarios() {
   };
 
   const getRoleLabel = (role) => {
+    const funcaoCustom = funcoesPersonalizadas.find(f => f.nome_funcao === role);
+    if (funcaoCustom) {
+      return funcaoCustom.label_exibicao;
+    }
+    
     const labels = {
       admin: 'Coordenador',
       supervisor: 'Supervisor',
@@ -281,6 +366,28 @@ export default function GestaoUsuarios() {
       noc: 'NOC',
     };
     return labels[role] || role;
+  };
+
+  const handleCriarFuncao = (e) => {
+    e.preventDefault();
+    if (!novaFuncao.nome_funcao || !novaFuncao.label_exibicao) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    
+    // Verificar se já existe
+    const jaExiste = funcoesPersonalizadas.some(f => f.nome_funcao === novaFuncao.nome_funcao);
+    if (jaExiste) {
+      toast.error('Já existe uma função com este nome');
+      return;
+    }
+    
+    criarFuncaoMutation.mutate(novaFuncao);
+  };
+
+  const handleDeleteFuncao = (funcao) => {
+    setFuncaoToDelete(funcao);
+    setDeleteFuncaoOpen(true);
   };
 
 
@@ -381,6 +488,144 @@ export default function GestaoUsuarios() {
           </div>
         
         <div className="flex gap-2">
+          {currentUser?.role === 'admin' && (
+            <Dialog open={isFuncoesDialogOpen} onOpenChange={setIsFuncoesDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#ADF802] hover:bg-[#9DE002] text-black gap-2">
+                  <Settings className="w-4 h-4" />
+                  Editar Função
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-3xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-[#ADF802]" />
+                    Gerenciar Funções do Sistema
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  {/* Criar Nova Função */}
+                  <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+                    <h3 className="text-lg font-semibold text-white mb-4">Criar Nova Função</h3>
+                    <form onSubmit={handleCriarFuncao} className="space-y-4">
+                      <div>
+                        <Label htmlFor="nome_funcao">Nome da Função (identificador)</Label>
+                        <Input
+                          id="nome_funcao"
+                          value={novaFuncao.nome_funcao}
+                          onChange={(e) => setNovaFuncao({ ...novaFuncao, nome_funcao: e.target.value.toLowerCase().replace(/\s/g, '_') })}
+                          className="bg-[#0a1628] border-[#1e3a5f] mt-2"
+                          placeholder="ex: tecnico, gerente, analista_senior"
+                          required
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Use apenas letras minúsculas, números e underline</p>
+                      </div>
+                      <div>
+                        <Label htmlFor="label_exibicao">Nome de Exibição</Label>
+                        <Input
+                          id="label_exibicao"
+                          value={novaFuncao.label_exibicao}
+                          onChange={(e) => setNovaFuncao({ ...novaFuncao, label_exibicao: e.target.value })}
+                          className="bg-[#0a1628] border-[#1e3a5f] mt-2"
+                          placeholder="ex: Técnico, Gerente, Analista Sênior"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cor_badge">Cor do Badge</Label>
+                        <Select
+                          value={novaFuncao.cor_badge}
+                          onValueChange={(value) => setNovaFuncao({ ...novaFuncao, cor_badge: value })}
+                        >
+                          <SelectTrigger className="bg-[#0a1628] border-[#1e3a5f] mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                            <SelectItem value="bg-blue-500/20 text-blue-400 border-blue-500/30">Azul</SelectItem>
+                            <SelectItem value="bg-green-500/20 text-green-400 border-green-500/30">Verde</SelectItem>
+                            <SelectItem value="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Amarelo</SelectItem>
+                            <SelectItem value="bg-red-500/20 text-red-400 border-red-500/30">Vermelho</SelectItem>
+                            <SelectItem value="bg-purple-500/20 text-purple-400 border-purple-500/30">Roxo</SelectItem>
+                            <SelectItem value="bg-pink-500/20 text-pink-400 border-pink-500/30">Rosa</SelectItem>
+                            <SelectItem value="bg-orange-500/20 text-orange-400 border-orange-500/30">Laranja</SelectItem>
+                            <SelectItem value="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">Ciano</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-[#ADF802] hover:bg-[#9DE002] text-black font-bold"
+                        disabled={criarFuncaoMutation.isPending}
+                      >
+                        {criarFuncaoMutation.isPending ? 'Criando...' : 'Criar Função'}
+                      </Button>
+                    </form>
+                  </div>
+
+                  {/* Funções Padrão do Sistema */}
+                  <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+                    <h3 className="text-lg font-semibold text-white mb-4">Funções Padrão (Não Removíveis)</h3>
+                    <div className="space-y-2">
+                      {[
+                        { role: 'admin', label: 'Coordenador' },
+                        { role: 'supervisor', label: 'Supervisor' },
+                        { role: 'user', label: 'Usuário' },
+                        { role: 'noc', label: 'NOC' }
+                      ].map((funcao) => (
+                        <div key={funcao.role} className="flex items-center justify-between p-3 bg-[#0a1628] rounded-lg border border-[#1e3a5f]/50">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadge(funcao.role)}`}>
+                              {funcao.label}
+                            </span>
+                            <span className="text-sm text-gray-400">({funcao.role})</span>
+                          </div>
+                          <Lock className="w-4 h-4 text-gray-500" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Funções Personalizadas */}
+                  {funcoesPersonalizadas.length > 0 && (
+                    <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
+                      <h3 className="text-lg font-semibold text-white mb-4">Funções Personalizadas</h3>
+                      <div className="space-y-2">
+                        {funcoesPersonalizadas.map((funcao) => (
+                          <div key={funcao.id} className="flex items-center justify-between p-3 bg-[#0a1628] rounded-lg border border-[#1e3a5f]/50">
+                            <div className="flex items-center gap-3">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${funcao.cor_badge}`}>
+                                {funcao.label_exibicao}
+                              </span>
+                              <span className="text-sm text-gray-400">({funcao.nome_funcao})</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteFuncao(funcao)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-[#1e3a5f]">
+                  <Button 
+                    onClick={() => setIsFuncoesDialogOpen(false)}
+                    className="bg-[#0f1f35] hover:bg-[#1e3a5f]"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
           <Dialog open={isInviteAnalistaOpen} onOpenChange={setIsInviteAnalistaOpen}>
             <DialogTrigger asChild>
               <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
@@ -485,6 +730,11 @@ export default function GestaoUsuarios() {
                     <SelectItem value="supervisor">Supervisor</SelectItem>
                     <SelectItem value="admin">Coordenador</SelectItem>
                     <SelectItem value="noc">NOC</SelectItem>
+                    {funcoesPersonalizadas.map((funcao) => (
+                      <SelectItem key={funcao.id} value={funcao.nome_funcao}>
+                        {funcao.label_exibicao}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -664,6 +914,11 @@ export default function GestaoUsuarios() {
                   <SelectItem value="supervisor">Supervisor</SelectItem>
                   <SelectItem value="admin">Coordenador</SelectItem>
                   <SelectItem value="noc">NOC</SelectItem>
+                  {funcoesPersonalizadas.map((funcao) => (
+                    <SelectItem key={funcao.id} value={funcao.nome_funcao}>
+                      {funcao.label_exibicao}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -722,6 +977,32 @@ export default function GestaoUsuarios() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deletando...' : 'Sim, Deletar Usuário'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Função Confirmation Dialog */}
+      <AlertDialog open={deleteFuncaoOpen} onOpenChange={setDeleteFuncaoOpen}>
+        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Remover Função do Sistema</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja remover a função <strong className="text-white">{funcaoToDelete?.label_exibicao}</strong>?
+              <br /><br />
+              <strong className="text-yellow-400">ATENÇÃO:</strong> Todos os usuários com esta função serão automaticamente alterados para "Usuário".
+              <br /><br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteFuncaoMutation.mutate(funcaoToDelete.id)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteFuncaoMutation.isPending}
+            >
+              {deleteFuncaoMutation.isPending ? 'Removendo...' : 'Sim, Remover Função'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
