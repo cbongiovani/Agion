@@ -120,8 +120,8 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0d0d0d] border-gray-800 border-b z-50 flex items-center justify-center px-4 safe-top">
-        <a 
-          href="/"
+        <Link 
+          to={createPageUrl('Home')}
           className="hover:opacity-80 transition-opacity"
         >
           <img 
@@ -129,7 +129,7 @@ export default function Layout({ children }) {
             alt="Grupo Agion" 
             className="h-8 w-auto cursor-pointer"
           />
-        </a>
+        </Link>
         <Button
           variant="ghost"
           size="icon"
@@ -158,8 +158,8 @@ export default function Layout({ children }) {
       `}>
         <div className="p-4 border-b border-gray-800 flex-shrink-0 safe-top">
           <div className="w-full flex items-center justify-center relative">
-            <a 
-              href="/"
+            <Link 
+              to={createPageUrl('Home')}
               onClick={() => setMobileMenuOpen(false)}
               className="hover:opacity-80 transition-opacity"
             >
@@ -168,7 +168,7 @@ export default function Layout({ children }) {
                 alt="Grupo Agion" 
                 className="h-8 w-auto cursor-pointer"
               />
-            </a>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
