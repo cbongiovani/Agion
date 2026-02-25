@@ -225,8 +225,7 @@ export default function Layout({ children }) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-xs text-white truncate">{currentUser?.full_name || 'Meu Perfil'}</p>
-              <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+              <p className="font-medium text-xs text-white truncate">{currentUser?.full_name}</p>
             </div>
             {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && pendingRequests.length > 0 && (
               <div className="relative flex-shrink-0">
