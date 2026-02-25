@@ -45,9 +45,30 @@ export default function Certificados() {
   });
 
   const createCertificadoMutation = useMutation({
-    mutationFn: (data) => base44.entities.Certificado.create(data),
+    mutationFn: async (data) => {
+      const certificado = await base44.entities.Certificado.create(data);
+      
+      // Registrar atividade
+      const analista = analistas.find(a => a.id === data.analista_id);
+      if (analista) {
+        await base44.entities.Atividade.create({
+          data: new Date(data.data_conclusao).toISOString().split('T')[0],
+          supervisor_id: data.supervisor_id,
+          analista_id: data.analista_id,
+          registrado_por: currentUser.email,
+          tipo: 'Feedback Individual',
+          tipo_feedback: 'Positivo',
+          nota: 10,
+          comentario: `Certificado registrado: ${data.nome_curso}`,
+          status: 'Concluído',
+        });
+      }
+      
+      return certificado;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificados'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success('Certificado registrado com sucesso!');
       resetForm();
       setIsCreateDialogOpen(false);
