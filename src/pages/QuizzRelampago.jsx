@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Plus, Trophy, Clock, CheckCircle, XCircle, Pencil, Trash2, Eye, Play, Calendar, User, Award, Timer } from 'lucide-react';
+import { Zap, Plus, Trophy, Clock, CheckCircle, XCircle, Pencil, Trash2, Eye, Play, Calendar, User, Award, Timer, Sparkles, Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -37,6 +37,13 @@ export default function QuizzRelampago() {
     respostas: [],
     tempoInicio: null,
   });
+
+  const [gerarComIA, setGerarComIA] = useState(false);
+  const [arquivosIA, setArquivosIA] = useState([]);
+  const [contextoIA, setContextoIA] = useState('');
+  const [categoriaIA, setCategoriaIA] = useState('');
+  const [perguntaGeradaIA, setPerguntaGeradaIA] = useState(null);
+  const [loadingIA, setLoadingIA] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -302,6 +309,116 @@ export default function QuizzRelampago() {
     return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
   };
 
+  const handleFileUploadIA = (e) => {
+    const files = Array.from(e.target.files);
+    
+    if (arquivosIA.length + files.length > 5) {
+      toast.error('Máximo de 5 arquivos permitidos');
+      return;
+    }
+
+    const filesValidos = files.filter(file => {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error(`${file.name} excede 2MB`);
+        return false;
+      }
+      return true;
+    });
+
+    setArquivosIA([...arquivosIA, ...filesValidos]);
+  };
+
+  const removerArquivoIA = (index) => {
+    setArquivosIA(arquivosIA.filter((_, i) => i !== index));
+  };
+
+  const gerarPerguntaComIA = async () => {
+    if (!contextoIA && arquivosIA.length === 0) {
+      toast.error('Adicione contexto ou anexe arquivos');
+      return;
+    }
+
+    setLoadingIA(true);
+    try {
+      let file_urls = [];
+      
+      for (const arquivo of arquivosIA) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: arquivo });
+        file_urls.push(file_url);
+      }
+
+      const prompt = `Você é um especialista em criar questões rápidas sobre processos de suporte técnico N1.
+
+Baseado no contexto fornecido, crie UMA questão de múltipla escolha com as seguintes características:
+- 1 pergunta clara e objetiva sobre processos do setor
+- 4 alternativas (A, B, C, D)
+- Apenas 1 alternativa correta
+- Questões sobre: processos, procedimentos, fluxos de trabalho, atendimento, sistemas
+${categoriaIA ? `- Categoria específica: ${categoriaIA}` : ''}
+
+Contexto fornecido pelo usuário:
+${contextoIA || 'Use os arquivos anexados como referência'}
+
+IMPORTANTE: Retorne APENAS um objeto JSON válido, sem markdown, sem explicações adicionais.
+
+Formato esperado:
+{
+  "pergunta": "texto da pergunta aqui",
+  "alternativa_a": "texto da alternativa A",
+  "alternativa_b": "texto da alternativa B",
+  "alternativa_c": "texto da alternativa C",
+  "alternativa_d": "texto da alternativa D",
+  "resposta_correta": "A" ou "B" ou "C" ou "D"
+}`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        add_context_from_internet: true,
+        file_urls: file_urls.length > 0 ? file_urls : null,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            pergunta: { type: 'string' },
+            alternativa_a: { type: 'string' },
+            alternativa_b: { type: 'string' },
+            alternativa_c: { type: 'string' },
+            alternativa_d: { type: 'string' },
+            resposta_correta: { type: 'string', enum: ['A', 'B', 'C', 'D'] }
+          }
+        }
+      });
+
+      setPerguntaGeradaIA(response);
+    } catch (error) {
+      toast.error('Erro ao gerar pergunta: ' + error.message);
+    } finally {
+      setLoadingIA(false);
+    }
+  };
+
+  const aprovarPerguntaIA = () => {
+    if (!perguntaGeradaIA) return;
+    
+    const novaPergunta = {
+      ...perguntaGeradaIA,
+      ordem: perguntas.length + 1
+    };
+    
+    setPerguntas([...perguntas, novaPergunta]);
+    toast.success('Pergunta adicionada!');
+    
+    setPerguntaGeradaIA(null);
+    setGerarComIA(false);
+    setContextoIA('');
+    setCategoriaIA('');
+    setArquivosIA([]);
+  };
+
+  const recusarPerguntaIA = () => {
+    setPerguntaGeradaIA(null);
+    toast.info('Pergunta recusada. Tente gerar outra.');
+  };
+
   const ranking = selectedQuizz ? calcularRanking() : [];
 
   return (
@@ -369,10 +486,16 @@ export default function QuizzRelampago() {
                 <div className="border-t border-gray-700 pt-4 mt-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">Perguntas</h3>
-                    <Button onClick={addPergunta} size="sm" className="bg-yellow-600 hover:bg-yellow-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Adicionar Pergunta
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setGerarComIA(true)} size="sm" className="bg-[#ADF802] hover:bg-[#9DE002] text-black">
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Gerar com IA
+                      </Button>
+                      <Button onClick={addPergunta} size="sm" className="bg-yellow-600 hover:bg-yellow-700">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar Manual
+                      </Button>
+                    </div>
                   </div>
 
                   {perguntas.map((pergunta, index) => (
@@ -695,6 +818,146 @@ export default function QuizzRelampago() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={gerarComIA} onOpenChange={setGerarComIA}>
+        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#ADF802]" />
+              Gerar Pergunta com Inteligência Artificial
+            </DialogTitle>
+          </DialogHeader>
+
+          {!perguntaGeradaIA ? (
+            <div className="space-y-4">
+              <div>
+                <Label>Categoria (opcional)</Label>
+                <Input
+                  value={categoriaIA}
+                  onChange={(e) => setCategoriaIA(e.target.value)}
+                  className="bg-[#1a1a1a] border-gray-700 mt-2"
+                  placeholder="Ex: Processos de Atendimento, Sistema..."
+                />
+              </div>
+
+              <div>
+                <Label>Contexto / Base de Conhecimento</Label>
+                <Textarea
+                  value={contextoIA}
+                  onChange={(e) => setContextoIA(e.target.value)}
+                  className="bg-[#1a1a1a] border-gray-700 mt-2 h-32"
+                  placeholder="Cole aqui o texto base para a IA gerar a pergunta..."
+                />
+              </div>
+
+              <div>
+                <Label>Anexar Arquivos (Máx: 5 arquivos de 2MB cada)</Label>
+                <div className="mt-2">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    onChange={handleFileUploadIA}
+                    className="hidden"
+                    id="file-upload-ia"
+                  />
+                  <label htmlFor="file-upload-ia">
+                    <Button type="button" variant="outline" className="border-gray-700 w-full" asChild>
+                      <span className="cursor-pointer">
+                        <Upload className="w-4 h-4 mr-2" />
+                        Selecionar Arquivos ({arquivosIA.length}/5)
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+                {arquivosIA.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {arquivosIA.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-[#1a1a1a] p-2 rounded border border-gray-700">
+                        <span className="text-sm text-gray-300 truncate">{file.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removerArquivoIA(index)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={gerarPerguntaComIA}
+                disabled={loadingIA}
+                className="w-full bg-[#ADF802] hover:bg-[#9DE002] text-black font-bold"
+              >
+                {loadingIA ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Gerando Pergunta...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Gerar Pergunta
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-[#ADF802]">Pergunta Gerada</span>
+                </div>
+                
+                <p className="font-semibold text-white mb-4">{perguntaGeradaIA.pergunta}</p>
+                
+                <div className="space-y-2">
+                  {['a', 'b', 'c', 'd'].map((letra) => (
+                    <div
+                      key={letra}
+                      className={`p-3 rounded-lg border ${
+                        perguntaGeradaIA.resposta_correta === letra.toUpperCase()
+                          ? 'bg-green-500/20 border-green-500/50'
+                          : 'bg-[#0a0a0a] border-gray-700'
+                      }`}
+                    >
+                      <span className="font-bold text-[#ADF802]">{letra.toUpperCase()})</span>{' '}
+                      <span className="text-gray-300">{perguntaGeradaIA[`alternativa_${letra}`]}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
+                  <span>Resposta Correta: {perguntaGeradaIA.resposta_correta}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={recusarPerguntaIA}
+                  variant="outline"
+                  className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/20"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Recusar
+                </Button>
+                <Button
+                  onClick={aprovarPerguntaIA}
+                  className="flex-1 bg-[#ADF802] hover:bg-[#9DE002] text-black font-bold"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Aprovar e Adicionar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
