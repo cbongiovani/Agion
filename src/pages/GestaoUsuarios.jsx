@@ -1020,7 +1020,7 @@ export default function GestaoUsuarios() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="supervisor_select">Vincular ao Supervisor</Label>
+              <Label htmlFor="supervisor_select">Vincular Analista</Label>
               <Select
                 value={formData.supervisor_id}
                 onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
