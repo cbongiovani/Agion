@@ -32,6 +32,7 @@ import {
 import { Plus, Pencil, Trash2, ClipboardList, Loader2, Filter, X, Eye, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/lib/dateUtils';
 import NotaBadge from '@/components/ui/NotaBadge';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
@@ -56,7 +57,7 @@ export default function Atividades() {
     dataFim: '',
   });
   const [formData, setFormData] = useState({
-    data: format(new Date(), 'yyyy-MM-dd'),
+    data: formatDateToInput(new Date()),
     analista_id: '',
     supervisor_id: '',
     tipo: '',
@@ -296,7 +297,7 @@ export default function Atividades() {
 
   const resetForm = () => {
     setFormData({
-      data: format(new Date(), 'yyyy-MM-dd'),
+      data: formatDateToInput(new Date()),
       analista_id: '',
       supervisor_id: '',
       tipo: '',
@@ -418,10 +419,11 @@ export default function Atividades() {
     }
     
     const payload = { 
-      ...formData, 
-      nota,
-      registrado_por: currentUser?.email
-    };
+       ...formData,
+       data: ensureCorrectDate(formData.data),
+       nota,
+       registrado_por: currentUser?.email
+     };
     
     if (editingAtividade) {
       updateMutation.mutate({ id: editingAtividade.id, data: payload });
@@ -832,7 +834,7 @@ export default function Atividades() {
               {filteredAtividades.map((atividade) => (
                 <tr key={atividade.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                   <td className="px-6 py-4 text-white">
-                    {format(new Date(atividade.data), 'dd/MM/yyyy')}
+                    {getLocalDateString(atividade.data)}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
@@ -943,7 +945,7 @@ export default function Atividades() {
             <div className="space-y-2 mb-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Data</span>
-                <span className="text-sm text-white">{format(new Date(atividade.data), 'dd/MM/yyyy')}</span>
+                <span className="text-sm text-white">{getLocalDateString(atividade.data)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Supervisor Resp.</span>
