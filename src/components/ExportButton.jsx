@@ -146,13 +146,6 @@ export default function ExportButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="bg-[#0a1628] border-[#1e3a5f]">
         <DropdownMenuItem
-          onClick={generatePDF}
-          disabled={isGenerating}
-          className="text-white cursor-pointer"
-        >
-          📄 Exportar PDF
-        </DropdownMenuItem>
-        <DropdownMenuItem
           onClick={generateCSV}
           disabled={isGenerating}
           className="text-white cursor-pointer"

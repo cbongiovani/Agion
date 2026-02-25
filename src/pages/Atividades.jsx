@@ -428,11 +428,15 @@ export default function Atividades() {
   };
 
   const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
-   const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
-   const getUsuarioNome = (email) => {
-     const usuario = usuarios.find(u => u.email === email);
-     return usuario?.full_name || email || '-';
-   };
+   const getAnalistaNome = (id) => {
+     const analista = analistas.find(a => a.id === id);
+     const usuario = usuarios.find(u => u.email === analista?.usuario_email);
+     return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+    };
+    const getUsuarioNome = (email) => {
+      const usuario = usuarios.find(u => u.email === email);
+      return usuario?.nome_customizado || usuario?.full_name || email || '-';
+    };
 
   const handleAnalistaChange = (analistaId) => {
     const analista = analistas.find(a => a.id === analistaId);

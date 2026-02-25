@@ -95,6 +95,11 @@ export default function FechamentoSemanal() {
     queryFn: () => base44.entities.Analista.list(),
   });
 
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const result = await base44.entities.FechamentoSemanal.create(data);
@@ -280,8 +285,16 @@ export default function FechamentoSemanal() {
     setIsDialogOpen(true);
   };
 
-  const getSupervisorNome = (id) => supervisores.find(s => s.id === id)?.nome || '-';
-  const getAnalistaNome = (id) => analistas.find(a => a.id === id)?.nome || '-';
+  const getSupervisorNome = (id) => {
+    const supervisor = supervisores.find(s => s.id === id);
+    const usuario = usuarios.find(u => u.email === supervisor?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
+  };
+  const getAnalistaNome = (id) => {
+    const analista = analistas.find(a => a.id === id);
+    const usuario = usuarios.find(u => u.email === analista?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+  };
 
   const handleAnalistaChange = (analistaId) => {
     const analista = analistas.find(a => a.id === analistaId);
