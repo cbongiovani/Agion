@@ -36,8 +36,6 @@ import { ptBR } from 'date-fns/locale';
 import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 
-const useState = React.useState || require('react').useState;
-
 export default function FechamentoSemanal() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
