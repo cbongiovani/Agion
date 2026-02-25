@@ -276,9 +276,9 @@ export default function Ranking() {
                 <Target className="w-4 h-4 mr-2" />
                 Mensal
               </TabsTrigger>
-              <TabsTrigger value="total" className="data-[state=active]:bg-[#ADF802] data-[state=active]:text-black">
+              <TabsTrigger value="anual" className="data-[state=active]:bg-[#ADF802] data-[state=active]:text-black">
                 <Star className="w-4 h-4 mr-2" />
-                Total
+                Anual
               </TabsTrigger>
             </TabsList>
           </Tabs>
