@@ -120,6 +120,13 @@ export default function Atividades() {
       const result = await base44.entities.Atividade.create(data);
       const user = await base44.auth.me();
       
+      // Criar registro de aprovação
+      await base44.entities.AprovacaoAtividade.create({
+        atividade_id: result.id,
+        tipo: 'atividade',
+        status: 'pendente'
+      });
+      
       // Criar log
       await base44.entities.Log.create({
         usuario_email: user.email,
@@ -133,7 +140,7 @@ export default function Atividades() {
       const analista = analistas.find(a => a.id === data.analista_id);
       const analistaNome = analista?.nome || 'analista';
       
-      console.log('Notificando coordenadores sobre nova atividade:', {
+      console.log('Notificando coordenadores sobre nova atividade pendente de aprovação:', {
         tipo: data.tipo,
         analista: analistaNome,
         registradoPor: user.full_name
@@ -142,9 +149,9 @@ export default function Atividades() {
       try {
         await notificarCoordenadores(
           'nova_atividade',
-          '📋 Nova Atividade Registrada',
-          `${user.full_name} registrou atividade do tipo ${data.tipo} para ${analistaNome}`,
-          'Atividades'
+          '📋 Nova Atividade Aguardando Aprovação',
+          `${user.full_name} registrou atividade do tipo ${data.tipo} para ${analistaNome} - Aguardando sua aprovação`,
+          'Aprovacao'
         );
         console.log('Coordenadores notificados com sucesso');
       } catch (error) {
