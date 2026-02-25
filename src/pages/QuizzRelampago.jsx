@@ -72,6 +72,11 @@ export default function QuizzRelampago() {
     enabled: !!selectedQuizz,
   });
 
+  const { data: todasRespostas = [] } = useQuery({
+    queryKey: ['todasRespostasQuizz'],
+    queryFn: () => base44.entities.RespostaQuizz.list(),
+  });
+
   const createQuizzMutation = useMutation({
     mutationFn: async (data) => {
       const quizz = await base44.entities.QuizzRelampago.create(data.quizz);
@@ -421,6 +426,11 @@ Formato esperado:
 
   const ranking = selectedQuizz ? calcularRanking() : [];
 
+  const jaParticipou = (quizzId) => {
+    if (!currentUser) return false;
+    return todasRespostas.some(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -630,10 +640,16 @@ Formato esperado:
                   <span>Criado por: {quizz.criador_nome}</span>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  {(isAnalista || currentUser?.role === 'user') && quizz.status === 'Ativo' && (
+                  {(isAnalista || currentUser?.role === 'user') && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
                     <Button onClick={() => iniciarParticipacao(quizz)} className="flex-1 bg-yellow-600 hover:bg-yellow-700">
                       <Play className="w-4 h-4 mr-2" />
                       Participar
+                    </Button>
+                  )}
+                  {(isAnalista || currentUser?.role === 'user') && jaParticipou(quizz.id) && (
+                    <Button disabled className="flex-1 bg-gray-600 cursor-not-allowed">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Já Participou
                     </Button>
                   )}
                   <Button onClick={() => visualizarResultados(quizz)} variant="outline" className="flex-1 border-gray-700">
