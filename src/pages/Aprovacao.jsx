@@ -59,23 +59,33 @@ export default function Aprovacao() {
   });
 
   const aprovarMutation = useMutation({
-    mutationFn: async (aprovacaoId) => {
+    mutationFn: async (item) => {
       const user = await base44.auth.me();
-      await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
-        status: 'aprovado',
-        aprovado_por: user.email,
-        data_aprovacao: new Date().toISOString(),
-      });
+      
+      if (item.tipo === 'atividade' || item.tipo === 'fechamento' || item.tipo === 'warroom') {
+        await base44.entities.AprovacaoAtividade.update(item.id, {
+          status: 'aprovado',
+          aprovado_por: user.email,
+          data_aprovacao: new Date().toISOString(),
+        });
+      } else if (item.tipo === 'avaliacao') {
+        await base44.entities.Avaliacao.update(item.id, { status: 'Concluída' });
+      } else if (item.tipo === 'questao') {
+        await base44.entities.Questao.update(item.id, { status: 'Aprovada' });
+      } else if (item.tipo === 'quizz') {
+        await base44.entities.QuizzRelampago.update(item.id, { status: 'Ativo' });
+      }
+      
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
         acao: 'Atualizou',
         entidade: 'Aprovação',
-        detalhes: `Aprovou registro ID: ${aprovacaoId}`,
+        detalhes: `Aprovou registro ID: ${item.id}`,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes', 'avaliacoes', 'questoes', 'quizzes'] });
       toast.success('Registro aprovado com sucesso!');
       setSelectedItem(null);
       setIsViewDialogOpen(false);
