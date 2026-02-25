@@ -500,11 +500,12 @@ Formato esperado:
   const jaParticipou = (quizzId) => {
     if (!currentUser) return false;
 
-    // Buscar todas as respostas do usuário para este quizz específico
-    const todasAsRespostas = base44.entities.RespostaQuizz.filter({ quizz_id: quizzId, usuario_id: currentUser.id });
+    // Verificar se o usuário tem respostas para este quizz nas respostas carregadas
+    const respostasParaEsteQuizz = todasRespostasQuizz.filter(
+      r => r.quizz_id === quizzId && r.usuario_id === currentUser.id
+    );
     
-    // Se houver respostas, o usuário já participou
-    return todasAsRespostas && todasAsRespostas.length > 0;
+    return respostasParaEsteQuizz.length > 0;
   };
 
   return (
