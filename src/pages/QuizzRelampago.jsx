@@ -498,20 +498,13 @@ Formato esperado:
   const ranking = selectedQuizz ? calcularRanking() : [];
 
   const jaParticipou = (quizzId) => {
-    if (!currentUser || !selectedQuizz || selectedQuizz.id !== quizzId) {
-      // Se o quizz não foi carregado, assumir que não participou
-      return false;
-    }
+    if (!currentUser) return false;
 
-    // Usar dados já carregados
-    const perguntasCount = perguntasQuizz.length;
-    if (perguntasCount === 0) return false;
-
-    const respostasDoUsuario = respostasQuizz.filter(
-      r => r.usuario_id === currentUser.id
-    );
-
-    return respostasDoUsuario.length >= perguntasCount;
+    // Buscar todas as respostas do usuário para este quizz específico
+    const todasAsRespostas = base44.entities.RespostaQuizz.filter({ quizz_id: quizzId, usuario_id: currentUser.id });
+    
+    // Se houver respostas, o usuário já participou
+    return todasAsRespostas && todasAsRespostas.length > 0;
   };
 
   return (
