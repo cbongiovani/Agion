@@ -1023,7 +1023,14 @@ export default function GestaoUsuarios() {
               <Label htmlFor="supervisor_select">Vincular Analista</Label>
               <Select
                 value={formData.supervisor_id}
-                onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
+                onValueChange={(value) => {
+                  const analista = analistas.find(a => a.id === value);
+                  setFormData({ 
+                    ...formData, 
+                    supervisor_id: value,
+                    full_name: analista ? analista.nome : formData.full_name
+                  });
+                }}
               >
                 <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
                   <SelectValue placeholder="Selecione um supervisor (opcional)" />
