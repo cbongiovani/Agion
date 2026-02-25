@@ -127,6 +127,7 @@ export default function Atividades() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success('Atividade criada com sucesso!');
+      clearDraft();
       resetForm();
     },
   });
@@ -158,6 +159,7 @@ export default function Atividades() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       toast.success('Atividade atualizada com sucesso!');
+      clearDraft();
       resetForm();
     },
   });
@@ -180,6 +182,45 @@ export default function Atividades() {
       setDeleteId(null);
     },
   });
+
+  const saveDraft = () => {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+      localStorage.setItem('draft_atividade', JSON.stringify({
+        formData,
+        editingAtividade,
+        timestamp: Date.now()
+      }));
+    }
+  };
+
+  const loadDraft = () => {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+      const draft = localStorage.getItem('draft_atividade');
+      if (draft) {
+        const { formData: savedFormData, editingAtividade: savedEditing, timestamp } = JSON.parse(draft);
+        const hoursDiff = (Date.now() - timestamp) / (1000 * 60 * 60);
+        if (hoursDiff < 24) {
+          toast.success('Rascunho restaurado!', {
+            action: {
+              label: 'Descartar',
+              onClick: () => {
+                localStorage.removeItem('draft_atividade');
+                resetForm();
+              }
+            }
+          });
+          setFormData(savedFormData);
+          setEditingAtividade(savedEditing);
+        } else {
+          localStorage.removeItem('draft_atividade');
+        }
+      }
+    }
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem('draft_atividade');
+  };
 
   const resetForm = () => {
     setFormData({
@@ -371,7 +412,15 @@ export default function Atividades() {
           <p className="text-gray-400 mt-1">Registre e gerencie as atividades do Suporte N1</p>
         </div>
         {canCreate && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+            if (!open) { 
+              saveDraft(); 
+              resetForm(); 
+            } else {
+              loadDraft();
+            }
+            setIsDialogOpen(open); 
+          }}>
             <DialogTrigger asChild>
               <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
                 <Plus className="w-4 h-4" />

@@ -74,6 +74,7 @@ export default function WarRoom() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
       toast.success('Incidente registrado com sucesso!');
+      clearDraft();
       resetForm();
     },
     onError: () => {
@@ -86,6 +87,7 @@ export default function WarRoom() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
       toast.success('Incidente atualizado com sucesso!');
+      clearDraft();
       resetForm();
     },
     onError: () => {
@@ -104,6 +106,45 @@ export default function WarRoom() {
       toast.error('Erro ao excluir incidente');
     }
   });
+
+  const saveDraft = () => {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+      localStorage.setItem('draft_warroom', JSON.stringify({
+        formData,
+        editingIncidente,
+        timestamp: Date.now()
+      }));
+    }
+  };
+
+  const loadDraft = () => {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+      const draft = localStorage.getItem('draft_warroom');
+      if (draft) {
+        const { formData: savedFormData, editingIncidente: savedEditing, timestamp } = JSON.parse(draft);
+        const hoursDiff = (Date.now() - timestamp) / (1000 * 60 * 60);
+        if (hoursDiff < 24) {
+          toast.success('Rascunho restaurado!', {
+            action: {
+              label: 'Descartar',
+              onClick: () => {
+                localStorage.removeItem('draft_warroom');
+                resetForm();
+              }
+            }
+          });
+          setFormData(savedFormData);
+          setEditingIncidente(savedEditing);
+        } else {
+          localStorage.removeItem('draft_warroom');
+        }
+      }
+    }
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem('draft_warroom');
+  };
 
   const resetForm = () => {
     setFormData({
@@ -329,7 +370,15 @@ export default function WarRoom() {
              />
            )}
            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
-             <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+             <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+               if (!open) { 
+                 saveDraft(); 
+                 resetForm(); 
+               } else {
+                 loadDraft();
+               }
+               setIsDialogOpen(open); 
+             }}>
                <DialogTrigger asChild>
                <Button className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
                  <Plus className="w-4 h-4 mr-2" />

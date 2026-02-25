@@ -91,6 +91,7 @@ export default function FechamentoSemanal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       toast.success('Fechamento registrado com sucesso!');
+      clearDraft();
       resetForm();
     },
   });
@@ -111,6 +112,7 @@ export default function FechamentoSemanal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       toast.success('Fechamento atualizado com sucesso!');
+      clearDraft();
       resetForm();
     },
   });
@@ -133,6 +135,49 @@ export default function FechamentoSemanal() {
       setDeleteId(null);
     },
   });
+
+  const saveDraft = () => {
+    const currentUserRole = localStorage.getItem('currentUserRole');
+    if (currentUserRole === 'admin' || currentUserRole === 'supervisor') {
+      localStorage.setItem('draft_fechamento', JSON.stringify({
+        formData,
+        editingFechamento,
+        timestamp: Date.now()
+      }));
+    }
+  };
+
+  const loadDraft = async () => {
+    try {
+      const user = await base44.auth.me();
+      if (user?.role === 'admin' || user?.role === 'supervisor') {
+        const draft = localStorage.getItem('draft_fechamento');
+        if (draft) {
+          const { formData: savedFormData, editingFechamento: savedEditing, timestamp } = JSON.parse(draft);
+          const hoursDiff = (Date.now() - timestamp) / (1000 * 60 * 60);
+          if (hoursDiff < 24) {
+            toast.success('Rascunho restaurado!', {
+              action: {
+                label: 'Descartar',
+                onClick: () => {
+                  localStorage.removeItem('draft_fechamento');
+                  resetForm();
+                }
+              }
+            });
+            setFormData(savedFormData);
+            setEditingFechamento(savedEditing);
+          } else {
+            localStorage.removeItem('draft_fechamento');
+          }
+        }
+      }
+    } catch (err) {}
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem('draft_fechamento');
+  };
 
   const resetForm = () => {
     setFormData({
@@ -241,7 +286,15 @@ export default function FechamentoSemanal() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Fechamento Semanal</h1>
           <p className="text-gray-400 mt-1">Consolidação semanal por supervisor</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+          if (!open) { 
+            saveDraft(); 
+            resetForm(); 
+          } else {
+            loadDraft();
+          }
+          setIsDialogOpen(open); 
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
               <Plus className="w-4 h-4" />
