@@ -133,6 +133,7 @@ export default function GestaoUsuarios() {
       queryClient.setQueryData(['users'], context.previousUsers);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuário atualizado com sucesso!');
       resetForm();
     },
