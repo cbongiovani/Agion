@@ -18,11 +18,12 @@ import QuizzCarrosselTop3 from '@/components/QuizzCarrosselTop3';
 export default function QuizzRelampago() {
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedQuizz, setSelectedQuizz] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'participate', 'results'
-  const [deleteQuizzId, setDeleteQuizzId] = useState(null);
-  const [deletePerguntaId, setDeletePerguntaId] = useState(null);
-  const [deleteParticipanteData, setDeleteParticipanteData] = useState(null);
+   const [selectedQuizz, setSelectedQuizz] = useState(null);
+   const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'participate', 'results'
+   const [deleteQuizzId, setDeleteQuizzId] = useState(null);
+   const [deletePerguntaId, setDeletePerguntaId] = useState(null);
+   const [deleteParticipanteData, setDeleteParticipanteData] = useState(null);
+   const [editingQuizzId, setEditingQuizzId] = useState(null);
   
   const [quizzForm, setQuizzForm] = useState({
     titulo: '',
@@ -119,6 +120,7 @@ export default function QuizzRelampago() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quizzRelampago'] });
       toast.success('Quizz atualizado!');
+      setEditingQuizzId(null);
     },
   });
 
@@ -211,14 +213,42 @@ export default function QuizzRelampago() {
       return;
     }
 
-    createQuizzMutation.mutate({
-      quizz: {
-        ...quizzForm,
-        criado_por: currentUser.email,
-        criador_nome: currentUser.full_name,
-        status: new Date(quizzForm.data_inicio) <= new Date() ? 'Ativo' : 'Agendado',
-      },
-      perguntas,
+    if (editingQuizzId) {
+      updateQuizzMutation.mutate({
+        id: editingQuizzId,
+        data: {
+          ...quizzForm,
+        }
+      });
+    } else {
+      createQuizzMutation.mutate({
+        quizz: {
+          ...quizzForm,
+          criado_por: currentUser.email,
+          criador_nome: currentUser.full_name,
+          status: new Date(quizzForm.data_inicio) <= new Date() ? 'Ativo' : 'Agendado',
+        },
+        perguntas,
+      });
+    }
+  };
+
+  const handleEditarQuizz = (quizz) => {
+    setEditingQuizzId(quizz.id);
+    setQuizzForm({
+      titulo: quizz.titulo,
+      descricao: quizz.descricao,
+      data_inicio: quizz.data_inicio,
+      data_fim: quizz.data_fim,
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleToggleStatus = (quizz) => {
+    const novoStatus = quizz.status === 'Ativo' ? 'Encerrado' : 'Ativo';
+    updateQuizzMutation.mutate({
+      id: quizz.id,
+      data: { status: novoStatus }
     });
   };
 
@@ -232,6 +262,7 @@ export default function QuizzRelampago() {
     setPerguntas([
       { pergunta: '', alternativa_a: '', alternativa_b: '', alternativa_c: '', alternativa_d: '', resposta_correta: '', ordem: 1 }
     ]);
+    setEditingQuizzId(null);
   };
 
   const addPergunta = () => {
@@ -509,9 +540,9 @@ Formato esperado:
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Criar Novo Quizz Relâmpago</DialogTitle>
-              </DialogHeader>
+               <DialogHeader>
+                 <DialogTitle>{editingQuizzId ? 'Editar Quizz Relâmpago' : 'Criar Novo Quizz Relâmpago'}</DialogTitle>
+               </DialogHeader>
               <div className="space-y-4">
                 <div>
                   <Label>Título</Label>
@@ -651,13 +682,13 @@ Formato esperado:
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-gray-700">
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleCreateQuizz} className="bg-yellow-600 hover:bg-yellow-700">
-                    Criar Quizz
-                  </Button>
-                </div>
+                   <Button variant="outline" onClick={() => { setIsCreateDialogOpen(false); resetForm(); }} className="border-gray-700">
+                     Cancelar
+                   </Button>
+                   <Button onClick={handleCreateQuizz} className="bg-yellow-600 hover:bg-yellow-700">
+                     {editingQuizzId ? 'Salvar Alterações' : 'Criar Quizz'}
+                   </Button>
+                 </div>
               </div>
             </DialogContent>
           </Dialog>
@@ -684,9 +715,22 @@ Formato esperado:
                       {quizz.descricao}
                     </CardDescription>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(quizz.status)}`}>
-                    {quizz.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(quizz.status)}`}>
+                             {quizz.status}
+                           </span>
+                           {isCoordOrSuper && (
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               onClick={() => handleToggleStatus(quizz)}
+                               className="text-xs p-1 h-auto"
+                               title={quizz.status === 'Ativo' ? 'Inativar' : 'Reativar'}
+                             >
+                               {quizz.status === 'Ativo' ? '⊘' : '✓'}
+                             </Button>
+                           )}
+                         </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -716,9 +760,15 @@ Formato esperado:
                     Ver Ranking
                   </Button>
                   {isCoordOrSuper && (
-                    <Button onClick={() => setDeleteQuizzId(quizz.id)} variant="ghost" className="text-red-400 hover:text-red-300">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <>
+                      <Button onClick={() => handleEditarQuizz(quizz)} variant="outline" className="border-gray-700 gap-2">
+                        <Pencil className="w-4 h-4" />
+                        Editar
+                      </Button>
+                      <Button onClick={() => setDeleteQuizzId(quizz.id)} variant="ghost" className="text-red-400 hover:text-red-300">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </CardContent>
