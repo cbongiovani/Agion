@@ -88,10 +88,17 @@ export default function Dashboard() {
   }), { ligacoes: 0, chamados: 0, monitorias: 0, oneOnOne: 0 });
 
   // Dados por supervisor
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
   const dadosPorSupervisor = supervisores.map(sup => {
+    const usuario = usuarios.find(u => u.email === sup.usuario_email);
+    const nomeExibicao = usuario?.nome_customizado || usuario?.full_name || sup.nome;
     const fechamentosSup = fechamentos.filter(f => f.supervisor_id === sup.id);
     return {
-      nome: sup.nome,
+      nome: nomeExibicao,
       chamados: fechamentosSup.reduce((sum, f) => sum + (f.total_chamados_verdana || 0), 0),
       ligacoes: fechamentosSup.reduce((sum, f) => sum + (f.total_ligacoes_next_ip || 0), 0),
     };
@@ -113,12 +120,14 @@ export default function Dashboard() {
 
   // Média por analista
   const mediaPorAnalista = analistas.map(an => {
+    const usuario = usuarios.find(u => u.email === an.usuario_email);
+    const nomeExibicao = usuario?.nome_customizado || usuario?.full_name || an.nome;
     const atividadesAn = atividades.filter(a => a.analista_id === an.id);
     const media = atividadesAn.length > 0 
       ? atividadesAn.reduce((sum, a) => sum + (a.nota || 0), 0) / atividadesAn.length 
       : 0;
     return {
-      nome: an.nome,
+      nome: nomeExibicao,
       media: parseFloat(media.toFixed(1)),
     };
   }).sort((a, b) => b.media - a.media);
