@@ -172,10 +172,14 @@ export default function QuizzRelampago() {
   });
 
   const deleteParticipanteMutation = useMutation({
-    mutationFn: async ({ quizzId, analistaId }) => {
+    mutationFn: async ({ quizzId, analistaId, usuarioId }) => {
+      if (currentUser?.role !== 'admin') {
+        throw new Error('Apenas coordenadores podem remover participações');
+      }
+      
       const respostas = await base44.entities.RespostaQuizz.filter({ 
-        quizz_id: quizzId, 
-        analista_id: analistaId 
+        quizz_id: quizzId,
+        usuario_id: usuarioId
       });
       
       for (const resposta of respostas) {
@@ -187,6 +191,9 @@ export default function QuizzRelampago() {
       queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
       toast.success('Participação removida! O analista pode participar novamente.');
       setDeleteParticipanteData(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Erro ao remover participação');
     },
   });
 
