@@ -715,16 +715,14 @@ Formato esperado:
                              {quizz.status}
                            </span>
                            {isCoordOrSuper && (
-                             <Button
-                               size="sm"
-                               variant="ghost"
-                               onClick={() => handleToggleStatus(quizz)}
-                               className="text-xs p-1 h-auto"
-                               title={quizz.status === 'Ativo' ? 'Inativar' : 'Reativar'}
-                             >
-                               {quizz.status === 'Ativo' ? '⊘' : '✓'}
-                             </Button>
-                           )}
+                               <Button
+                                 size="sm"
+                                 onClick={() => handleToggleStatus(quizz)}
+                                 className={quizz.status === 'Ativo' ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs gap-1' : 'bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs gap-1'}
+                               >
+                                 {quizz.status === 'Ativo' ? '⊘ Inativar' : '✓ Reativar'}
+                               </Button>
+                             )}
                          </div>
                 </div>
               </CardHeader>
