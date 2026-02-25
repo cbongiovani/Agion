@@ -168,7 +168,7 @@ export default function Certificados() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white flex items-center gap-3">
             <Award className="w-8 h-8 text-yellow-400" />
-            Certificados e Certificações
+            Certificados
           </h1>
           <p className="text-gray-400 mt-1">Gerencie certificados e cursos realizados</p>
         </div>
