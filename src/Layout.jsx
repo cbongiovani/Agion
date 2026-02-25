@@ -314,7 +314,7 @@ export default function Layout({ children }) {
       </footer>
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0 pb-28 lg:pb-24">
+      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0 pb-20 lg:pb-16">
         <div className="p-4 lg:p-8">
           {children}
         </div>
