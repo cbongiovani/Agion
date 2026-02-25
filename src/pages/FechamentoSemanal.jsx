@@ -521,7 +521,8 @@ export default function FechamentoSemanal() {
               </div>
             </form>
           </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         )}
       </div>
 
