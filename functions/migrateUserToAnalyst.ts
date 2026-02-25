@@ -10,12 +10,26 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Apenas admins podem executar esta migração' }, { status: 403 });
     }
 
-    // 1. Migrar todos os usuários com role 'user' para 'analyst'
+    // 1. Migrar todos os usuários com role 'user' ou 'analyst' via Platform API
     const users = await base44.asServiceRole.entities.User.list();
-    const usersToMigrate = users.filter(u => u.role === 'user');
+    const usersToMigrate = users.filter(u => u.role === 'user' || u.role === 'analyst');
 
+    let migratedCount = 0;
     for (const usr of usersToMigrate) {
-      await base44.asServiceRole.entities.User.update(usr.id, { role: 'analyst' });
+      try {
+        // Usar fetch para chamar a Platform API diretamente
+        const response = await fetch(`https://api.base44.com/api/v1/users/${usr.id}/role`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('BASE44_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ role: 'analyst' })
+        });
+        if (response.ok) migratedCount++;
+      } catch (e) {
+        console.error(`Erro ao migrar ${usr.id}:`, e.message);
+      }
     }
 
     // 2. Registrar log da migração
@@ -24,13 +38,13 @@ Deno.serve(async (req) => {
       usuario_nome: user.full_name,
       acao: 'Sistema',
       entidade: 'Sistema',
-      detalhes: `Migração: ${usersToMigrate.length} usuários alterados de 'user' para 'analyst'`,
+      detalhes: `Migração: ${migratedCount} usuários alterados para 'analyst'`,
     });
 
     return Response.json({
       success: true,
-      message: `Migração concluída: ${usersToMigrate.length} usuários alterados para 'Analista'`,
-      migratedCount: usersToMigrate.length
+      message: `Migração concluída: ${migratedCount} usuários alterados para 'Analista'`,
+      migratedCount: migratedCount
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
