@@ -48,11 +48,9 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import Analistas from './pages/Analistas';
-import Atividades from './pages/Atividades';
 import Avaliacoes from './pages/Avaliacoes';
 import Certificados from './pages/Certificados';
 import Dashboard from './pages/Dashboard';
-import FechamentoSemanal from './pages/FechamentoSemanal';
 import GestaoUsuarios from './pages/GestaoUsuarios';
 import Home from './pages/Home';
 import Logs from './pages/Logs';
@@ -70,11 +68,9 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "Analistas": Analistas,
-    "Atividades": Atividades,
     "Avaliacoes": Avaliacoes,
     "Certificados": Certificados,
     "Dashboard": Dashboard,
-    "FechamentoSemanal": FechamentoSemanal,
     "GestaoUsuarios": GestaoUsuarios,
     "Home": Home,
     "Logs": Logs,
