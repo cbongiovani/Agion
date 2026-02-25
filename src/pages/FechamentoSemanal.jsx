@@ -365,12 +365,12 @@ export default function FechamentoSemanal() {
                   Novo Fechamento
                 </Button>
               </DialogTrigger>
-          <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingFechamento ? 'Editar Fechamento' : 'Novo Fechamento Semanal'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingFechamento ? 'Editar Fechamento' : 'Novo Fechamento Semanal'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label>Semana Início</Label>
                   <Input

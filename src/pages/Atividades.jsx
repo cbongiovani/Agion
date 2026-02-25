@@ -580,12 +580,12 @@ export default function Atividades() {
                   Nova Atividade
                 </Button>
               </DialogTrigger>
-          <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingAtividade ? (viewOnlyMode ? 'Visualizar Atividade' : 'Editar Atividade') : 'Nova Atividade'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={viewOnlyMode ? (e) => { e.preventDefault(); resetForm(); } : handleSubmit} className="space-y-4">
-               <div className="grid grid-cols-2 gap-4">
+              <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingAtividade ? (viewOnlyMode ? 'Visualizar Atividade' : 'Editar Atividade') : 'Nova Atividade'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={viewOnlyMode ? (e) => { e.preventDefault(); resetForm(); } : handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                  <div>
                    <Label className="text-blue-400">Data</Label>
                    <Input
