@@ -134,10 +134,13 @@ export default function Ranking() {
           r.mes === currentMonth
         );
         pontos = monthRankings.reduce((sum, r) => sum + (r.pontos_semana || 0), 0);
-      } else {
-        // Total - soma de todos os pontos
-        const totalRankings = rankings.filter(r => r.analista_id === analista.id);
-        pontos = totalRankings.reduce((sum, r) => sum + (r.pontos_total || 0), 0);
+      } else if (viewMode === 'anual') {
+        // Anual - soma dos pontos do ano atual
+        const anuaisSRankings = rankings.filter(r => 
+          r.analista_id === analista.id && 
+          r.ano === currentYear
+        );
+        pontos = anuaisSRankings.reduce((sum, r) => sum + (r.pontos_total || 0), 0);
       }
 
       // Medalhas
