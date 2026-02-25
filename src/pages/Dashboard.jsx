@@ -51,10 +51,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     base44.auth.me().then(user => {
-      setCurrentUser(user);
       window.location.href = createPageUrl('Home');
     }).catch(() => {});
   }, []);
+
+  // Retorna null enquanto redireciona para evitar renderizar o dashboard
+  return null;
 
   const toggleChart = (chartName) => {
     setExpandedCharts(prev => ({ ...prev, [chartName]: !prev[chartName] }));
