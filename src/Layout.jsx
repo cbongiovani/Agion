@@ -215,6 +215,7 @@ export default function Layout({ children }) {
         <div className="border-t border-gray-800 p-3 space-y-1.5 flex-shrink-0 safe-bottom">
           <QuizzNotificationWidget />
           <ClockWidget />
+          <OnlineUsersCounter currentUser={currentUser} />
           <Link
             to={createPageUrl('MeuPerfil')}
             onClick={() => setMobileMenuOpen(false)}
