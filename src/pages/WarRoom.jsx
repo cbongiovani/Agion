@@ -646,8 +646,19 @@ export default function WarRoom() {
                 <Button type="button" variant="outline" onClick={resetForm} className={isDark ? 'border-gray-800' : 'border-gray-300'}>
                   Cancelar
                 </Button>
-                <Button type="submit" className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}>
-                  {editingIncidente ? 'Atualizar' : 'Registrar Incidente'}
+                <Button 
+                  type="submit" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className={isDark ? 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold' : 'bg-[#ADF802] hover:bg-[#9DE002] text-[#1a1a1a] font-bold'}
+                >
+                  {(createMutation.isPending || updateMutation.isPending) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    editingIncidente ? 'Atualizar' : 'Registrar Incidente'
+                  )}
                 </Button>
               </div>
             </form>
