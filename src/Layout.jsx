@@ -181,31 +181,30 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="flex flex-col flex-1 overflow-y-auto py-1">
-          <TooltipProvider>
-            {navItems.map((item) => (
-              <Tooltip key={item.path}>
-                <TooltipTrigger asChild>
-                  <Link
-                    to={createPageUrl(item.path)}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`
-                      flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none
-                      ${isActive(item.path) 
-                        ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
-                        : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent active:bg-[#151515]'
-                      }
-                    `}
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium text-sm">{item.name}</span>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="bg-gray-900 text-gray-100 border-gray-700">
+          {navItems.map((item) => (
+            <div key={item.path} className="relative group">
+              <Link
+                to={createPageUrl(item.path)}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`
+                  flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none
+                  ${isActive(item.path) 
+                    ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
+                    : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent active:bg-[#151515]'
+                  }
+                `}
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium text-sm">{item.name}</span>
+              </Link>
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
+                <div className="bg-gray-800/95 backdrop-blur-sm text-gray-100 text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg border border-gray-700">
                   {item.tooltip}
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </TooltipProvider>
+                  <div className="absolute right-full w-2 h-2 bg-gray-800/95 border-l border-t border-gray-700 transform rotate-45"></div>
+                </div>
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-gray-800 p-3 space-y-1.5 flex-shrink-0 safe-bottom">
