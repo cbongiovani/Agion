@@ -33,6 +33,7 @@ import { Plus, Pencil, Trash2, Calendar, Loader2, AlertTriangle } from 'lucide-r
 import { toast } from 'sonner';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 
 export default function FechamentoSemanal() {
@@ -65,8 +66,8 @@ export default function FechamentoSemanal() {
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
   
   const [formData, setFormData] = useState({
-    semana_inicio: format(weekStart, 'yyyy-MM-dd'),
-    semana_fim: format(weekEnd, 'yyyy-MM-dd'),
+    semana_inicio: formatDateToInput(weekStart),
+    semana_fim: formatDateToInput(weekEnd),
     analista_id: '',
     supervisor_id: '',
     total_ligacoes_next_ip: '',
@@ -215,8 +216,8 @@ export default function FechamentoSemanal() {
 
   const resetForm = () => {
     setFormData({
-      semana_inicio: format(weekStart, 'yyyy-MM-dd'),
-      semana_fim: format(weekEnd, 'yyyy-MM-dd'),
+      semana_inicio: formatDateToInput(weekStart),
+      semana_fim: formatDateToInput(weekEnd),
       analista_id: '',
       supervisor_id: '',
       total_ligacoes_next_ip: '',
@@ -250,6 +251,8 @@ export default function FechamentoSemanal() {
 
     const payload = {
       ...formData,
+      semana_inicio: ensureCorrectDate(formData.semana_inicio),
+      semana_fim: ensureCorrectDate(formData.semana_fim),
       analista_id: formData.analista_id || null,
       total_ligacoes_next_ip: parseInt(formData.total_ligacoes_next_ip) || 0,
       total_chamados_verdana: parseInt(formData.total_chamados_verdana) || 0,
@@ -531,11 +534,11 @@ export default function FechamentoSemanal() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-white">
-                    {getSupervisorNome(fechamento.supervisor_id)}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {format(addDays(new Date(fechamento.semana_inicio), 1), "dd/MM/yyyy", { locale: ptBR })} - {format(addDays(new Date(fechamento.semana_fim), 1), "dd/MM/yyyy", { locale: ptBR })}
-                  </p>
+                     {getSupervisorNome(fechamento.supervisor_id)}
+                   </h3>
+                   <p className="text-sm text-gray-400">
+                     {getLocalDateString(fechamento.semana_inicio)} - {getLocalDateString(fechamento.semana_fim)}
+                   </p>
                   {fechamento.analista_id && (
                     <p className="text-xs text-emerald-400 mt-1">
                       Analista: {getAnalistaNome(fechamento.analista_id)}

@@ -35,6 +35,7 @@ import { Plus, Pencil, Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCir
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateToInput, ensureCorrectDate } from '@/components/dateUtils';
 
 const SEVERIDADES = ['Crítica', 'Alta', 'Média', 'Baixa'];
 const CATEGORIAS = ['Infraestrutura', 'Aplicação', 'Rede', 'Segurança', 'Banco de Dados', 'Serviço'];
@@ -60,7 +61,7 @@ export default function WarRoom() {
     impacto: '',
     acoes_tomadas: '',
     responsavel: '',
-    data_inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
+    data_inicio: new Date().toISOString().slice(0, 16),
     data_resolucao: '',
   });
 
@@ -204,7 +205,7 @@ export default function WarRoom() {
       impacto: '',
       acoes_tomadas: '',
       responsavel: '',
-      data_inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
+      data_inicio: new Date().toISOString().slice(0, 16),
       data_resolucao: '',
     });
     setNovaAtividade({
@@ -279,6 +280,8 @@ export default function WarRoom() {
     
     const payload = {
       ...formData,
+      data_inicio: ensureCorrectDate(formData.data_inicio),
+      data_resolucao: formData.data_resolucao ? ensureCorrectDate(formData.data_resolucao) : '',
       registrado_por: currentUser?.email || 'Sistema',
       supervisor_id: supervisorDoCriador?.id || null
     };
