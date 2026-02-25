@@ -67,18 +67,18 @@ export default function Layout({ children }) {
     const role = currentUser?.role;
     
     const baseItems = [
-      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', permKey: 'dashboard' },
-      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', permKey: 'atividades' },
-      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', permKey: 'fechamento_semanal' },
-      { name: 'Supervisores', icon: Users, path: 'Supervisores', permKey: 'supervisores' },
-      { name: 'Analistas', icon: UserCircle, path: 'Analistas', permKey: 'analistas' },
-      { name: 'Ranking', icon: Trophy, path: 'Ranking', permKey: 'ranking' },
-      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago' },
-      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', permKey: 'avaliacoes' },
-      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room' },
-      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', permKey: 'manual_supervisor' },
-      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', permKey: 'gestao_usuarios' },
-      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', permKey: 'logs' },
+      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', permKey: 'dashboard', tooltip: 'Visão geral consolidada de métricas e performance do painel de governança' },
+      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', permKey: 'atividades', tooltip: 'Registre e acompanhe atividades de monitorias, chamados e feedback individual' },
+      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', permKey: 'fechamento_semanal', tooltip: 'Consolidação semanal de resultados, backlog e observações de desempenho' },
+      { name: 'Supervisores', icon: Users, path: 'Supervisores', permKey: 'supervisores', tooltip: 'Gestão de equipes supervisoras e suas informações' },
+      { name: 'Analistas', icon: UserCircle, path: 'Analistas', permKey: 'analistas', tooltip: 'Cadastro e acompanhamento de analistas N1' },
+      { name: 'Ranking', icon: Trophy, path: 'Ranking', permKey: 'ranking', tooltip: 'Ranking de performance com gamificação MMORPG - Pontos e Medalhas' },
+      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago', tooltip: 'Testes rápidos de conhecimento com questões sobre processos técnicos' },
+      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', permKey: 'avaliacoes', tooltip: 'Avaliações periódicas (AT) estruturadas com 20 questões por período' },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room', tooltip: 'Gerenciamento de incidentes críticos com rastreamento de atividades' },
+      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', permKey: 'manual_supervisor', tooltip: 'Base de conhecimento e orientações para supervisores' },
+      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', permKey: 'gestao_usuarios', tooltip: 'Convites, permissões e funções personalizadas do painel' },
+      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', permKey: 'logs', tooltip: 'Rastreamento de todas as ações realizadas no painel' },
     ];
     
     // Admin sempre vê tudo
