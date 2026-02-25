@@ -188,7 +188,6 @@ export default function QuizzRelampago() {
 
   const isCoordOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
   const isCoord = currentUser?.role === 'admin';
-  const isAnalista = currentUser?.role === 'user';
 
   const handleCreateQuizz = () => {
     if (!quizzForm.titulo || !quizzForm.data_inicio || !quizzForm.data_fim) {
@@ -699,13 +698,13 @@ Formato esperado:
                   <span>Criado por: {quizz.criador_nome}</span>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  {(isAnalista || currentUser?.role === 'user') && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
+                  {!isCoordOrSuper && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
                     <Button onClick={() => iniciarParticipacao(quizz)} className="flex-1 bg-yellow-600 hover:bg-yellow-700">
                       <Play className="w-4 h-4 mr-2" />
                       Participar
                     </Button>
                   )}
-                  {(isAnalista || currentUser?.role === 'user') && jaParticipou(quizz.id) && (
+                  {!isCoordOrSuper && jaParticipou(quizz.id) && (
                     <Button disabled className="flex-1 bg-gray-600 cursor-not-allowed">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Realizado
