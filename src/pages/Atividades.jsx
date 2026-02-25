@@ -1,0 +1,538 @@
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Plus, Pencil, Trash2, ClipboardList, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
+import { notificarCoordenadores } from '@/components/notificationHelper';
+import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
+import AtividadeLimitModal from '@/components/AtividadeLimitCheck';
+import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
+import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
+
+export default function Atividades() {
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAtividade, setEditingAtividade] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [limitAlert, setLimitAlert] = useState(null);
+  const [selectedType, setSelectedType] = useState('Chamados');
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: permissoesUsuario } = useQuery({
+    queryKey: ['permissoesUsuario', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser?.email) return null;
+      const perms = await base44.entities.PermissaoUsuario.filter({ usuario_email: currentUser.email });
+      return perms.length > 0 ? perms[0] : null;
+    },
+    enabled: !!currentUser?.email,
+  });
+
+  const canCreate = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.criar || false;
+  const canEdit = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.editar || false;
+  const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.deletar || false;
+
+  const [formData, setFormData] = useState({
+    data: formatDateToInput(new Date()),
+    tipo: 'Chamados',
+    analista_id: '',
+    supervisor_id: '',
+    protocolo_gravacao: '',
+    link_gravacao_teams: '',
+    ticket_acompanhado: '',
+    tipo_feedback: '',
+    topicos_monitoria_offline: {},
+    topicos_monitoria_assistida: {},
+    nota: '',
+    comentario: '',
+    status: 'Aberto',
+  });
+
+  const { data: atividades = [], isLoading } = useQuery({
+    queryKey: ['atividades'],
+    queryFn: () => base44.entities.Atividade.list('-created_date'),
+  });
+
+  const { data: supervisores = [] } = useQuery({
+    queryKey: ['supervisores'],
+    queryFn: () => base44.entities.Supervisor.list(),
+  });
+
+  const { data: analistas = [] } = useQuery({
+    queryKey: ['analistas'],
+    queryFn: () => base44.entities.Analista.list(),
+  });
+
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      const result = await base44.entities.Atividade.create(data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Criou',
+        entidade: 'Atividade',
+        detalhes: `Registrou atividade do tipo ${data.tipo}`,
+      });
+
+      await notificarCoordenadores(
+        'nova_atividade',
+        'Nova Atividade Registrada',
+        `${user.full_name} registrou uma nova atividade do tipo ${data.tipo}`,
+        'Atividade'
+      );
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      toast.success('Atividade registrada com sucesso!');
+      resetForm();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.Atividade.update(id, data);
+      const user = await base44.auth.me();
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Atualizou',
+        entidade: 'Atividade',
+        detalhes: `Atualizou atividade`,
+      });
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      toast.success('Atividade atualizada com sucesso!');
+      resetForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const user = await base44.auth.me();
+      await base44.entities.Atividade.delete(id);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Atividade',
+        detalhes: `Excluiu atividade`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      toast.success('Atividade excluída com sucesso!');
+      setDeleteId(null);
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      data: formatDateToInput(new Date()),
+      tipo: 'Chamados',
+      analista_id: '',
+      supervisor_id: '',
+      protocolo_gravacao: '',
+      link_gravacao_teams: '',
+      ticket_acompanhado: '',
+      tipo_feedback: '',
+      topicos_monitoria_offline: {},
+      topicos_monitoria_assistida: {},
+      nota: '',
+      comentario: '',
+      status: 'Aberto',
+    });
+    setEditingAtividade(null);
+    setIsDialogOpen(false);
+    setSelectedType('Chamados');
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    const payload = {
+      ...formData,
+      data: ensureCorrectDate(formData.data),
+      nota: parseFloat(formData.nota) || 0,
+    };
+
+    if (editingAtividade) {
+      updateMutation.mutate({ id: editingAtividade.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const openEdit = (atividade) => {
+    setEditingAtividade(atividade);
+    setFormData({
+      data: atividade.data,
+      tipo: atividade.tipo,
+      analista_id: atividade.analista_id || '',
+      supervisor_id: atividade.supervisor_id || '',
+      protocolo_gravacao: atividade.protocolo_gravacao || '',
+      link_gravacao_teams: atividade.link_gravacao_teams || '',
+      ticket_acompanhado: atividade.ticket_acompanhado || '',
+      tipo_feedback: atividade.tipo_feedback || '',
+      topicos_monitoria_offline: atividade.topicos_monitoria_offline || {},
+      topicos_monitoria_assistida: atividade.topicos_monitoria_assistida || {},
+      nota: atividade.nota?.toString() || '',
+      comentario: atividade.comentario || '',
+      status: atividade.status || 'Aberto',
+    });
+    setSelectedType(atividade.tipo);
+    setIsDialogOpen(true);
+  };
+
+  const getSupervisorNome = (id) => {
+    const supervisor = supervisores.find(s => s.id === id);
+    const usuario = usuarios.find(u => u.email === supervisor?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
+  };
+
+  const getAnalistaNome = (id) => {
+    const analista = analistas.find(a => a.id === id);
+    const usuario = usuarios.find(u => u.email === analista?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+  };
+
+  const handleAnalistaChange = (analistaId) => {
+    const analista = analistas.find(a => a.id === analistaId);
+    setFormData({
+      ...formData,
+      analista_id: analistaId,
+      supervisor_id: analista?.supervisor_id || ''
+    });
+  };
+
+  const handleTipoChange = (tipo) => {
+    setSelectedType(tipo);
+    setFormData({ ...formData, tipo });
+  };
+
+  const getNotaBadgeColor = (nota) => {
+    if (nota >= 9) return 'bg-emerald-500/20 text-emerald-400';
+    if (nota >= 7) return 'bg-blue-500/20 text-blue-400';
+    if (nota >= 5) return 'bg-amber-500/20 text-amber-400';
+    return 'bg-red-500/20 text-red-400';
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">Atividades</h1>
+          <p className="text-gray-400 mt-1">Registre monitorias, chamados e feedbacks</p>
+        </div>
+        {canCreate && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            if (!open) resetForm();
+            setIsDialogOpen(open);
+          }}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Plus className="w-4 h-4" />
+                Nova Atividade
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Data</Label>
+                    <Input
+                      type="date"
+                      value={formData.data}
+                      onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Tipo de Atividade</Label>
+                    <Select value={selectedType} onValueChange={handleTipoChange}>
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#242424] border-gray-700">
+                        <SelectItem value="Chamados">Chamados</SelectItem>
+                        <SelectItem value="Ligações">Ligações</SelectItem>
+                        <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
+                        <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
+                        <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Analista</Label>
+                    <Select value={formData.analista_id} onValueChange={handleAnalistaChange}>
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#242424] border-gray-700">
+                        {analistas.map((an) => (
+                          <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.supervisor_id && (
+                    <div>
+                      <Label>Supervisor</Label>
+                      <div className="bg-[#1a1a1a] border border-gray-700 rounded-md p-2 mt-2">
+                        <p className="text-white">{getSupervisorNome(formData.supervisor_id)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {selectedType === 'Chamados' && (
+                  <div>
+                    <Label>Ticket</Label>
+                    <Input
+                      type="text"
+                      placeholder="Ex: #12345"
+                      maxLength="10"
+                      value={formData.ticket_acompanhado}
+                      onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                    />
+                  </div>
+                )}
+
+                {selectedType === 'Ligações' && (
+                  <div>
+                    <Label>Protocolo da Gravação</Label>
+                    <Input
+                      type="text"
+                      value={formData.protocolo_gravacao}
+                      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                    />
+                  </div>
+                )}
+
+                {selectedType === 'Monitoria Assistida' && (
+                  <div>
+                    <Label>Link da Gravação Teams</Label>
+                    <Input
+                      type="text"
+                      value={formData.link_gravacao_teams}
+                      onChange={(e) => setFormData({ ...formData, link_gravacao_teams: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                    />
+                  </div>
+                )}
+
+                {selectedType === 'Feedback Individual' && (
+                  <div>
+                    <Label>Tipo de Feedback</Label>
+                    <Select value={formData.tipo_feedback} onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}>
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#242424] border-gray-700">
+                        <SelectItem value="Positivo">Positivo</SelectItem>
+                        <SelectItem value="Negativo">Negativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {selectedType === 'Monitoria Offline' && (
+                  <MonitoriaOfflineForm
+                    data={formData.topicos_monitoria_offline}
+                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
+                  />
+                )}
+
+                {selectedType === 'Monitoria Assistida' && (
+                  <MonitoriaAssistidaForm
+                    data={formData.topicos_monitoria_assistida}
+                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
+                  />
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nota (0-10)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.5"
+                      value={formData.nota}
+                      onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#242424] border-gray-700">
+                        <SelectItem value="Aberto">Aberto</SelectItem>
+                        <SelectItem value="Em evolução">Em evolução</SelectItem>
+                        <SelectItem value="Concluído">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Comentário</Label>
+                  <Textarea
+                    value={formData.comentario}
+                    onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
+                    className="bg-[#1a1a1a] border-gray-700 mt-2 h-24"
+                    placeholder="Detalhes adicionais..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                  <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                    {editingAtividade ? 'Atualizar' : 'Registrar'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {atividades.map((atividade) => (
+          <div key={atividade.id} className="bg-[#242424] rounded-2xl border border-gray-800 p-6 hover:border-emerald-500/30 transition-all">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                  <ClipboardList className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">
+                    {atividade.tipo}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {getLocalDateString(atividade.data)} • {getAnalistaNome(atividade.analista_id)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Supervisor: {getSupervisorNome(atividade.supervisor_id)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className={`px-4 py-2 rounded-lg font-bold ${getNotaBadgeColor(atividade.nota)}`}>
+                  {atividade.nota}/10
+                </div>
+                <span className="text-xs bg-gray-700/50 text-gray-300 px-3 py-1 rounded-full">
+                  {atividade.status}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEdit(atividade)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteId(atividade.id)}
+                    className="text-gray-400 hover:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {atividade.comentario && (
+              <div className="mt-4 pt-4 border-t border-gray-800">
+                <p className="text-sm text-gray-400">{atividade.comentario}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {atividades.length === 0 && (
+        <div className="text-center py-12">
+          <ClipboardList className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400">Nenhuma atividade registrada</p>
+        </div>
+      )}
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent className="bg-[#242424] border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir esta atividade? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate(deleteId)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AtividadeLimitModal isOpen={!!limitAlert} onClose={() => setLimitAlert(null)} alert={limitAlert} />
+    </div>
+  );
+}

@@ -64,6 +64,7 @@ import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
 import Aprovacao from './pages/Aprovacao';
 import FechamentoSemanal from './pages/FechamentoSemanal';
+import Atividades from './pages/Atividades';
 import __Layout from './Layout.jsx';
 
 
@@ -85,6 +86,7 @@ export const PAGES = {
     "WarRoom": WarRoom,
     "Aprovacao": Aprovacao,
     "FechamentoSemanal": FechamentoSemanal,
+    "Atividades": Atividades,
 }
 
 export const pagesConfig = {
