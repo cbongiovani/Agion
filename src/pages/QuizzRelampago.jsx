@@ -76,15 +76,9 @@ export default function QuizzRelampago() {
     enabled: !!selectedQuizz,
   });
 
-  const { data: todasRespostas = [] } = useQuery({
-    queryKey: ['todasRespostasQuizz'],
-    queryFn: () => base44.entities.RespostaQuizz.list(),
-  });
-
-  const { data: todasPerguntas = [] } = useQuery({
-    queryKey: ['todasPerguntasQuizz'],
-    queryFn: () => base44.entities.PerguntaQuizz.list(),
-  });
+  // Usar dados já carregados em perguntasQuizz e respostasQuizz quando necessário
+  const todasPerguntas = perguntasQuizz; // Usar dados do quizz selecionado
+  const todasRespostas = respostasQuizz; // Usar dados do quizz selecionado
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ['usuarios'],
@@ -504,19 +498,20 @@ Formato esperado:
   const ranking = selectedQuizz ? calcularRanking() : [];
 
   const jaParticipou = (quizzId) => {
-    if (!currentUser) return false;
-    
-    // Buscar quantas perguntas tem o quizz
-    const perguntasDoQuizz = todasPerguntas.filter(p => p.quizz_id === quizzId);
-    if (perguntasDoQuizz.length === 0) return false;
-    
-    // Buscar respostas do usuário para este quizz
-    const respostasDoUsuario = todasRespostas.filter(
-      r => r.quizz_id === quizzId && r.usuario_id === currentUser.id
+    if (!currentUser || !selectedQuizz || selectedQuizz.id !== quizzId) {
+      // Se o quizz não foi carregado, assumir que não participou
+      return false;
+    }
+
+    // Usar dados já carregados
+    const perguntasCount = perguntasQuizz.length;
+    if (perguntasCount === 0) return false;
+
+    const respostasDoUsuario = respostasQuizz.filter(
+      r => r.usuario_id === currentUser.id
     );
-    
-    // Se respondeu pelo menos o mesmo número de perguntas que o quizz tem, já participou
-    return respostasDoUsuario.length >= perguntasDoQuizz.length;
+
+    return respostasDoUsuario.length >= perguntasCount;
   };
 
   return (

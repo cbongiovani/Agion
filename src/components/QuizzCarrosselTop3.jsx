@@ -6,20 +6,22 @@ import { Card } from '@/components/ui/card';
 
 export default function QuizzCarrosselTop3() {
   const { data: quizzAtivo } = useQuery({
-    queryKey: ['quizzAtivo'],
-    queryFn: async () => {
-      const quizzes = await base44.entities.QuizzRelampago.list();
-      return quizzes.find(q => q.status === 'Ativo') || null;
-    },
-    refetchInterval: 5000,
-  });
+     queryKey: ['quizzAtivo'],
+     queryFn: async () => {
+       const quizzes = await base44.entities.QuizzRelampago.list();
+       return quizzes.find(q => q.status === 'Ativo') || null;
+     },
+     staleTime: 10000, // Cache por 10s ao invés de refetch a cada 5s
+     refetchInterval: 30000, // Refetch apenas a cada 30s
+   });
 
-  const { data: respostasQuizz = [] } = useQuery({
-    queryKey: ['respostasQuizzCarrossel', quizzAtivo?.id],
-    queryFn: () => base44.entities.RespostaQuizz.filter({ quizz_id: quizzAtivo.id }),
-    enabled: !!quizzAtivo,
-    refetchInterval: 5000,
-  });
+   const { data: respostasQuizz = [] } = useQuery({
+     queryKey: ['respostasQuizzCarrossel', quizzAtivo?.id],
+     queryFn: () => base44.entities.RespostaQuizz.filter({ quizz_id: quizzAtivo.id }),
+     enabled: !!quizzAtivo,
+     staleTime: 10000,
+     refetchInterval: 30000,
+   });
 
   const { data: perguntasQuizz = [] } = useQuery({
     queryKey: ['perguntasQuizzCarrossel', quizzAtivo?.id],
