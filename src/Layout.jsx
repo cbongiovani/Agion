@@ -65,37 +65,32 @@ export default function Layout({ children }) {
     const role = currentUser?.role;
     
     const baseItems = [
-      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', roles: ['admin', 'supervisor'], permKey: 'dashboard' },
-      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', roles: ['admin', 'supervisor'], permKey: 'atividades' },
-      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', roles: ['admin', 'supervisor'], permKey: 'fechamento_semanal' },
-      { name: 'Supervisores', icon: Users, path: 'Supervisores', roles: ['admin', 'supervisor'], permKey: 'supervisores' },
-      { name: 'Analistas', icon: UserCircle, path: 'Analistas', roles: ['admin', 'supervisor'], permKey: 'analistas' },
-      { name: 'Ranking', icon: Trophy, path: 'Ranking', roles: ['admin', 'supervisor', 'user'], permKey: 'ranking' },
-      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', roles: ['admin', 'supervisor', 'user'], permKey: 'quizz_relampago' },
-      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', roles: ['admin', 'supervisor'], permKey: 'avaliacoes' },
-      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', roles: ['admin', 'supervisor', 'noc'], permKey: 'war_room' },
-      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', roles: ['admin', 'supervisor'], permKey: 'manual_supervisor' },
-      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', roles: ['admin'], permKey: 'gestao_usuarios' },
-      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', roles: ['admin'], permKey: 'logs' },
+      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', permKey: 'dashboard' },
+      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', permKey: 'atividades' },
+      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', permKey: 'fechamento_semanal' },
+      { name: 'Supervisores', icon: Users, path: 'Supervisores', permKey: 'supervisores' },
+      { name: 'Analistas', icon: UserCircle, path: 'Analistas', permKey: 'analistas' },
+      { name: 'Ranking', icon: Trophy, path: 'Ranking', permKey: 'ranking' },
+      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago' },
+      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', permKey: 'avaliacoes' },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room' },
+      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', permKey: 'manual_supervisor' },
+      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', permKey: 'gestao_usuarios' },
+      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', permKey: 'logs' },
     ];
     
     // Admin sempre vê tudo
     if (role === 'admin') {
-      return baseItems.filter(item => item.roles.includes(role));
+      return baseItems;
     }
     
-    // Para outros usuários, verificar permissões
-    return baseItems.filter(item => {
-      if (!item.roles.includes(role)) return false;
-      
-      // Se tem permissões configuradas, verificar
-      if (permissoesUsuario?.abas_visiveis) {
-        return permissoesUsuario.abas_visiveis[item.permKey] === true;
-      }
-      
-      // Padrão: apenas Ranking visível para todos
-      return item.permKey === 'ranking';
-    });
+    // Para todos os outros usuários (incluindo funções personalizadas), verificar permissões
+    if (permissoesUsuario?.abas_visiveis) {
+      return baseItems.filter(item => permissoesUsuario.abas_visiveis[item.permKey] === true);
+    }
+    
+    // Se não tem permissões configuradas, mostrar apenas Ranking e Quizz Relâmpago
+    return baseItems.filter(item => item.permKey === 'ranking' || item.permKey === 'quizz_relampago');
   };
 
   const navItems = getNavItems();
