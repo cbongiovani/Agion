@@ -875,16 +875,21 @@ export default function GestaoUsuarios() {
               </tr>
             </thead>
             <tbody>
-              {sortedUsers.map((user) => (
+              {sortedUsers.map((user) => {
+                const supervisorVinculado = user.supervisor_id ? supervisores.find(s => s.id === user.supervisor_id) : null;
+                const nomeExibicao = supervisorVinculado ? supervisorVinculado.nome : (user.full_name || '-');
+                const letraInicial = supervisorVinculado ? supervisorVinculado.nome.charAt(0) : (user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase());
+
+                return (
                 <tr key={user.id} className="border-b border-[#1e3a5f]/50 hover:bg-[#1e3a5f]/30">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-[#e74c3c]/20 flex items-center justify-center">
                         <span className="text-[#e74c3c] font-bold">
-                          {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                          {letraInicial}
                         </span>
                       </div>
-                      <span className="text-white font-medium">{user.full_name || '-'}</span>
+                      <span className="text-white font-medium">{nomeExibicao}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-400">
@@ -933,9 +938,10 @@ export default function GestaoUsuarios() {
                       </Button>
                     </div>
                   </td>
-                </tr>
-              ))}
-            </tbody>
+                  </tr>
+                  );
+                  })}
+                  </tbody>
           </table>
         </div>
       </div>
