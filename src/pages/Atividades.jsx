@@ -403,9 +403,11 @@ export default function Atividades() {
         </div>
         {canCreate && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            if (!open && !createMutation.isPending && !updateMutation.isPending) {
+            if (open) {
+              setIsDialogOpen(true);
+            } else if (!createMutation.isPending && !updateMutation.isPending) {
               resetForm();
-              setIsDialogOpen(open);
+              setIsDialogOpen(false);
             }
           }}>
             <DialogTrigger asChild>
