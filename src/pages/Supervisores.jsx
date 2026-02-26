@@ -479,22 +479,7 @@ Seja direto, específico e focado em resultados mensuráveis.`;
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Supervisores</h1>
           <p className="text-gray-400 mt-1">Gerencie os supervisores do Suporte N1</p>
         </div>
-        <div className="flex gap-2">
-          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
-            <ExportPDFButton
-              data={generatePDFData}
-              fileName={`Relatorio_Supervisores_${format(new Date(), 'yyyy-MM-dd')}.pdf`}
-              buttonText="Exportar PDF"
-              className="bg-[#ADF802] hover:bg-[#9DE002] text-black"
-            />
-          )}
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-                <Plus className="w-4 h-4" />
-                Novo Supervisor
-              </Button>
-            </DialogTrigger>
+        {/* Botões removidos - Gestão apenas via Gestão de Usuários */}
             <DialogContent className="bg-[#242424] border-gray-800 text-white">
             <DialogHeader>
               <DialogTitle>{editingSupervisor ? 'Editar Supervisor' : 'Novo Supervisor'}</DialogTitle>
@@ -558,23 +543,7 @@ Seja direto, específico e focado em resultados mensuráveis.`;
                       <p className="text-sm text-gray-400">{supervisor.equipe}</p>
                     </div>
                   </div>
-                  <div className="flex gap-1 items-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); openEdit(supervisor); }}
-                      className="text-gray-400 hover:text-white"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); setDeleteId(supervisor.id); }}
-                      className="text-gray-400 hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div className="flex items-center">
                     {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                   </div>
                 </div>

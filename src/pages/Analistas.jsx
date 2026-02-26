@@ -203,13 +203,7 @@ export default function Analistas() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Analistas</h1>
           <p className="text-gray-400 mt-1">Gerencie os analistas do Suporte N1</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Analista
-            </Button>
-          </DialogTrigger>
+        {/* Botão removido - Gestão apenas via Gestão de Usuários */}
           <DialogContent className="bg-[#242424] border-gray-800 text-white">
             <DialogHeader>
               <DialogTitle>{editingAnalista ? 'Editar Analista' : 'Novo Analista'}</DialogTitle>
@@ -324,22 +318,6 @@ export default function Analistas() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(analista)}
-                          className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px]"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(analista.id)}
-                          className="text-gray-400 hover:text-red-400 min-w-[44px] min-h-[44px]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -392,22 +370,6 @@ export default function Analistas() {
                     Ver Perfil
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => openEdit(analista)}
-                  className="text-gray-400 hover:text-white border-gray-700 min-w-[44px] min-h-[44px]"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setDeleteId(analista.id)}
-                  className="text-red-400 hover:text-red-300 border-gray-700 min-w-[44px] min-h-[44px]"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
               </div>
             </div>
           );
