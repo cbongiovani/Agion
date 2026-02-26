@@ -24,7 +24,7 @@ export default function PermissionGrid({ user, resources, userOverrides, roles }
   }, {});
 
   // Obter permissão padrão da role
-  const { data: rolePermissions = [] } = React.useQuery({
+  const { data: rolePermissions = [] } = useQuery({
     queryKey: ['rolePermissions', user.role],
     queryFn: () =>
       base44.entities.RolePermission.filter({ role_key: user.role }),

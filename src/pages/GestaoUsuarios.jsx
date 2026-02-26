@@ -48,11 +48,11 @@ export default function GestaoUsuarios() {
   useEffect(() => {
     const syncResources = async () => {
       try {
-        await base44.functions.invoke('ensureResourceCatalog', {});
-        queryClient.invalidateQueries({ queryKey: ['resources'] });
+        await base44.asServiceRole.functions.invoke('ensureResourceCatalog', {});
       } catch (error) {
         console.error('Erro ao sincronizar recursos:', error);
       }
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
     };
     syncResources();
   }, [queryClient]);
