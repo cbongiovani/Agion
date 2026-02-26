@@ -53,7 +53,6 @@ export default function Atividades() {
   const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.deletar || false;
 
   const [formData, setFormData] = useState({
-    data: formatDateToInput(new Date()),
     tipo: 'Chamados',
     analista_id: '',
     supervisor_id: '',
@@ -193,7 +192,6 @@ export default function Atividades() {
 
   const resetForm = () => {
     setFormData({
-      data: formatDateToInput(new Date()),
       tipo: 'Chamados',
       analista_id: '',
       supervisor_id: '',
@@ -231,7 +229,8 @@ export default function Atividades() {
 
     const payload = {
       ...formData,
-      data: ensureCorrectDate(formData.data),
+      // Sempre usa a data atual de registro para novas atividades
+      data: editingAtividade ? ensureCorrectDate(formData.data) : formatDateToInput(new Date()),
       nota: parseFloat(formData.nota) || 0,
     };
 
@@ -353,18 +352,28 @@ export default function Atividades() {
                 <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Data</Label>
-                    <Input
-                      type="date"
-                      value={formData.data}
-                      onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                      className="bg-[#1a1a1a] border-gray-700 mt-2"
-                      required
-                    />
+                {!editingAtividade && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-sm text-blue-400">
+                      📅 A data será registrada automaticamente como <strong>{format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}</strong>
+                    </p>
                   </div>
-                  <div>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editingAtividade && (
+                    <div>
+                      <Label>Data</Label>
+                      <Input
+                        type="date"
+                        value={formData.data}
+                        onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                        className="bg-[#1a1a1a] border-gray-700 mt-2"
+                        required
+                      />
+                    </div>
+                  )}
+                  <div className={editingAtividade ? '' : 'sm:col-span-2'}>
                     <Label className="flex items-center gap-2">
                       Tipo de Atividade
                       <AtividadeInfoTooltip tipo={selectedType} />
