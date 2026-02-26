@@ -35,8 +35,8 @@ export default function FechamentoSemanal() {
     enabled: !!currentUser?.email,
   });
 
-  const canCreate = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_fechamento?.criar || false;
-  const canEdit = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_fechamento?.editar || false;
+  const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || permissoesUsuario?.permissoes_fechamento?.criar || false;
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || permissoesUsuario?.permissoes_fechamento?.editar || false;
   const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_fechamento?.deletar || false;
   
   const today = new Date();
@@ -126,11 +126,22 @@ export default function FechamentoSemanal() {
       return result;
     },
     onSuccess: () => {
+      // Fechar dialog imediatamente
+      setIsDialogOpen(false);
+      
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-      toast.success('Fechamento enviado para aprovação!');
+      
+      // Limpar draft e resetar form
       clearDraft();
       resetForm();
+      
+      // Mostrar mensagem de sucesso
+      toast.success('✅ Fechamento enviado para aprovação do coordenador!', {
+        description: 'Você será notificado assim que for avaliado.',
+        duration: 5000
+      });
     },
   });
 
@@ -148,10 +159,18 @@ export default function FechamentoSemanal() {
       return result;
     },
     onSuccess: () => {
+      // Fechar dialog imediatamente
+      setIsDialogOpen(false);
+      
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
-      toast.success('Fechamento atualizado com sucesso!');
+      
+      // Limpar draft e resetar form
       clearDraft();
       resetForm();
+      
+      // Mostrar mensagem de sucesso
+      toast.success('Fechamento atualizado com sucesso!');
     },
   });
 
@@ -314,7 +333,10 @@ export default function FechamentoSemanal() {
               setIsDialogOpen(open); 
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Button 
+                  className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
                   <Plus className="w-4 h-4" />
                   Novo Fechamento
                 </Button>
@@ -463,11 +485,28 @@ export default function FechamentoSemanal() {
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-                    <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={resetForm} 
+                      className="border-gray-700"
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
                       Cancelar
                     </Button>
-                    <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                      {editingFechamento ? 'Atualizar' : 'Registrar'}
+                    <Button 
+                      type="submit" 
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {createMutation.isPending || updateMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {editingFechamento ? 'Atualizando...' : 'Registrando...'}
+                        </>
+                      ) : (
+                        editingFechamento ? 'Atualizar' : 'Registrar'
+                      )}
                     </Button>
                   </div>
                 </form>

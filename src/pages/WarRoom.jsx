@@ -89,17 +89,27 @@ export default function WarRoom() {
     queryFn: async () => {
       const todosIncidentes = await base44.entities.Incidente.list('-data_inicio');
       
-      // Admin, Supervisor e NOC veem tudo
-      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') {
-        return todosIncidentes;
-      }
-      
-      // Outros usuários veem apenas aprovados
+      // Buscar aprovações
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'warroom' });
       const aprovados = aprovacoes
         .filter(a => a.status === 'aprovado')
         .map(a => a.atividade_id);
       
+      // Admin vê TUDO (aprovados + pendentes + rejeitados para gestão)
+      if (currentUser?.role === 'admin') {
+        return todosIncidentes;
+      }
+      
+      // Supervisor e NOC veem: aprovados de todos + seus próprios (pendentes/rejeitados)
+      if (currentUser?.role === 'supervisor' || currentUser?.role === 'noc') {
+        return todosIncidentes.filter(inc => 
+          aprovados.includes(inc.id) || 
+          inc.registrado_por === currentUser.email ||
+          inc.created_by === currentUser.email
+        );
+      }
+      
+      // Outros usuários veem APENAS aprovados
       return todosIncidentes.filter(inc => aprovados.includes(inc.id));
     },
     enabled: !!currentUser,
@@ -112,8 +122,12 @@ export default function WarRoom() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const result = await base44.entities.Incidente.create(data);
       const user = await base44.auth.me();
+      
+      const result = await base44.entities.Incidente.create({
+        ...data,
+        registrado_por: user.email
+      });
       
       // Criar registro de aprovação
       await base44.entities.AprovacaoAtividade.create({
@@ -128,14 +142,26 @@ export default function WarRoom() {
         `${user.full_name} registrou incidente: ${data.titulo} (${data.severidade}) - Aguardando aprovação`,
         'Aprovacao'
       );
+      
       return result;
     },
     onSuccess: () => {
+      // Fechar dialog imediatamente
+      setIsDialogOpen(false);
+      
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-      toast.success('Incidente enviado para aprovação!');
+      
+      // Limpar draft e resetar form
       clearDraft();
       resetForm();
+      
+      // Mostrar mensagem de sucesso
+      toast.success('✅ Incidente enviado para aprovação do coordenador!', {
+        description: 'Você será notificado assim que for avaliado.',
+        duration: 5000
+      });
     },
     onError: () => {
       toast.error('Erro ao registrar incidente');
@@ -145,10 +171,18 @@ export default function WarRoom() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Incidente.update(id, data),
     onSuccess: () => {
+      // Fechar dialog imediatamente
+      setIsDialogOpen(false);
+      
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
-      toast.success('Incidente atualizado com sucesso!');
+      
+      // Limpar draft e resetar form
       clearDraft();
       resetForm();
+      
+      // Mostrar mensagem de sucesso
+      toast.success('Incidente atualizado com sucesso!');
     },
     onError: () => {
       toast.error('Erro ao atualizar incidente');
