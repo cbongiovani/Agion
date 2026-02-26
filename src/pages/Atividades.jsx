@@ -131,18 +131,26 @@ export default function Atividades() {
     queryKey: ['atividades', currentUser?.role],
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
+      // Remove duplicatas
+      const mapUnique = {};
+      todasAtividades.forEach((ativ) => {
+        if (!mapUnique[ativ.id]) {
+          mapUnique[ativ.id] = ativ;
+        }
+      });
+      const atividadesUnicas = Object.values(mapUnique);
 
       // Buscar aprovações
       const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
       const aprovacaoPorId = {};
       todasAprovacoes.forEach((aprov) => {
-        if (aprov.tipo === 'atividade') {
+        if (aprov.tipo === 'atividade' && !aprovacaoPorId[aprov.atividade_id]) {
           aprovacaoPorId[aprov.atividade_id] = aprov;
         }
       });
 
       // Anexar status de aprovação em cada atividade
-      const atividadesComAprovacao = todasAtividades.map((ativ) => ({
+      const atividadesComAprovacao = atividadesUnicas.map((ativ) => ({
         ...ativ,
         aprovacao_status: aprovacaoPorId[ativ.id]?.status || 'pendente',
         aprovacao_data: aprovacaoPorId[ativ.id]?.data_aprovacao,
