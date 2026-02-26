@@ -132,21 +132,27 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
       
-      // Fechar o diálogo e resetar o formulário
+      // Fechar o diálogo IMEDIATAMENTE
       setIsDialogOpen(false);
       
-      // Resetar o formulário após um pequeno delay para garantir que o diálogo foi fechado
-      setTimeout(() => {
-        resetForm();
-      }, 100);
+      // Mostrar mensagem de sucesso GARANTIDA
+      toast.success('✅ Atividade Registrada com Sucesso!', {
+        description: '📋 Seu registro foi enviado para aprovação do coordenador. Você será notificado quando for avaliado.',
+        duration: 7000,
+      });
       
-      toast.success('Atividade registrada e enviada para aprovação!', {
-        description: 'Seu registro está pendente de avaliação pela coordenação. Acompanhe o status no seu perfil.',
-        duration: 6000,
+      // Resetar formulário após fechar
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error('❌ Erro ao registrar atividade', {
+        description: error.message || 'Tente novamente',
+        duration: 5000,
       });
     },
   });
@@ -229,6 +235,11 @@ export default function Atividades() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Prevenir múltiplos envios
+    if (createMutation.isPending || updateMutation.isPending) {
+      return;
+    }
 
     const payload = {
       ...formData,
