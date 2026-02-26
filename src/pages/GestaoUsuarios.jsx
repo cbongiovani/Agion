@@ -43,7 +43,6 @@ export default function GestaoUsuarios() {
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [deleteFuncaoOpen, setDeleteFuncaoOpen] = useState(false);
-  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [funcaoToDelete, setFuncaoToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(false);
