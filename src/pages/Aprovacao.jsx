@@ -252,21 +252,6 @@ export default function Aprovacao() {
   const quizzesPendentes = quizzes.filter(q => q.status === 'Agendado');
   const questoesPendentes = questoes.filter(q => q.status === 'Pendente');
 
-  const isLoadingAny = !atividades.length || !fechamentos.length || !incidentes.length;
-
-  if (isLoadingAny) {
-    return (
-      <div className="space-y-6">
-        <div className="h-12 bg-[#1a1a1a] rounded-lg animate-pulse"></div>
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-16 bg-[#0f1f35] rounded-lg animate-pulse"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
