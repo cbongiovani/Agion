@@ -175,7 +175,7 @@ export default function Dashboard() {
       keyResults: [
         {
           resultado: 'Realizarem 100% dos analistas monitorias',
-          progresso: kpis.coberturaTreinamento.valor,
+          progresso: parseInt(kpis.coberturaTreinamento.valor) || 0,
           atual: `${rankingAnalistas.length}/${analistas.length}`,
           meta: `${analistas.length}/${analistas.length}`
         },
@@ -239,7 +239,7 @@ export default function Dashboard() {
                 <div key={krIdx}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-300 text-sm">{kr.resultado}</span>
-                    <span className="text-gray-400 text-xs">{kr.progresso.toFixed(0)}%</span>
+                    <span className="text-gray-400 text-xs">{typeof kr.progresso === 'number' ? kr.progresso.toFixed(0) : kr.progresso}%</span>
                   </div>
                   <div className="w-full bg-gray-800 rounded-full h-2">
                     <div
