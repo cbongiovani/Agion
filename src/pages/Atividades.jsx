@@ -105,7 +105,34 @@ export default function Atividades() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const result = await base44.entities.Atividade.create(data);
+      // Gerar código automático baseado no tipo
+      const prefixos = {
+        'Chamados': 'CH',
+        'Ligações': 'LG',
+        'Monitoria Offline': 'MO',
+        'Monitoria Assistida': 'MA',
+        'Feedback Individual': 'FB'
+      };
+      
+      // Buscar última atividade do mesmo tipo para gerar próximo número
+      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
+      const codigosExistentes = atividadesMesmoTipo
+        .map(a => a.codigo_atividade)
+        .filter(c => c && c.startsWith(prefixos[data.tipo]));
+      
+      let proximoNumero = 1;
+      if (codigosExistentes.length > 0) {
+        const numeros = codigosExistentes.map(c => parseInt(c.slice(2)));
+        proximoNumero = Math.max(...numeros) + 1;
+      }
+      
+      const codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
+      
+      const result = await base44.entities.Atividade.create({
+        ...data,
+        codigo_atividade: codigoAtividade
+      });
+      
       const user = await base44.auth.me();
       
       // Criar registro de aprovação
@@ -120,13 +147,13 @@ export default function Atividades() {
         usuario_nome: user.full_name,
         acao: 'Criou',
         entidade: 'Atividade',
-        detalhes: `Registrou atividade do tipo ${data.tipo}`,
+        detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
       });
 
       await notificarCoordenadores(
         'nova_atividade',
         'Nova Atividade Registrada',
-        `${user.full_name} registrou uma nova atividade do tipo ${data.tipo} - Aguardando aprovação`,
+        `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
         'Aprovacao'
       );
 
@@ -312,7 +339,7 @@ export default function Atividades() {
   };
 
   const atividadesFiltradas = atividades.filter(ativ => {
-    if (filterIdBusca && !ativ.id.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
+    if (filterIdBusca && !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
     if (filterSupervisor && ativ.supervisor_id !== filterSupervisor) return false;
     if (filterAnalista && ativ.analista_id !== filterAnalista) return false;
     if (filterTipo && ativ.tipo !== filterTipo) return false;
@@ -547,13 +574,13 @@ export default function Atividades() {
         
         {/* Campo de Busca por ID */}
         <div className="mb-4">
-          <Label className="text-xs text-gray-400">Buscar por ID do Registro</Label>
+          <Label className="text-xs text-gray-400">Buscar por Código (CH, LG, MO, MA, FB)</Label>
           <Input
             type="text"
-            placeholder="Digite o ID do registro..."
+            placeholder="Ex: CH00001, LG00002, MO00003..."
             value={filterIdBusca}
-            onChange={(e) => setFilterIdBusca(e.target.value)}
-            className="bg-[#1a1a1a] border-gray-700 mt-1"
+            onChange={(e) => setFilterIdBusca(e.target.value.toUpperCase())}
+            className="bg-[#1a1a1a] border-gray-700 mt-1 font-mono"
           />
         </div>
         
@@ -656,8 +683,10 @@ export default function Atividades() {
             <tbody className="divide-y divide-gray-800">
               {atividadesFiltradas.map((atividade) => (
                 <tr key={atividade.id} className="hover:bg-[#1a1a1a] transition-colors">
-                  <td className="px-4 py-3 text-xs text-gray-500 font-mono whitespace-nowrap">
-                    {atividade.id.slice(0, 8)}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
+                      {atividade.codigo_atividade || 'N/A'}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
                     {getLocalDateString(atividade.data)}
