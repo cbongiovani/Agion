@@ -120,6 +120,7 @@ export default function Layout({ children }) {
       { name: 'Atividades', icon: ClipboardList, path: 'Atividades', moduleKey: MODULES.ATIVIDADES, tooltip: 'Registre e acompanhe atividades' },
       { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', moduleKey: MODULES.FECHAMENTO_SEMANAL, tooltip: 'Consolidação semanal de resultados' },
       { name: 'Supervisores', icon: Users, path: 'Supervisores', moduleKey: MODULES.SUPERVISORES, tooltip: 'Gestão de equipes' },
+      { name: 'Avaliação Supervisores', icon: Award, path: 'AvaliacaoSupervisores', moduleKey: MODULES.SUPERVISORES, adminOnly: true, tooltip: 'Análise de desempenho com IA' },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', moduleKey: MODULES.ANALISTAS, tooltip: 'Cadastro de analistas N1' },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', moduleKey: MODULES.RANKING, tooltip: 'Performance com gamificação' },
       { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', moduleKey: MODULES.QUIZZ_RELAMPAGO, alwaysVisible: true, tooltip: 'Testes rápidos de conhecimento' },
