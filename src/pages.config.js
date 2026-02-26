@@ -66,6 +66,7 @@ import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
 import DashboardOKR from './pages/DashboardOKR';
+import AvaliacaoSupervisores from './pages/AvaliacaoSupervisores';
 import __Layout from './Layout.jsx';
 
 
@@ -89,6 +90,7 @@ export const PAGES = {
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
     "DashboardOKR": DashboardOKR,
+    "AvaliacaoSupervisores": AvaliacaoSupervisores,
 }
 
 export const pagesConfig = {
