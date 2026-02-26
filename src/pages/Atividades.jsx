@@ -74,18 +74,27 @@ export default function Atividades() {
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
-      // Admin e Supervisor veem TUDO (mesma visualização)
-      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
-        return todasAtividades;
-      }
-      
       // Buscar aprovações
       const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
       const idsAprovados = todasAprovacoes
         .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
         .map(a => a.atividade_id);
       
-      // Outros usuários: apenas aprovadas
+      // Admin vê TUDO (aprovados + pendentes + rejeitados para gestão)
+      if (currentUser?.role === 'admin') {
+        return todasAtividades;
+      }
+      
+      // Supervisor vê: aprovados de todos + seus próprios (pendentes/rejeitados)
+      if (currentUser?.role === 'supervisor') {
+        return todasAtividades.filter(ativ => 
+          idsAprovados.includes(ativ.id) || 
+          ativ.registrado_por === currentUser.email ||
+          ativ.created_by === currentUser.email
+        );
+      }
+      
+      // Outros usuários: APENAS aprovadas
       return todasAtividades.filter(ativ => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
@@ -456,7 +465,7 @@ export default function Atividades() {
                   <div className={editingAtividade ? '' : 'sm:col-span-2'}>
                     <Label className="flex items-center gap-2">
                       Tipo de Atividade
-                      <AtividadeInfoTooltip tipo={selectedType} />
+                      <AtividadeInfoTooltip tipo={selectedType} modalOpen={isDialogOpen} />
                     </Label>
                     <Select value={selectedType} onValueChange={handleTipoChange}>
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
