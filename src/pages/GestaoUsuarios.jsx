@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Settings, Loader2, Mail, Shield, Trash2, Lock, Info, ArrowUpDown } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,1021 +28,461 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import PermissionsManager from '@/components/PermissionsManager';
+import { Plus, Search, Settings, Loader2, Trash2, Lock, LogOut, Eye, EyeOff, RefreshCw, History } from 'lucide-react';
+import { toast } from 'sonner';
+import PermissionGrid from '@/components/PermissionGrid';
+import RoleEditor from '@/components/RoleEditor';
 
 export default function GestaoUsuarios() {
   const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [isInviteAnalistaOpen, setIsInviteAnalistaOpen] = useState(false);
-  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
-  const [isFuncoesDialogOpen, setIsFuncoesDialogOpen] = useState(false);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
-  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
-  const [deleteFuncaoOpen, setDeleteFuncaoOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
-  const [funcaoToDelete, setFuncaoToDelete] = useState(null);
-  const [editingUser, setEditingUser] = useState(false);
-  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null);
-  const [inviteData, setInviteData] = useState({ email: '', role: 'analyst' });
-  const [inviteAnalistaData, setInviteAnalistaData] = useState({ analistaId: '', email: '' });
-  const [formData, setFormData] = useState({ full_name: '', role: 'analyst', supervisor_id: '' });
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('active');
+  const [showRoleEditor, setShowRoleEditor] = useState(false);
+  const [showAuditLog, setShowAuditLog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [userData, setUserData] = useState({});
 
-  const [novaFuncao, setNovaFuncao] = useState({
-    nome_funcao: '',
-    label_exibicao: '',
-    cor_badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-  });
+  // Sincronizar recursos ao carregar
+  useEffect(() => {
+    const syncResources = async () => {
+      try {
+        await base44.functions.invoke('ensureResourceCatalog', {});
+        queryClient.invalidateQueries({ queryKey: ['resources'] });
+      } catch (error) {
+        console.error('Erro ao sincronizar recursos:', error);
+      }
+    };
+    syncResources();
+  }, [queryClient]);
 
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
-  });
-
-  const { data: analistas = [] } = useQuery({
-    queryKey: ['analistas'],
-    queryFn: () => base44.entities.Analista.list(),
-  });
-
-  const { data: supervisores = [] } = useQuery({
-    queryKey: ['supervisores'],
-    queryFn: () => base44.entities.Supervisor.list(),
-  });
-
-  const { data: currentUser } = useQuery({
+  // Validação de acesso
+  const { data: currentUser, isLoading: loadingUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
 
+  // Listar usuários
+  const { data: users = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  // Listar recursos
+  const { data: resources = [] } = useQuery({
+    queryKey: ['resources'],
+    queryFn: () => base44.entities.ResourceCatalog.list(),
+  });
+
+  // Listar roles
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
     queryFn: () => base44.entities.Role.list(),
   });
 
-  const { data: funcoesPersonalizadas = [] } = useQuery({
-    queryKey: ['funcoes'],
-    queryFn: () => base44.entities.FuncaoUsuario.filter({ ativo: true }),
+  // Carregar overrides do usuário selecionado
+  const { data: userOverrides = [] } = useQuery({
+    queryKey: ['userOverrides', selectedUser?.email],
+    queryFn: () =>
+      selectedUser
+        ? base44.entities.UserPermissionOverride.filter({ user_email: selectedUser.email })
+        : Promise.resolve([]),
+    enabled: !!selectedUser,
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const result = await base44.entities.User.update(id, data);
+  // Carregar logs de auditoria
+  const { data: auditLogs = [] } = useQuery({
+    queryKey: ['auditLogs', selectedUser?.email],
+    queryFn: () =>
+      selectedUser
+        ? base44.entities.Log.filter({ usuario_email: selectedUser.email })
+        : Promise.resolve([]),
+    enabled: !!selectedUser && showAuditLog,
+  });
+
+  // Mutation: Atualizar usuário
+  const updateUserMutation = useMutation({
+    mutationFn: async (data) => {
       const user = await base44.auth.me();
+      const oldData = selectedUser;
+      
+      await base44.entities.User.update(selectedUser.id, data);
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
         acao: 'Atualizou',
-        entidade: 'Usuário',
-        detalhes: `Atualizou usuário ${data.full_name || editingUser?.email}`,
+        entidade: 'User',
+        detalhes: JSON.stringify({ antes: oldData, depois: data }),
       });
-      return result;
-    },
-    onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: ['users'] });
-      const previousUsers = queryClient.getQueryData(['users']);
-      queryClient.setQueryData(['users'], (old = []) =>
-        old.map((user) => (user.id === id ? { ...user, ...data } : user))
-      );
-      return { previousUsers };
-    },
-    onError: (err, variables, context) => {
-      queryClient.setQueryData(['users'], context.previousUsers);
-    },
-    onSuccess: () => {
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Usuário atualizado com sucesso!');
-      resetForm();
+      setSelectedUser({ ...selectedUser, ...data });
+      toast.success('Usuário atualizado!');
     },
+    onError: (error) => toast.error('Erro: ' + error.message),
   });
 
-  const inviteMutation = useMutation({
-    mutationFn: async ({ email, role }) => {
-      const user = await base44.auth.me();
-      await base44.users.inviteUser(email, role);
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Convidou Usuário',
-        entidade: 'Usuário',
-        detalhes: `Convidou ${email} com função ${role === 'admin' ? 'Coordenador' : role === 'supervisor' ? 'Supervisor' : role === 'noc' ? 'NOC' : 'Analista'}`,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Convite enviado com sucesso!');
-      setInviteData({ email: '', role: 'analyst' });
-      setIsInviteDialogOpen(false);
-    },
-    onError: (error) => {
-      toast.error('Erro ao enviar convite: ' + error.message);
-    },
-  });
-
-  const inviteAnalistaMutation = useMutation({
-    mutationFn: async ({ email, analistaId }) => {
-      const user = await base44.auth.me();
-      await base44.users.inviteUser(email, 'analyst');
-      await base44.entities.Analista.update(analistaId, { usuario_email: email });
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Convidou Usuário',
-        entidade: 'Analista',
-        detalhes: `Convidou analista com e-mail ${email}`,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['analistas'] });
-      toast.success('Analista convidado com sucesso!');
-      setInviteAnalistaData({ analistaId: '', email: '' });
-      setIsInviteAnalistaOpen(false);
-    },
-    onError: (error) => {
-      toast.error('Erro ao convidar analista: ' + error.message);
-    },
-  });
-
-  const deleteMutation = useMutation({
+  // Mutation: Deletar usuário
+  const deleteUserMutation = useMutation({
     mutationFn: async (userId) => {
       const user = await base44.auth.me();
+      const targetUser = users.find(u => u.id === userId);
+      
       await base44.entities.User.delete(userId);
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
-        acao: 'Excluiu',
-        entidade: 'Usuário',
-        detalhes: `Deletou usuário ${userToDelete?.full_name || userToDelete?.email}`,
+        acao: 'Removeu',
+        entidade: 'User',
+        detalhes: `Deletou usuário ${targetUser?.email}`,
       });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Usuário deletado com sucesso!');
-      setDeleteUserOpen(false);
-      setUserToDelete(null);
-    },
-    onError: (error) => {
-      toast.error('Erro ao deletar usuário: ' + error.message);
-    },
-  });
-
-
-
-  const criarFuncaoMutation = useMutation({
-    mutationFn: async (data) => {
-      const user = await base44.auth.me();
-      const funcao = await base44.entities.FuncaoUsuario.create({
-        ...data,
-        criado_por: user.email,
-        ativo: true
-      });
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Criou',
-        entidade: 'Sistema',
-        detalhes: `Criou nova função: ${data.label_exibicao}`,
-      });
-      return funcao;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['funcoes'] });
-      toast.success('Função criada com sucesso!');
-      setNovaFuncao({ nome_funcao: '', label_exibicao: '', cor_badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' });
-    },
-    onError: (error) => {
-      toast.error('Erro ao criar função: ' + error.message);
-    },
-  });
-
-  const deleteFuncaoMutation = useMutation({
-    mutationFn: async (funcaoId) => {
-      const user = await base44.auth.me();
-      const funcao = funcoesPersonalizadas.find(f => f.id === funcaoId);
       
-      // Buscar todos usuários com essa função e alterar para 'analyst'
-      const usuariosComFuncao = users.filter(u => u.role === funcao.nome_funcao);
-      for (const usuario of usuariosComFuncao) {
-        await base44.entities.User.update(usuario.id, { role: 'analyst' });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      if (selectedUser?.id === userId) setSelectedUser(null);
+      toast.success('Usuário deletado!');
+    },
+    onError: (error) => toast.error('Erro: ' + error.message),
+  });
+
+  // Mutation: Resetar permissões
+  const resetPermissionsMutation = useMutation({
+    mutationFn: async () => {
+      const user = await base44.auth.me();
+      
+      for (const override of userOverrides) {
+        await base44.entities.UserPermissionOverride.delete(override.id);
       }
       
-      // Desativar a função ao invés de deletar
-      await base44.entities.FuncaoUsuario.update(funcaoId, { ativo: false });
-      
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
-        acao: 'Excluiu',
-        entidade: 'Sistema',
-        detalhes: `Removeu função: ${funcao.label_exibicao}. ${usuariosComFuncao.length} usuários alterados para 'Usuário'.`,
+        acao: 'Removeu',
+        entidade: 'UserPermissionOverride',
+        detalhes: `Resetou ${userOverrides.length} overrides do usuário ${selectedUser.email}`,
       });
+      
+      queryClient.invalidateQueries({ queryKey: ['userOverrides'] });
+      toast.success('Permissões resetadas!');
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['funcoes'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Função removida! Usuários afetados foram alterados para "Analista".');
-      setDeleteFuncaoOpen(false);
-      setFuncaoToDelete(null);
-    },
-    onError: (error) => {
-      toast.error('Erro ao remover função: ' + error.message);
-    },
+    onError: (error) => toast.error('Erro: ' + error.message),
   });
 
-  const resetForm = () => {
-    setFormData({ full_name: '', role: 'analyst', supervisor_id: '' });
-    setEditingUser(null);
-    setIsDialogOpen(false);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!editingUser) return;
-    updateMutation.mutate({ id: editingUser.id, data: formData });
-  };
-
-  const handleInvite = (e) => {
-    e.preventDefault();
-    inviteMutation.mutate(inviteData);
-  };
-
-  const handleInviteAnalista = (e) => {
-    e.preventDefault();
-    const analista = analistas.find(a => a.id === inviteAnalistaData.analistaId);
-    if (!analista) {
-      toast.error('Selecione um analista');
-      return;
-    }
-    if (analista.usuario_email) {
-      toast.error('Este analista já possui um usuário vinculado');
-      return;
-    }
-    inviteAnalistaMutation.mutate({ 
-      email: inviteAnalistaData.email,
-      analistaId: analista.id
-    });
-  };
-
-  const openEdit = (user) => {
-    setEditingUser(user);
-    setFormData({ 
-      full_name: user.full_name || '',
-      role: user.role || 'analyst',
-      supervisor_id: user.supervisor_id || ''
-    });
-    setIsDialogOpen(true);
-  };
-
-  const getRoleBadge = (role) => {
-    const funcaoCustom = funcoesPersonalizadas.find(f => f.nome_funcao === role);
-    if (funcaoCustom) {
-      return funcaoCustom.cor_badge;
-    }
-    
-    const colors = {
-      admin: 'bg-[#e74c3c]/20 text-[#e74c3c] border-[#e74c3c]/30',
-      supervisor: 'bg-[#ADF802]/20 text-[#ADF802] border-[#ADF802]/30',
-      analyst: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      noc: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    };
-    return colors[role] || colors.user;
-  };
-
-  const getRoleLabel = (role) => {
-    const funcaoCustom = funcoesPersonalizadas.find(f => f.nome_funcao === role);
-    if (funcaoCustom) {
-      return funcaoCustom.label_exibicao;
-    }
-    
-    const labels = {
-      admin: 'Coordenador',
-      supervisor: 'Supervisor',
-      analyst: 'Analista',
-      noc: 'NOC',
-    };
-    return labels[role] || role;
-  };
-
-  const handleCriarFuncao = (e) => {
-    e.preventDefault();
-    if (!novaFuncao.nome_funcao || !novaFuncao.label_exibicao) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-    
-    // Verificar se já existe
-    const jaExiste = funcoesPersonalizadas.some(f => f.nome_funcao === novaFuncao.nome_funcao);
-    if (jaExiste) {
-      toast.error('Já existe uma função com este nome');
-      return;
-    }
-    
-    criarFuncaoMutation.mutate(novaFuncao);
-  };
-
-  const handleDeleteFuncao = (funcao) => {
-    setFuncaoToDelete(funcao);
-    setDeleteFuncaoOpen(true);
-  };
-
-
-
-  const handleDeleteAccount = async () => {
-    try {
-      const user = await base44.auth.me();
-      await base44.entities.User.delete(user.id);
-      base44.auth.logout();
-    } catch (error) {
-      toast.error('Erro ao deletar conta: ' + error.message);
-    }
-  };
-
-  const handleDeleteUser = () => {
-    if (userToDelete) {
-      deleteMutation.mutate(userToDelete.id);
-    }
-  };
-
-  const openDeleteDialog = (user) => {
-    setUserToDelete(user);
-    setDeleteUserOpen(true);
-  };
-
-  const openPermissionsDialog = (user) => {
-    setSelectedUserForPermissions(user);
-    setIsPermissionsDialogOpen(true);
-  };
-
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const sortedUsers = React.useMemo(() => {
-    let sortableUsers = [...users];
-    if (sortConfig.key) {
-      sortableUsers.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
-
-        if (sortConfig.key === 'role') {
-          aValue = getRoleLabel(a.role);
-          bValue = getRoleLabel(b.role);
-        }
-
-        if (sortConfig.key === 'created_date') {
-          aValue = new Date(a.created_date);
-          bValue = new Date(b.created_date);
-        }
-
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableUsers;
-  }, [users, sortConfig]);
-
-  if (isLoading) {
+  // Verificar acesso
+  if (loadingUser) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[#e74c3c]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#ADF802]" />
       </div>
     );
   }
 
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'supervisor') {
+    return (
+      <div className="text-center py-12">
+        <Lock className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <p className="text-white text-lg">Acesso restrito a Administradores</p>
+      </div>
+    );
+  }
+
+  // Filtrar usuários
+  const filteredUsers = users.filter((u) => {
+    const matchSearch = u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       u.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchRole = filterRole === 'all' || u.role === filterRole;
+    const matchStatus = filterStatus === 'all' || (u.status || 'active') === filterStatus;
+    const hasOverrides = userOverrides.length > 0;
+    return matchSearch && matchRole && matchStatus;
+  });
+
+  const userModules = resources.reduce((acc, r) => {
+    if (!acc[r.module]) acc[r.module] = [];
+    acc[r.module].push(r);
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-800">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Gestão de Usuários</h1>
-          <p className="text-gray-400 mt-1">Gerencie acesso e permissões do sistema</p>
+          <p className="text-gray-400 mt-1">RBAC dinâmico e auditoria completa</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {currentUser?.role === 'admin' && (
-            <Dialog open={isFuncoesDialogOpen} onOpenChange={setIsFuncoesDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-[#ADF802] hover:bg-[#9DE002] text-black gap-2">
-                  <Settings className="w-4 h-4" />
-                  Editar Função
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-3xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5 text-[#ADF802]" />
-                    Gerenciar Funções do Sistema
-                  </DialogTitle>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                  {/* Criar Nova Função */}
-                  <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-                    <h3 className="text-lg font-semibold text-white mb-4">Criar Nova Função</h3>
-                    <form onSubmit={handleCriarFuncao} className="space-y-4">
-                      <div>
-                        <Label htmlFor="nome_funcao">Nome da Função (identificador)</Label>
-                        <Input
-                          id="nome_funcao"
-                          value={novaFuncao.nome_funcao}
-                          onChange={(e) => setNovaFuncao({ ...novaFuncao, nome_funcao: e.target.value.toLowerCase().replace(/\s/g, '_') })}
-                          className="bg-[#0a1628] border-[#1e3a5f] mt-2"
-                          placeholder="ex: tecnico, gerente, analista_senior"
-                          required
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Use apenas letras minúsculas, números e underline</p>
-                      </div>
-                      <div>
-                        <Label htmlFor="label_exibicao">Nome de Exibição</Label>
-                        <Input
-                          id="label_exibicao"
-                          value={novaFuncao.label_exibicao}
-                          onChange={(e) => setNovaFuncao({ ...novaFuncao, label_exibicao: e.target.value })}
-                          className="bg-[#0a1628] border-[#1e3a5f] mt-2"
-                          placeholder="ex: Técnico, Gerente, Analista Sênior"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cor_badge">Cor do Badge</Label>
-                        <Select
-                          value={novaFuncao.cor_badge}
-                          onValueChange={(value) => setNovaFuncao({ ...novaFuncao, cor_badge: value })}
-                        >
-                          <SelectTrigger className="bg-[#0a1628] border-[#1e3a5f] mt-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                            <SelectItem value="bg-blue-500/20 text-blue-400 border-blue-500/30">Azul</SelectItem>
-                            <SelectItem value="bg-green-500/20 text-green-400 border-green-500/30">Verde</SelectItem>
-                            <SelectItem value="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Amarelo</SelectItem>
-                            <SelectItem value="bg-red-500/20 text-red-400 border-red-500/30">Vermelho</SelectItem>
-                            <SelectItem value="bg-purple-500/20 text-purple-400 border-purple-500/30">Roxo</SelectItem>
-                            <SelectItem value="bg-pink-500/20 text-pink-400 border-pink-500/30">Rosa</SelectItem>
-                            <SelectItem value="bg-orange-500/20 text-orange-400 border-orange-500/30">Laranja</SelectItem>
-                            <SelectItem value="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">Ciano</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-[#ADF802] hover:bg-[#9DE002] text-black font-bold"
-                        disabled={criarFuncaoMutation.isPending}
-                      >
-                        {criarFuncaoMutation.isPending ? 'Criando...' : 'Criar Função'}
-                      </Button>
-                    </form>
-                  </div>
-
-                  {/* Funções Padrão do Sistema */}
-                  <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-                    <h3 className="text-lg font-semibold text-white mb-4">Funções Padrão (Não Removíveis)</h3>
-                    <div className="space-y-2">
-                      {[
-                        { role: 'admin', label: 'Coordenador' },
-                          { role: 'supervisor', label: 'Supervisor' },
-                          { role: 'analyst', label: 'Analista' },
-                          { role: 'noc', label: 'NOC' }
-                      ].map((funcao) => (
-                        <div key={funcao.role} className="flex items-center justify-between p-3 bg-[#0a1628] rounded-lg border border-[#1e3a5f]/50">
-                          <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadge(funcao.role)}`}>
-                              {funcao.label}
-                            </span>
-                            <span className="text-sm text-gray-400">({funcao.role})</span>
-                          </div>
-                          <Lock className="w-4 h-4 text-gray-500" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Funções Personalizadas */}
-                  {funcoesPersonalizadas.length > 0 && (
-                    <div className="bg-[#0f1f35] rounded-xl p-4 border border-[#1e3a5f]">
-                      <h3 className="text-lg font-semibold text-white mb-4">Funções Personalizadas</h3>
-                      <div className="space-y-2">
-                        {funcoesPersonalizadas.map((funcao) => (
-                          <div key={funcao.id} className="flex items-center justify-between p-3 bg-[#0a1628] rounded-lg border border-[#1e3a5f]/50">
-                            <div className="flex items-center gap-3">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${funcao.cor_badge}`}>
-                                {funcao.label_exibicao}
-                              </span>
-                              <span className="text-sm text-gray-400">({funcao.nome_funcao})</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteFuncao(funcao)}
-                              className="text-red-400 hover:text-red-300"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end pt-4 border-t border-[#1e3a5f]">
-                  <Button 
-                    onClick={() => setIsFuncoesDialogOpen(false)}
-                    className="bg-[#0f1f35] hover:bg-[#1e3a5f]"
-                  >
-                    Fechar
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-
-          <Dialog open={isInviteAnalistaOpen} onOpenChange={setIsInviteAnalistaOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-                <Plus className="w-4 h-4" />
-                Convidar Analista
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white">
-              <DialogHeader>
-                <DialogTitle>Convidar Analista para o Painel</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleInviteAnalista} className="space-y-4">
-                <div>
-                  <Label htmlFor="analista_select">Selecione o Analista</Label>
-                  <Select
-                    value={inviteAnalistaData.analistaId}
-                    onValueChange={(value) => setInviteAnalistaData({ ...inviteAnalistaData, analistaId: value })}
-                  >
-                    <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
-                      <SelectValue placeholder="Selecione um analista" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                      {analistas.filter(a => !a.usuario_email).map((analista) => (
-                        <SelectItem key={analista.id} value={analista.id}>
-                          {analista.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="email_analista">E-mail do Analista</Label>
-                  <Input
-                    id="email_analista"
-                    type="email"
-                    value={inviteAnalistaData.email}
-                    onChange={(e) => setInviteAnalistaData({ ...inviteAnalistaData, email: e.target.value })}
-                    className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
-                    placeholder="analista@grupoavenida.com.br"
-                    required
-                  />
-                  <p className="text-xs text-gray-400 mt-2">
-                    O analista receberá permissão de "Analista" e será vinculado automaticamente ao seu perfil.
-                  </p>
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsInviteAnalistaOpen(false)} 
-                    className="border-[#1e3a5f]"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    disabled={inviteAnalistaMutation.isPending}
-                  >
-                    {inviteAnalistaMutation.isPending ? 'Convidando...' : 'Convidar Analista'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#e74c3c] hover:bg-[#c0392b] gap-2">
-                <Plus className="w-4 h-4" />
-                Convidar Usuário
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white">
-            <DialogHeader>
-              <DialogTitle>Convidar Novo Usuário</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleInvite} className="space-y-4">
-              <div>
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={inviteData.email}
-                  onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
-                  className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
-                  placeholder="usuario@grupoavenida.com.br"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">Função</Label>
-                <Select
-                  value={inviteData.role}
-                  onValueChange={(value) => setInviteData({ ...inviteData, role: value })}
-                >
-                  <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                      <SelectItem value="analyst">Analista</SelectItem>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                      <SelectItem value="admin">Coordenador</SelectItem>
-                      <SelectItem value="noc">NOC</SelectItem>
-                      {funcoesPersonalizadas.map((funcao) => (
-                        <SelectItem key={funcao.id} value={funcao.nome_funcao}>
-                          {funcao.label_exibicao}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  </div>
-                  {formData.role === 'supervisor' && (
-                  <div>
-                    <Label htmlFor="supervisor_id">Vincular ao Supervisor</Label>
-                    <Select
-                      value={formData.supervisor_id}
-                      onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
-                    >
-                      <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
-                        <SelectValue placeholder="Selecione um supervisor" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                        {supervisores.map((sup) => (
-                          <SelectItem key={sup.id} value={sup.id}>
-                            {sup.nome} ({sup.equipe})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Vinculando o usuário ao supervisor, os War Rooms criados serão contabilizados no painel de supervisores.
-                    </p>
-                  </div>
-                  )}
-                  <div className="flex justify-end gap-3 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsInviteDialogOpen(false)} 
-                  className="border-[#1e3a5f]"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-[#e74c3c] hover:bg-[#c0392b]"
-                  disabled={inviteMutation.isPending}
-                >
-                  {inviteMutation.isPending ? 'Enviando...' : 'Enviar Convite'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-        </div>
+        <Button
+          onClick={() => setShowRoleEditor(true)}
+          className="bg-[#ADF802] hover:bg-[#9DE002] text-black gap-2"
+        >
+          <Settings className="w-4 h-4" />
+          Funções & Permissões
+        </Button>
       </div>
 
-      <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-gray-400 text-sm border-b border-[#1e3a5f] bg-[#0f1f35]">
-                <th 
-                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
-                  onClick={() => handleSort('full_name')}
-                >
-                  <div className="flex items-center gap-2">
-                    Nome
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
-                  onClick={() => handleSort('email')}
-                >
-                  <div className="flex items-center gap-2">
-                    E-mail
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
-                  onClick={() => handleSort('role')}
-                >
-                  <div className="flex items-center gap-2">
-                    Função
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-4 font-medium cursor-pointer hover:text-white transition-colors"
-                  onClick={() => handleSort('created_date')}
-                >
-                  <div className="flex items-center gap-2">
-                    Data de Criação
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedUsers.map((user) => {
-                const nomeExibicao = user.full_name || '-';
-                const letraInicial = user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase();
-
-                return (
-                <tr key={user.id} className="border-b border-[#1e3a5f]/50 hover:bg-[#1e3a5f]/30">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-sm">
-                          {letraInicial}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-white font-medium">{nomeExibicao}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-400 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-500" />
-                      {user.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadge(user.role)}`}>
-                      {getRoleLabel(user.role)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-400 text-sm">
-                    {new Date(user.created_date).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end gap-2">
-                      {currentUser?.role === 'admin' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openPermissionsDialog(user)}
-                          className="text-gray-400 hover:text-[#ADF802] h-8 w-8 p-0"
-                          title="Gerenciar Permissões"
-                        >
-                          <Lock className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(user)}
-                        className="text-gray-400 hover:text-white h-8 w-8 p-0"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openDeleteDialog(user)}
-                        className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                  </tr>
-                  );
-                  })}
-                  </tbody>
-          </table>
-        </div>
-      </div>
-
-      {users.length === 0 && (
-        <div className="text-center py-12">
-          <Settings className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">Nenhum usuário cadastrado</p>
-        </div>
-      )}
-
-      {/* Gerenciar Conta */}
-      <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-2xl p-6">
-        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-          <Settings className="w-5 h-5" />
-          Gerenciar Conta
-        </h2>
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-red-400 flex items-center gap-2">
-                <Trash2 className="w-5 h-5" />
-                Zona de Perigo
-              </h3>
-              <p className="text-sm text-gray-400 mt-2">
-                Ações irreversíveis que afetam permanentemente sua conta.
-              </p>
-            </div>
-            <Button
-              onClick={() => setDeleteAccountOpen(true)}
-              variant="outline"
-              className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 min-h-[44px]"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Deletar Minha Conta
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white">
-          <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="full_name">Nome Completo</Label>
+      <div className="grid grid-cols-3 gap-6 h-[600px]">
+        {/* Coluna A: Lista de Usuários */}
+        <div className="bg-[#0a1628] rounded-xl border border-[#1e3a5f] flex flex-col">
+          <div className="p-4 border-b border-[#1e3a5f] space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
               <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="bg-[#0f1f35] border-[#1e3a5f] mt-2"
+                placeholder="Buscar por nome/email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-[#0f1f35] border-[#1e3a5f]"
               />
             </div>
-            <div>
-              <Label htmlFor="edit_role">Função</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
-              >
-                <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                  <SelectItem value="analyst">Analista</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="admin">Coordenador</SelectItem>
-                  <SelectItem value="noc">NOC</SelectItem>
-                  {funcoesPersonalizadas.map((funcao) => (
-                    <SelectItem key={funcao.id} value={funcao.nome_funcao}>
-                      {funcao.label_exibicao}
+                  <SelectItem value="all">Todas as funções</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.key} value={r.key}>
+                      {r.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label htmlFor="supervisor_select">Vincular Analista</Label>
-              <Select
-                value={formData.supervisor_id}
-                onValueChange={(value) => {
-                  const analista = analistas.find(a => a.id === value);
-                  setFormData({ 
-                    ...formData, 
-                    supervisor_id: value,
-                    full_name: analista ? analista.nome : formData.full_name
-                  });
-                }}
-              >
-                <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-2">
-                  <SelectValue placeholder="Selecione um analista" />
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] h-8">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                  <SelectItem value={null}>Nenhum</SelectItem>
-                  {analistas.map((analista) => (
-                    <SelectItem key={analista.id} value={analista.id}>
-                      {analista.nome}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-400 mt-2">
-                Vinculando o usuário ao supervisor, seus War Rooms serão contabilizados no painel.
-              </p>
             </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={resetForm} className="border-[#1e3a5f]">
-                Cancelar
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {loadingUsers ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-6 h-6 animate-spin text-[#ADF802]" />
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="p-4 text-center text-gray-400">Nenhum usuário encontrado</div>
+            ) : (
+              filteredUsers.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => setSelectedUser(user)}
+                  className={`w-full p-3 border-b border-[#1e3a5f]/30 text-left transition-colors ${
+                    selectedUser?.id === user.id
+                      ? 'bg-[#1e3a5f] border-l-4 border-l-[#ADF802]'
+                      : 'hover:bg-[#0f1f35]'
+                  }`}
+                >
+                  <div className="font-medium text-white text-sm">{user.full_name || user.email}</div>
+                  <div className="text-xs text-gray-400 mt-1">{user.email}</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">
+                      {roles.find(r => r.key === user.role)?.label || user.role}
+                    </span>
+                    {(user.status || 'active') === 'inactive' && (
+                      <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded">
+                        Inativo
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Coluna B: Perfil do Usuário */}
+        {selectedUser ? (
+          <div className="bg-[#0a1628] rounded-xl border border-[#1e3a5f] p-4 flex flex-col space-y-4">
+            <h2 className="text-lg font-bold text-white">Perfil do Usuário</h2>
+
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              <div>
+                <Label className="text-xs text-gray-400">Nome Completo</Label>
+                <Input
+                  value={userData.full_name || selectedUser.full_name || ''}
+                  onChange={(e) => setUserData({ ...userData, full_name: e.target.value })}
+                  className="bg-[#0f1f35] border-[#1e3a5f] mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs text-gray-400">E-mail</Label>
+                <Input
+                  value={selectedUser.email}
+                  disabled
+                  className="bg-[#0f1f35] border-[#1e3a5f] mt-1 opacity-60"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs text-gray-400">Função</Label>
+                <Select
+                  value={userData.role || selectedUser.role}
+                  onValueChange={(value) => setUserData({ ...userData, role: value })}
+                >
+                  <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                    {roles.map((r) => (
+                      <SelectItem key={r.key} value={r.key}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs text-gray-400">Status</Label>
+                <Select
+                  value={userData.status || selectedUser.status || 'active'}
+                  onValueChange={(value) => setUserData({ ...userData, status: value })}
+                >
+                  <SelectTrigger className="bg-[#0f1f35] border-[#1e3a5f] mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="text-xs text-gray-500 bg-[#0f1f35] p-2 rounded">
+                <p>Criado em: {new Date(selectedUser.created_date).toLocaleDateString('pt-BR')}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 border-t border-[#1e3a5f] pt-4">
+              <Button
+                onClick={() => updateUserMutation.mutate(userData)}
+                disabled={updateUserMutation.isPending || Object.keys(userData).length === 0}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {updateUserMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
-              <Button type="submit" className="bg-[#e74c3c] hover:bg-[#c0392b]">
-                Atualizar
+
+              <Button
+                onClick={() => setShowAuditLog(true)}
+                variant="outline"
+                className="w-full border-[#1e3a5f]"
+              >
+                <History className="w-4 h-4 mr-2" />
+                Ver Auditoria
+              </Button>
+
+              {userOverrides.length > 0 && (
+                <Button
+                  onClick={() => resetPermissionsMutation.mutate()}
+                  variant="outline"
+                  className="w-full border-orange-500/50 text-orange-400"
+                  disabled={resetPermissionsMutation.isPending}
+                >
+                  {resetPermissionsMutation.isPending ? 'Resetando...' : 'Resetar Permissões'}
+                </Button>
+              )}
+
+              <Button
+                onClick={() => setDeleteConfirm(selectedUser.id)}
+                variant="outline"
+                className="w-full border-red-500/50 text-red-400"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Deletar Usuário
               </Button>
             </div>
-          </form>
+          </div>
+        ) : (
+          <div className="bg-[#0a1628] rounded-xl border border-[#1e3a5f] flex items-center justify-center">
+            <p className="text-gray-400">Selecione um usuário para editar</p>
+          </div>
+        )}
+
+        {/* Coluna C: Permissões */}
+        {selectedUser ? (
+          <PermissionGrid
+            user={selectedUser}
+            resources={resources}
+            userOverrides={userOverrides}
+            roles={roles}
+          />
+        ) : (
+          <div className="bg-[#0a1628] rounded-xl border border-[#1e3a5f] flex items-center justify-center">
+            <p className="text-gray-400">Selecione um usuário para gerenciar permissões</p>
+          </div>
+        )}
+      </div>
+
+      {/* Role Editor Modal */}
+      {showRoleEditor && (
+        <RoleEditor
+          isOpen={showRoleEditor}
+          onClose={() => setShowRoleEditor(false)}
+          resources={resources}
+          roles={roles}
+        />
+      )}
+
+      {/* Audit Log Modal */}
+      <Dialog open={showAuditLog} onOpenChange={setShowAuditLog}>
+        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Auditoria - {selectedUser?.full_name || selectedUser?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {auditLogs.length === 0 ? (
+              <p className="text-gray-400 text-center py-8">Nenhuma ação registrada</p>
+            ) : (
+              auditLogs.map((log, idx) => (
+                <div key={idx} className="bg-[#0f1f35] p-3 rounded border border-[#1e3a5f]/30 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-[#ADF802]">{log.acao}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(log.created_date).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  <div className="text-gray-400 text-xs mt-1">
+                    Entidade: {log.entidade} | {log.detalhes}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Account Confirmation Dialog */}
-      <AlertDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
-        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Deletar Conta Permanentemente</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Esta ação é <strong className="text-red-400">irreversível</strong>. Todos os seus dados, configurações e histórico serão permanentemente removidos do sistema. 
-              Você será desconectado imediatamente após a exclusão.
-              <br /><br />
-              Tem certeza que deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAccount}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Sim, Deletar Minha Conta
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete User Confirmation Dialog */}
-      <AlertDialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Deletar Usuário</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja deletar o usuário <strong className="text-white">{userToDelete?.full_name || userToDelete?.email}</strong>?
-              <br /><br />
-              Esta ação é <strong className="text-red-400">irreversível</strong> e todos os dados do usuário serão permanentemente removidos.
+              Tem certeza que deseja deletar <strong>{selectedUser?.full_name || selectedUser?.email}</strong>?
+              <br />
+              <br />
+              Esta ação é <strong>irreversível</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteUser}
+              onClick={() => {
+                deleteUserMutation.mutate(deleteConfirm);
+                setDeleteConfirm(null);
+              }}
               className="bg-red-600 hover:bg-red-700"
-              disabled={deleteMutation.isPending}
+              disabled={deleteUserMutation.isPending}
             >
-              {deleteMutation.isPending ? 'Deletando...' : 'Sim, Deletar Usuário'}
+              {deleteUserMutation.isPending ? 'Deletando...' : 'Sim, Deletar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Delete Função Confirmation Dialog */}
-      <AlertDialog open={deleteFuncaoOpen} onOpenChange={setDeleteFuncaoOpen}>
-        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Remover Função do Sistema</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja remover a função <strong className="text-white">{funcaoToDelete?.label_exibicao}</strong>?
-              <br /><br />
-              <strong className="text-yellow-400">ATENÇÃO:</strong> Todos os usuários com esta função serão automaticamente alterados para "Analista".
-              <br /><br />
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteFuncaoMutation.mutate(funcaoToDelete.id)}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={deleteFuncaoMutation.isPending}
-            >
-              {deleteFuncaoMutation.isPending ? 'Removendo...' : 'Sim, Remover Função'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Permissions Dialog */}
-      <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
-        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-[#ADF802]" />
-              Exceções de Permissão - {selectedUserForPermissions?.full_name || selectedUserForPermissions?.email}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedUserForPermissions && (
-            <PermissionsManager
-              user={selectedUserForPermissions}
-              onClose={() => setIsPermissionsDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
