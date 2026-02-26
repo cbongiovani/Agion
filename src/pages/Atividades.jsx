@@ -453,6 +453,13 @@ export default function Atividades() {
     return analistaA.localeCompare(analistaB);
   });
 
+  // Paginação
+  const totalRegistros = atividadesFiltradas.length;
+  const totalPaginas = Math.ceil(totalRegistros / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
