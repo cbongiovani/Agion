@@ -204,15 +204,17 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
                     </label>
                     <p className="text-xs text-emerald-400">✓ {item.resposta}</p>
                   </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => startEdit(item)}
-                    className="text-gray-400 hover:text-white h-8 w-8"
-                  >
-                    <Pencil className="w-3 h-3" />
-                  </Button>
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => startEdit(item)}
+                      className="text-gray-400 hover:text-white h-8 w-8"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
