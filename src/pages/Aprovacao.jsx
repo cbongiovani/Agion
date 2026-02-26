@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle2, XCircle, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import VisualizarAtividade from '@/components/VisualizarAtividade';
 
 export default function Aprovacao() {
   const queryClient = useQueryClient();
