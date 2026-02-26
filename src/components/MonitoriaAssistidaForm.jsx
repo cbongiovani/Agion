@@ -59,7 +59,7 @@ const perguntasDefault = [
   }
 ];
 
-export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChange }) {
+export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChange, onNotaChange }) {
   const [editingKey, setEditingKey] = useState(null);
   const [editData, setEditData] = useState({});
   const topicos = data;
@@ -75,10 +75,17 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
   const perguntas = getPerguntas();
 
   const handleCheckboxChange = (key, checked) => {
-    onChange({
+    const newData = {
       ...topicos,
       [key]: checked
-    });
+    };
+    onChange(newData);
+    
+    // Calcular e atualizar a nota automaticamente
+    if (onNotaChange) {
+      const nota = calcularNotaTotal(newData);
+      onNotaChange(parseFloat(nota));
+    }
   };
 
   const startEdit = (item) => {
@@ -110,8 +117,8 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
     setEditData({});
   };
 
-  const calcularNotaTotal = () => {
-    const acertos = perguntas.filter(p => topicos[p.key] === true).length;
+  const calcularNotaTotal = (dados = topicos) => {
+    const acertos = perguntas.filter(p => dados[p.key] === true).length;
     return acertos.toFixed(1);
   };
 

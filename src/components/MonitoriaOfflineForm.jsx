@@ -15,22 +15,29 @@ const topicos = [
   { key: 'encerramento_padrao', label: '10 - Encerramento Padrão', peso: 0.5 }
 ];
 
-export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloChange }) {
+export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloChange, onNotaChange }) {
   const topicosValues = data;
   
   const handleTopicoChange = (key, value) => {
-    onChange({
+    const newData = {
       ...topicosValues,
       [key]: value
-    });
+    };
+    onChange(newData);
+    
+    // Calcular e atualizar a nota automaticamente
+    if (onNotaChange) {
+      const nota = calcularNotaTotal(newData);
+      onNotaChange(parseFloat(nota));
+    }
   };
 
-  const calcularNotaTotal = () => {
+  const calcularNotaTotal = (dados = topicosValues) => {
     let totalPonderado = 0;
     let pesoTotal = 0;
     
     topicos.forEach((topico) => {
-      const valor = topicosValues[topico.key];
+      const valor = dados[topico.key];
       if (valor) {
         totalPonderado += valor * topico.peso;
         pesoTotal += topico.peso;
