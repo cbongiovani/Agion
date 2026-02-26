@@ -366,7 +366,6 @@ export default function Atividades() {
       }, 200);
     },
     onError: (error) => {
-      submitLockRef.current = false;
       toast.error('❌ Erro ao atualizar atividade', {
         description: error.message || 'Tente novamente',
         duration: 5000,
