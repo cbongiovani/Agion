@@ -36,6 +36,8 @@ export default function Atividades() {
   const [filterIdBusca, setFilterIdBusca] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
