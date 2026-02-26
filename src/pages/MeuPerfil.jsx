@@ -50,11 +50,11 @@ export default function MeuPerfil() {
   });
 
   const { data: minhasAtividadesPendentes = [] } = useQuery({
-    queryKey: ['minhasAtividadesPendentes', user?.email],
+    queryKey: ['minhasAprovacoesPendentes', user?.email],
     queryFn: async () => {
       if (!user?.email) return [];
       
-      const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date');
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ ack_by_owner: false });
       const atividades = await base44.entities.Atividade.list();
       const fechamentos = await base44.entities.FechamentoSemanal.list();
       const incidentes = await base44.entities.Incidente.list();
@@ -91,6 +91,22 @@ export default function MeuPerfil() {
     },
     enabled: !!user && (user.role === 'supervisor' || user.role === 'admin'),
     refetchInterval: 30000,
+  });
+
+  const acknowledgeRejectionMutation = useMutation({
+    mutationFn: async (aprovacaoId) => {
+      const actor = await base44.auth.me();
+      await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
+        ack_by_owner: true,
+        ack_at: new Date().toISOString(),
+        ack_by: actor.email
+      });
+    },
+    onSuccess: () => {
+      toast.success('Rejeição reconhecida');
+      queryClient.invalidateQueries({ queryKey: ['minhasAprovacoesPendentes'] });
+    },
+    onError: (error) => toast.error('Erro ao reconhecer: ' + error.message),
   });
 
   const updateMutation = useMutation({
@@ -389,18 +405,32 @@ export default function MeuPerfil() {
                       </>
                     )}
                     {item.status === 'rejeitado' && item.motivo_rejeicao && (
-                      <div className="mt-2 bg-red-500/10 border border-red-500/30 rounded p-2">
-                        <p className="text-xs text-red-400 font-medium mb-1">Motivo da Rejeição:</p>
-                        <p className="text-sm text-gray-300">{item.motivo_rejeicao}</p>
-                      </div>
+                       <div className="mt-2 bg-red-500/10 border border-red-500/30 rounded p-2">
+                         <div className="flex justify-between items-start">
+                           <div className="flex-1">
+                             <p className="text-xs text-red-400 font-medium mb-1">Motivo da Rejeição:</p>
+                             <p className="text-sm text-gray-300">{item.motivo_rejeicao}</p>
+                           </div>
+                           <Button
+                             size="icon"
+                             variant="ghost"
+                             onClick={() => acknowledgeRejectionMutation.mutate(item.id)}
+                             disabled={acknowledgeRejectionMutation.isPending}
+                             className="text-red-400 hover:text-red-300 hover:bg-red-500/20 ml-2 flex-shrink-0"
+                             title="Reconhecer rejeição"
+                           >
+                             <X className="w-4 h-4" />
+                           </Button>
+                         </div>
+                       </div>
+                     )}
+                    </div>
+                    </div>
+                    </div>
+                    ))}
+                    </div>
+                    </Card>
                     )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {(user.role === 'user' || user.role === 'supervisor') && (
         <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
