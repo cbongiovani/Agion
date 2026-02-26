@@ -10,6 +10,14 @@ import { CheckCircle2, XCircle, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import VisualizarAtividade from '@/components/VisualizarAtividade';
 
+// Helper para formatar datas com segurança
+const formatDateBR = (value) => {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return '--';
+  return date.toLocaleDateString('pt-BR');
+};
+
 export default function Aprovacao() {
   const queryClient = useQueryClient();
   const [selectedItem, setSelectedItem] = useState(null);
@@ -24,22 +32,52 @@ export default function Aprovacao() {
 
   const { data: aprovacoes = [] } = useQuery({
     queryKey: ['aprovacoes'],
-    queryFn: () => base44.entities.AprovacaoAtividade.list(),
+    queryFn: () => base44.entities.AprovacaoAtividade.filter({ status: 'pendente' }),
   });
 
   const { data: atividades = [] } = useQuery({
     queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list(),
+    queryFn: async () => {
+      const aprovacoesPendentes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
+      const idsNecessarios = aprovacoesPendentes
+        .filter(a => a.tipo === 'atividade' && a.atividade_id)
+        .map(a => a.atividade_id);
+      
+      if (idsNecessarios.length === 0) return [];
+      
+      const todas = await base44.entities.Atividade.list();
+      return todas.filter(a => idsNecessarios.includes(a.id));
+    },
   });
 
   const { data: fechamentos = [] } = useQuery({
     queryKey: ['fechamentos'],
-    queryFn: () => base44.entities.FechamentoSemanal.list(),
+    queryFn: async () => {
+      const aprovacoesPendentes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
+      const idsNecessarios = aprovacoesPendentes
+        .filter(a => a.tipo === 'fechamento' && a.atividade_id)
+        .map(a => a.atividade_id);
+      
+      if (idsNecessarios.length === 0) return [];
+      
+      const todos = await base44.entities.FechamentoSemanal.list();
+      return todos.filter(f => idsNecessarios.includes(f.id));
+    },
   });
 
   const { data: incidentes = [] } = useQuery({
     queryKey: ['incidentes'],
-    queryFn: () => base44.entities.Incidente.list(),
+    queryFn: async () => {
+      const aprovacoesPendentes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
+      const idsNecessarios = aprovacoesPendentes
+        .filter(a => a.tipo === 'warroom' && a.atividade_id)
+        .map(a => a.atividade_id);
+      
+      if (idsNecessarios.length === 0) return [];
+      
+      const todos = await base44.entities.Incidente.list();
+      return todos.filter(i => idsNecessarios.includes(i.id));
+    },
   });
 
   const { data: avaliacoes = [] } = useQuery({
@@ -249,7 +287,7 @@ export default function Aprovacao() {
                       <div className="flex-1">
                         <p className="text-white font-medium">{atividade?.tipo || 'Atividade'}</p>
                         <p className="text-sm text-gray-400 mt-1">
-                          {new Date(atividade?.data).toLocaleDateString('pt-BR')} • {supervisorNome}
+                          {formatDateBR(atividade?.data)} • {supervisorNome}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -311,7 +349,7 @@ export default function Aprovacao() {
                       <div className="flex-1">
                         <p className="text-white font-medium">Fechamento Semanal</p>
                         <p className="text-sm text-gray-400 mt-1">
-                          {new Date(fechamento?.semana_inicio).toLocaleDateString('pt-BR')} - {new Date(fechamento?.semana_fim).toLocaleDateString('pt-BR')}
+                          {formatDateBR(fechamento?.semana_inicio)} - {formatDateBR(fechamento?.semana_fim)}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -531,7 +569,7 @@ export default function Aprovacao() {
                     <div className="flex-1">
                       <p className="text-white font-medium">{item.titulo}</p>
                       <p className="text-sm text-gray-400 mt-1">
-                        {new Date(item.data_inicio).toLocaleDateString('pt-BR')} às {new Date(item.data_inicio).toLocaleTimeString('pt-BR')}
+                        {formatDateBR(item.data_inicio)} às {new Date(item.data_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -588,7 +626,7 @@ export default function Aprovacao() {
                       <div className="border-b border-[#1e3a5f] pb-3">
                         <p className="text-xs text-gray-400 uppercase">Período</p>
                         <p className="text-white font-medium mt-1">
-                          {new Date(selectedItem.data.semana_inicio).toLocaleDateString('pt-BR')} - {new Date(selectedItem.data.semana_fim).toLocaleDateString('pt-BR')}
+                          {formatDateBR(selectedItem.data.semana_inicio)} - {formatDateBR(selectedItem.data.semana_fim)}
                         </p>
                       </div>
                       <div className="border-b border-[#1e3a5f] pb-3">

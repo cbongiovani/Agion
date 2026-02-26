@@ -179,12 +179,18 @@ export default function Atividades() {
           // Se chegou aqui, sucesso - sair do loop
           tentativas = maxTentativas;
           
-          // Criar registro de aprovação
-          await base44.entities.AprovacaoAtividade.create({
-            atividade_id: result.id,
-            tipo: 'atividade',
-            status: 'pendente'
-          });
+          // CRÍTICO: Criar registro de aprovação com rollback se falhar
+          try {
+            await base44.entities.AprovacaoAtividade.create({
+              atividade_id: result.id,
+              tipo: 'atividade',
+              status: 'pendente'
+            });
+          } catch (aprovacaoError) {
+            // ROLLBACK: Deletar atividade recém-criada
+            await base44.entities.Atividade.delete(result.id);
+            throw new Error('Falha ao criar aprovação. Registro cancelado.');
+          }
           
           await base44.entities.Log.create({
             usuario_email: user.email,
