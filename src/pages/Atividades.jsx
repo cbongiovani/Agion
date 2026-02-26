@@ -301,22 +301,24 @@ export default function Atividades() {
     // ✅ AJUSTE CRÍTICO: FECHA O MODAL SEM DEPENDER DE onOpenChange “inteligente”
     onSuccess: () => {
       setRegistrado(true);
-
-      // sincroniza tudo
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['ranking'] });
-      queryClient.invalidateQueries({ queryKey: ['rankings'] });
-      queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
-      queryClient.invalidateQueries({ queryKey: ['supervisores'] });
-
-      // ✅ FECHAMENTO GARANTIDO
+      
+      // ✅ FECHAMENTO GARANTIDO - fechar modal ANTES de invalidar queries
       setTimeout(() => {
         setIsDialogOpen(false);
         resetForm(); // também limpa registrado
+      }, 50);
+
+      // Invalidar queries após fechar modal (evita duplicação)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['atividades'] });
+        queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['ranking'] });
+        queryClient.invalidateQueries({ queryKey: ['rankings'] });
+        queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+        queryClient.invalidateQueries({ queryKey: ['supervisores'] });
         setShowSuccessDialog(true);
-      }, 900);
+      }, 400);
     },
 
     onError: (error) => {
