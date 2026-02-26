@@ -94,25 +94,7 @@ export default function GestaoUsuarios() {
     enabled: !!selectedUser && permOpen,
   });
 
-  // Access check
-  if (loadingUser) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[#ADF802]" />
-      </div>
-    );
-  }
-
-  // 👉 Se quiser somente coordenador, troca aqui para: currentUser?.role !== 'admin'
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'supervisor') {
-    return (
-      <div className="text-center py-12">
-        <Lock className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-white text-lg">Acesso restrito a Administradores</p>
-      </div>
-    );
-  }
-
+  // Helper functions
   const roleLabel = (roleKey) =>
     roles.find((r) => r.key === roleKey)?.label || roleKey || '-';
 
@@ -121,7 +103,7 @@ export default function GestaoUsuarios() {
 
   const statusValue = (u) => (u?.status || 'active');
 
-  // Filtered list
+  // Filtered list (must be before early returns)
   const filteredUsers = useMemo(() => {
     const s = searchTerm.trim().toLowerCase();
 
@@ -141,6 +123,25 @@ export default function GestaoUsuarios() {
       })
       .sort((a, b) => displayName(a).localeCompare(displayName(b)));
   }, [users, searchTerm, filterRole, filterStatus]);
+
+  // Access check
+  if (loadingUser) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ADF802]" />
+      </div>
+    );
+  }
+
+  // 👉 Se quiser somente coordenador, troca aqui para: currentUser?.role !== 'admin'
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'supervisor') {
+    return (
+      <div className="text-center py-12">
+        <Lock className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <p className="text-white text-lg">Acesso restrito a Administradores</p>
+      </div>
+    );
+  }
 
   // Mutations
   const updateUserMutation = useMutation({
