@@ -23,6 +23,7 @@ export default function Atividades() {
   const [deleteId, setDeleteId] = useState(null);
   const [selectedType, setSelectedType] = useState('Chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   
   // Filtros
   const [filterSupervisor, setFilterSupervisor] = useState('');
@@ -132,22 +133,12 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
-      // Invalidar queries
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-      queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
-      
-      // Fechar o diálogo IMEDIATAMENTE
+      // Fechar dialog de registro IMEDIATAMENTE
       setIsDialogOpen(false);
-      
-      // Mostrar mensagem de sucesso GARANTIDA
-      toast.success('✅ Atividade Registrada com Sucesso!', {
-        description: '📋 Seu registro foi enviado para aprovação do coordenador. Você será notificado quando for avaliado.',
-        duration: 7000,
-      });
-      
-      // Resetar formulário após fechar
       resetForm();
+      
+      // Mostrar dialog de sucesso GARANTIDO
+      setShowSuccessDialog(true);
     },
     onError: (error) => {
       toast.error('❌ Erro ao registrar atividade', {
@@ -171,17 +162,12 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      
-      // Fechar o diálogo
+      // Fechar dialog e resetar
       setIsDialogOpen(false);
+      resetForm();
       
-      // Resetar após um pequeno delay
-      setTimeout(() => {
-        resetForm();
-      }, 100);
-      
-      toast.success('Atividade atualizada com sucesso!');
+      // Mostrar dialog de sucesso
+      setShowSuccessDialog(true);
     },
   });
 
@@ -855,6 +841,50 @@ export default function Atividades() {
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Sucesso - GARANTIDO */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="bg-gradient-to-br from-emerald-900/30 to-emerald-950/50 border-2 border-emerald-500/50 backdrop-blur-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-bold text-emerald-400 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <svg className="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              Atividade Registrada com Sucesso!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-gray-300 space-y-3 pt-4">
+              <p className="flex items-start gap-2">
+                <span className="text-emerald-400 text-xl">📋</span>
+                <span>Seu registro foi <strong className="text-white">enviado para aprovação</strong> do coordenador.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-blue-400 text-xl">🔔</span>
+                <span>Você será <strong className="text-white">notificado</strong> assim que a atividade for avaliada.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-purple-400 text-xl">👤</span>
+                <span>Acompanhe o status no seu <strong className="text-white">Perfil</strong>.</span>
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-6">
+            <AlertDialogAction
+              onClick={() => {
+                setShowSuccessDialog(false);
+                // Refresh otimizado das queries
+                queryClient.invalidateQueries({ queryKey: ['atividades'] });
+                queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+                queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 text-base"
+            >
+              Entendi
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
