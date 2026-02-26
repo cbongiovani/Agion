@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,6 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
 import { getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
@@ -51,66 +50,10 @@ import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
 import { MODULES } from '@/components/moduleConstants';
 
-// =====================
-// Helpers
-// =====================
-function toArray(maybe) {
-  if (Array.isArray(maybe)) return maybe;
-  if (maybe && Array.isArray(maybe.items)) return maybe.items;
-  return [];
-}
-
-function pickLatestApprovalForKey(approvals) {
-  // key = `${tipo}:${atividade_id}`
-  const map = new Map();
-  for (const a of approvals) {
-    if (!a?.tipo || !a?.atividade_id) continue;
-    const key = `${a.tipo}:${a.atividade_id}`;
-    const t = new Date(a?.created_date || a?.created_at || a?.data_aprovacao || 0).getTime();
-    const prev = map.get(key);
-    const pt = prev ? new Date(prev?.created_date || prev?.created_at || prev?.data_aprovacao || 0).getTime() : -1;
-    if (!prev || t >= pt) map.set(key, a);
-  }
-  return Array.from(map.values());
-}
-
-async function ensureApprovalIdempotente({ tipo, atividade_id, solicitante_email }) {
-  // Regra:
-  // - Se já existe aprovação p/ (tipo, atividade_id), NÃO cria outra.
-  // - Se existir e estiver rejeitado, volta pra pendente (limpa motivo).
-  // - Se existir e estiver pendente, só garante campos mínimos.
-  // - Se existir e estiver aprovado, mantém.
-  const existentesRaw = await base44.entities.AprovacaoAtividade.filter({ tipo, atividade_id });
-  const existentes = toArray(existentesRaw);
-
-  if (existentes.length > 0) {
-    const latest = pickLatestApprovalForKey(existentes)[0];
-    if (!latest?.id) return latest;
-
-    if (latest.status === 'aprovado') return latest;
-
-    await base44.entities.AprovacaoAtividade.update(latest.id, {
-      status: 'pendente',
-      aprovado_por: null,
-      data_aprovacao: null,
-      motivo_rejeicao: null,
-      solicitante_email: solicitante_email || latest.solicitante_email || null,
-    });
-
-    return latest;
-  }
-
-  // Não existe: cria
-  return await base44.entities.AprovacaoAtividade.create({
-    atividade_id,
-    tipo,
-    status: 'pendente',
-    solicitante_email: solicitante_email || null,
-  });
-}
-
 export default function Atividades() {
   const queryClient = useQueryClient();
+
+  // ✅ Lock anti-double-submit (síncrono)
   const submitLockRef = useRef(false);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -174,78 +117,94 @@ export default function Atividades() {
     nota: '',
     comentario: '',
     status: 'Aberto',
-    data: '',
   });
 
-  const { data: supervisoresRaw = [] } = useQuery({
+  // Carregamentos base
+  const { data: supervisores = [] } = useQuery({
     queryKey: ['supervisores'],
     queryFn: () => base44.entities.Supervisor.list(),
     staleTime: 5 * 60 * 1000,
   });
-  const supervisores = toArray(supervisoresRaw);
 
-  const { data: analistasRaw = [] } = useQuery({
+  const { data: analistas = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
     staleTime: 5 * 60 * 1000,
   });
-  const analistas = toArray(analistasRaw);
 
-  const { data: usuariosRaw = [] } = useQuery({
+  const { data: usuarios = [] } = useQuery({
     queryKey: ['usuarios'],
     queryFn: () => base44.entities.User.list(),
     staleTime: 5 * 60 * 1000,
   });
-  const usuarios = toArray(usuariosRaw);
 
-  // ✅ carrega atividades + junta aprovação mais recente (sem duplicar)
+  // ✅ Lista + merge de aprovação
   const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role, currentUser?.email],
+    queryKey: ['atividades', currentUser?.role],
     enabled: !!currentUser,
-    staleTime: 5 * 1000,
+    staleTime: 3000,
     queryFn: async () => {
-      const [ativRaw, aprovRaw] = await Promise.all([
-        base44.entities.Atividade.list('-created_date', 500),
-        base44.entities.AprovacaoAtividade.list('-created_date', 500),
-      ]);
+      const todasAtividades = await base44.entities.Atividade.list('-created_date');
 
-      const todas = toArray(ativRaw);
+      // Dedup por id
+      const mapUnique = {};
+      (todasAtividades || []).forEach((ativ) => {
+        const id = String(ativ?.id);
+        if (!id) return;
+        if (!mapUnique[id]) mapUnique[id] = ativ;
+      });
+      const atividadesUnicas = Object.values(mapUnique);
 
-      const aprov = pickLatestApprovalForKey(
-        toArray(aprovRaw).filter(a => a?.tipo === 'atividade' && a?.atividade_id)
-      );
+      // Aprovações
+      const todasAprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 1000);
+      const aprovacaoPorAtividadeId = {};
 
-      const aprovByAtividade = new Map(aprov.map(a => [a.atividade_id, a]));
+      (todasAprovacoes || []).forEach((aprov) => {
+        if (aprov?.tipo !== 'atividade') return;
+        const aId = String(aprov?.atividade_id);
+        if (!aId) return;
 
-      const atividadesComAprovacao = todas.map(a => {
-        const ap = aprovByAtividade.get(a.id);
+        // pega a mais recente
+        const newTime = new Date(aprov?.created_date || aprov?.created_at || aprov?.data_aprovacao || 0).getTime();
+        const old = aprovacaoPorAtividadeId[aId];
+        const oldTime = new Date(old?.created_date || old?.created_at || old?.data_aprovacao || 0).getTime();
+        if (!old || newTime >= oldTime) aprovacaoPorAtividadeId[aId] = aprov;
+      });
+
+      const atividadesComAprovacao = atividadesUnicas.map((ativ) => {
+        const id = String(ativ.id);
+        const aprov = aprovacaoPorAtividadeId[id];
         return {
-          ...a,
-          aprovacao_status: ap?.status || 'pendente',
-          aprovacao_data: ap?.data_aprovacao,
-          aprovacao_motivo_rejeicao: ap?.motivo_rejeicao,
+          ...ativ,
+          aprovacao_status: aprov?.status || 'pendente',
+          aprovacao_data: aprov?.data_aprovacao,
+          aprovacao_motivo_rejeicao: aprov?.motivo_rejeicao,
         };
       });
 
-      // ids aprovados
-      const aprovadosSet = new Set(
-        aprov.filter(a => a.status === 'aprovado').map(a => a.atividade_id)
+      const idsAprovados = new Set(
+        Object.keys(aprovacaoPorAtividadeId).filter(
+          (id) => aprovacaoPorAtividadeId[id]?.status === 'aprovado'
+        )
       );
 
       // Admin vê tudo
-      if (currentUser.role === 'admin') return atividadesComAprovacao;
+      if (currentUser?.role === 'admin') return atividadesComAprovacao;
 
-      // Supervisor vê: aprovadas de todos + as dele (pendente/rejeitado)
-      if (currentUser.role === 'supervisor') {
-        return atividadesComAprovacao.filter(a =>
-          aprovadosSet.has(a.id) ||
-          a.registrado_por === currentUser.email ||
-          a.created_by === currentUser.email
-        );
+      // Supervisor: aprovados + próprios (pendentes/rejeitados)
+      if (currentUser?.role === 'supervisor') {
+        return atividadesComAprovacao.filter((ativ) => {
+          const id = String(ativ.id);
+          return (
+            idsAprovados.has(id) ||
+            ativ.registrado_por === currentUser.email ||
+            ativ.created_by === currentUser.email
+          );
+        });
       }
 
       // Outros: apenas aprovadas
-      return atividadesComAprovacao.filter(a => aprovadosSet.has(a.id));
+      return atividadesComAprovacao.filter((ativ) => idsAprovados.has(String(ativ.id)));
     },
   });
 
@@ -263,7 +222,6 @@ export default function Atividades() {
       nota: '',
       comentario: '',
       status: 'Aberto',
-      data: '',
     });
     setEditingAtividade(null);
     setSelectedType('Chamados');
@@ -271,29 +229,29 @@ export default function Atividades() {
   };
 
   const getSupervisorNome = (id) => {
-    const supervisor = supervisores.find((s) => s.id === id);
+    const supervisor = supervisores.find((s) => String(s.id) === String(id));
     const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
     return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
   };
 
   const getAnalistaNome = (id) => {
-    const analista = analistas.find((a) => a.id === id);
+    const analista = analistas.find((a) => String(a.id) === String(id));
     const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
     return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
   };
 
   const handleAnalistaChange = (analistaId) => {
-    const analista = analistas.find((a) => a.id === analistaId);
-    setFormData(prev => ({
+    const analista = analistas.find((a) => String(a.id) === String(analistaId));
+    setFormData((prev) => ({
       ...prev,
-      analista_id: analistaId,
-      supervisor_id: analista?.supervisor_id || '',
+      analista_id: String(analistaId),
+      supervisor_id: analista?.supervisor_id ? String(analista.supervisor_id) : '',
     }));
   };
 
   const handleTipoChange = (tipo) => {
     setSelectedType(tipo);
-    setFormData(prev => ({ ...prev, tipo }));
+    setFormData((prev) => ({ ...prev, tipo }));
   };
 
   const createMutation = useMutation({
@@ -306,45 +264,67 @@ export default function Atividades() {
         'Feedback Individual': 'FB',
       };
 
-      // gera código (melhor esforço — sem “retry” que duplica)
-      const atividadesMesmoTipoRaw = await base44.entities.Atividade.filter({ tipo: data.tipo });
-      const atividadesMesmoTipo = toArray(atividadesMesmoTipoRaw);
-
-      const codigosExistentes = atividadesMesmoTipo
-        .map((a) => a.codigo_atividade)
-        .filter((c) => c && c.startsWith(prefixos[data.tipo]));
-
-      let proximoNumero = 1;
-      if (codigosExistentes.length > 0) {
-        const numeros = codigosExistentes.map((c) => parseInt(c.slice(2), 10)).filter(n => Number.isFinite(n));
-        proximoNumero = (numeros.length ? Math.max(...numeros) : 0) + 1;
+      // ✅ validações mínimas (evita “não aconteceu nada”)
+      if (!data?.analista_id) {
+        throw new Error('Selecione um Analista.');
+      }
+      if (!data?.supervisor_id) {
+        throw new Error('Supervisor não identificado. Selecione o Analista novamente.');
       }
 
-      const codigo_atividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
+      // gera código
+      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
+      const codigosExistentes = (atividadesMesmoTipo || [])
+        .map((a) => a.codigo_atividade)
+        .filter((c) => c && c.startsWith(prefixos[data.tipo]));
+      let proximoNumero = 1;
+      if (codigosExistentes.length > 0) {
+        const numeros = codigosExistentes.map((c) => parseInt(String(c).slice(2), 10)).filter((n) => !Number.isNaN(n));
+        proximoNumero = (numeros.length ? Math.max(...numeros) : 0) + 1;
+      }
+      const codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
 
       const user = await base44.auth.me();
 
-      const atividade = await base44.entities.Atividade.create({
+      // ✅ cria atividade
+      const atividadeCriada = await base44.entities.Atividade.create({
         ...data,
-        codigo_atividade,
+        codigo_atividade: codigoAtividade,
         registrado_por: user.email,
       });
 
-      // ✅ aprovação idempotente (não duplica)
-      await ensureApprovalIdempotente({
-        tipo: 'atividade',
-        atividade_id: atividade.id,
-        solicitante_email: user.email,
-      });
+      const atividadeId = String(atividadeCriada?.id);
 
-      // Log / notificação (não quebra o fluxo se falhar)
+      // ✅ idempotência da aprovação: se já existir, não criar de novo
+      try {
+        const jaExiste = await base44.entities.AprovacaoAtividade.filter({
+          atividade_id: atividadeId,
+          tipo: 'atividade',
+        });
+
+        if (!jaExiste || jaExiste.length === 0) {
+          await base44.entities.AprovacaoAtividade.create({
+            atividade_id: atividadeId,
+            tipo: 'atividade',
+            status: 'pendente',
+          });
+        }
+      } catch (aprovacaoError) {
+        // ✅ rollback para não “sumir” a criação
+        try {
+          await base44.entities.Atividade.delete(atividadeId);
+        } catch {}
+        throw new Error(aprovacaoError?.message || 'Falha ao criar aprovação. Registro cancelado.');
+      }
+
+      // logs + notificação
       try {
         await base44.entities.Log.create({
           usuario_email: user.email,
           usuario_nome: user.full_name,
           acao: 'Criou',
           entidade: 'Atividade',
-          detalhes: `Registrou atividade ${codigo_atividade} do tipo ${data.tipo}`,
+          detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
         });
       } catch {}
 
@@ -352,80 +332,72 @@ export default function Atividades() {
         await notificarCoordenadores(
           'nova_atividade',
           'Nova Atividade Registrada',
-          `${user.full_name} registrou uma nova atividade ${codigo_atividade} do tipo ${data.tipo} - Aguardando aprovação`,
+          `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
           'Aprovacao'
         );
       } catch {}
 
-      return atividade;
+      return atividadeCriada;
     },
-    onSuccess: () => {
-      // fecha modal primeiro (evita re-render duplicado)
-      setTimeout(() => {
-        setIsDialogOpen(false);
-        resetForm();
-      }, 50);
 
-      // depois sincroniza
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['atividades'] });
-        queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['ranking'] });
-        queryClient.invalidateQueries({ queryKey: ['rankings'] });
-        queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
-        setShowSuccessDialog(true);
-      }, 300);
+    onSuccess: () => {
+      // ✅ FECHA MODAL SEM ENROLO
+      setIsDialogOpen(false);
+      resetForm();
+
+      // ✅ invalida as queries CERTAS (incluindo a tela de aprovação)
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+      setShowSuccessDialog(true);
     },
+
     onError: (error) => {
       toast.error('❌ Erro ao registrar atividade', {
         description: error?.message || 'Tente novamente',
         duration: 5000,
       });
+    },
+
+    onSettled: () => {
+      // ✅ SEMPRE libera lock
       submitLockRef.current = false;
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const user = await base44.auth.me();
       const result = await base44.entities.Atividade.update(id, data);
-
-      // ✅ Se supervisor re-enviar depois de rejeitado, volta pra pendente sem duplicar
-      await ensureApprovalIdempotente({
-        tipo: 'atividade',
-        atividade_id: id,
-        solicitante_email: user.email,
-      });
-
+      const user = await base44.auth.me();
       try {
         await base44.entities.Log.create({
           usuario_email: user.email,
           usuario_nome: user.full_name,
           acao: 'Atualizou',
           entidade: 'Atividade',
-          detalhes: `Atualizou atividade ${id}`,
+          detalhes: `Atualizou atividade`,
         });
       } catch {}
-
       return result;
     },
     onSuccess: () => {
       setIsDialogOpen(false);
       resetForm();
-
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['atividades'] });
-        queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        setShowSuccessDialog(true);
-      }, 200);
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setShowSuccessDialog(true);
     },
     onError: (error) => {
       toast.error('❌ Erro ao atualizar atividade', {
         description: error?.message || 'Tente novamente',
         duration: 5000,
       });
+    },
+    onSettled: () => {
       submitLockRef.current = false;
     },
   });
@@ -440,12 +412,13 @@ export default function Atividades() {
           usuario_nome: user.full_name,
           acao: 'Excluiu',
           entidade: 'Atividade',
-          detalhes: `Excluiu atividade ${id}`,
+          detalhes: `Excluiu atividade`,
         });
       } catch {}
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Atividade excluída com sucesso!');
@@ -471,6 +444,7 @@ export default function Atividades() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(`${selectedIds.size} atividades excluídas com sucesso!`);
@@ -492,6 +466,7 @@ export default function Atividades() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // ✅ lock anti-double-submit
     if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
     submitLockRef.current = true;
 
@@ -504,6 +479,7 @@ export default function Atividades() {
       ...formData,
       data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
       nota: parseFloat(formData.nota) || 0,
+      tipo: selectedType,
     };
 
     if (editingAtividade) {
@@ -519,8 +495,8 @@ export default function Atividades() {
     setFormData({
       data: atividade.data,
       tipo: atividade.tipo,
-      analista_id: atividade.analista_id || '',
-      supervisor_id: atividade.supervisor_id || '',
+      analista_id: atividade.analista_id ? String(atividade.analista_id) : '',
+      supervisor_id: atividade.supervisor_id ? String(atividade.supervisor_id) : '',
       protocolo_gravacao: atividade.protocolo_gravacao || '',
       link_gravacao_teams: atividade.link_gravacao_teams || '',
       ticket_acompanhado: atividade.ticket_acompanhado || '',
@@ -547,8 +523,9 @@ export default function Atividades() {
   };
 
   const getNotaBadgeColor = (nota) => {
-    if (nota >= 9) return 'bg-emerald-500 text-white';
-    if (nota >= 7) return 'bg-yellow-500 text-black';
+    const n = Number(nota || 0);
+    if (n >= 9) return 'bg-emerald-500 text-white';
+    if (n >= 7) return 'bg-yellow-500 text-black';
     return 'bg-red-500 text-white';
   };
 
@@ -558,23 +535,31 @@ export default function Atividades() {
     return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
-  const atividadesFiltradas = useMemo(() => {
-    return atividades
-      .filter((ativ) => {
-        if (filterIdBusca && !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
-        if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase()))
-          return false;
-        if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase()))
-          return false;
-        if (filterTipo && !String(ativ.tipo || '').toLowerCase().includes(filterTipo.toLowerCase())) return false;
-        if (filterDataInicio && ativ.data < filterDataInicio) return false;
-        if (filterDataFim && ativ.data > filterDataFim) return false;
-        return true;
-      })
-      .sort((a, b) => getAnalistaNome(a.analista_id).toLowerCase().localeCompare(getAnalistaNome(b.analista_id).toLowerCase()));
-  }, [atividades, filterIdBusca, filterSupervisor, filterAnalista, filterTipo, filterDataInicio, filterDataFim]);
+  const atividadesFiltradas = (atividades || [])
+    .filter((ativ) => {
+      if (filterIdBusca && !String(ativ.codigo_atividade || '').toLowerCase().includes(filterIdBusca.toLowerCase()))
+        return false;
 
-  // Paginação
+      if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase()))
+        return false;
+
+      if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase()))
+        return false;
+
+      if (filterTipo && !String(ativ.tipo || '').toLowerCase().includes(filterTipo.toLowerCase()))
+        return false;
+
+      if (filterDataInicio && String(ativ.data || '') < filterDataInicio) return false;
+      if (filterDataFim && String(ativ.data || '') > filterDataFim) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
+      const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
+      return analistaA.localeCompare(analistaB);
+    });
+
   const totalRegistros = atividadesFiltradas.length;
   const totalPaginas = Math.ceil(totalRegistros / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
@@ -687,7 +672,7 @@ export default function Atividades() {
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
                         {analistas.map((an) => (
-                          <SelectItem key={an.id} value={an.id}>
+                          <SelectItem key={an.id} value={String(an.id)}>
                             {an.nome}
                           </SelectItem>
                         ))}
@@ -711,7 +696,7 @@ export default function Atividades() {
                     <Input
                       type="text"
                       placeholder="Ex: #12345"
-                      maxLength="10"
+                      maxLength="20"
                       value={formData.ticket_acompanhado}
                       onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
@@ -939,7 +924,7 @@ export default function Atividades() {
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-gray-400">Registros por página:</Label>
                 <Select
-                  value={pageSize.toString()}
+                  value={String(pageSize)}
                   onValueChange={(val) => {
                     setPageSize(parseInt(val, 10));
                     setCurrentPage(1);
@@ -1041,15 +1026,12 @@ export default function Atividades() {
                       className="cursor-pointer"
                     />
                   </td>
-
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
                       {atividade.codigo_atividade || 'N/A'}
                     </span>
                   </td>
-
                   <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{getLocalDateString(atividade.data)}</td>
-
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
@@ -1058,26 +1040,17 @@ export default function Atividades() {
                       <AtividadeInfoTooltip tipo={atividade.tipo} />
                     </div>
                   </td>
-
                   <td className="px-4 py-3 text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</td>
                   <td className="px-4 py-3 text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</td>
-
                   <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[150px]">
                     {atividade.registrado_por || atividade.created_by}
                   </td>
-
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>
-                      {atividade.nota}
-                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>{atividade.nota}</span>
                   </td>
-
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
-                      {atividade.status}
-                    </span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>{atividade.status}</span>
                   </td>
-
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
@@ -1095,7 +1068,6 @@ export default function Atividades() {
                         : '⏳ Pendente'}
                     </span>
                   </td>
-
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <Button
@@ -1107,7 +1079,6 @@ export default function Atividades() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-
                       {canEdit && (
                         <Button
                           variant="ghost"
@@ -1119,7 +1090,6 @@ export default function Atividades() {
                           <Pencil className="w-4 h-4" />
                         </Button>
                       )}
-
                       {canDelete && (
                         <Button
                           variant="ghost"
@@ -1148,45 +1118,6 @@ export default function Atividades() {
           </div>
         )}
       </div>
-
-      {/* Dialog de Visualização (mantive simples: se você já usa VisualizarAtividade separado, pode plugar aqui) */}
-      <Dialog open={!!viewingAtividade} onOpenChange={() => setViewingAtividade(null)}>
-        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Atividade</DialogTitle>
-          </DialogHeader>
-          {viewingAtividade && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Data</p>
-                  <p className="text-white font-medium">{getLocalDateString(viewingAtividade.data)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Tipo</p>
-                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getTipoColor(viewingAtividade.tipo)}`}>
-                    {viewingAtividade.tipo}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Supervisor</p>
-                  <p className="text-white">{getSupervisorNome(viewingAtividade.supervisor_id)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Analista</p>
-                  <p className="text-white">{getAnalistaNome(viewingAtividade.analista_id)}</p>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-gray-800">
-                <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">
-                  Fechar
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog de Exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
@@ -1245,10 +1176,6 @@ export default function Atividades() {
                 <span className="text-emerald-400 text-xl">📋</span>
                 <span>Seu registro foi <strong className="text-white">enviado para aprovação</strong> do coordenador.</span>
               </p>
-              <p className="flex items-start gap-2">
-                <span className="text-blue-400 text-xl">🔔</span>
-                <span>Você será <strong className="text-white">notificado</strong> assim que a atividade for avaliada.</span>
-              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-6">
@@ -1256,6 +1183,7 @@ export default function Atividades() {
               onClick={() => {
                 setShowSuccessDialog(false);
                 queryClient.invalidateQueries({ queryKey: ['atividades'] });
+                queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
                 queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
                 queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
               }}
