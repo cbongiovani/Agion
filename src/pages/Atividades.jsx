@@ -52,15 +52,13 @@ import { MODULES } from '@/components/moduleConstants';
 
 export default function Atividades() {
   const queryClient = useQueryClient();
+  const submitLockRef = useRef(false); // ✅ Lock síncrono anti-double-submit
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [selectedType, setSelectedType] = useState('Chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-
-  // ✅ NOVO: controla o botão "Registrado" e ajuda a evitar double submit
-  const [registrado, setRegistrado] = useState(false);
 
   // Filtros
   const [filterSupervisor, setFilterSupervisor] = useState('');
@@ -128,7 +126,8 @@ export default function Atividades() {
     staleTime: 2000, // Evita refetches múltiplos em 2 segundos
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
-      // Remove duplicatas
+      
+      // ✅ DEFESA: Deduplicação por ID
       const mapUnique = {};
       todasAtividades.forEach((ativ) => {
         if (!mapUnique[ativ.id]) {
@@ -137,12 +136,15 @@ export default function Atividades() {
       });
       const atividadesUnicas = Object.values(mapUnique);
 
-      // Buscar aprovações
+      // ✅ Buscar aprovações uma única vez
       const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
       const aprovacaoPorId = {};
       todasAprovacoes.forEach((aprov) => {
-        if (aprov.tipo === 'atividade' && !aprovacaoPorId[aprov.atividade_id]) {
-          aprovacaoPorId[aprov.atividade_id] = aprov;
+        // Deduplica por atividade_id: pega a mais recente se houver múltiplas
+        if (aprov.tipo === 'atividade') {
+          if (!aprovacaoPorId[aprov.atividade_id]) {
+            aprovacaoPorId[aprov.atividade_id] = aprov;
+          }
         }
       });
 
@@ -209,7 +211,7 @@ export default function Atividades() {
     });
     setEditingAtividade(null);
     setSelectedType('Chamados');
-    setRegistrado(false); // ✅ garante reset do estado do botão
+    submitLockRef.current = false; // ✅ liberar lock
   };
 
   const createMutation = useMutation({
@@ -339,32 +341,33 @@ export default function Atividades() {
     mutationFn: async ({ id, data }) => {
       const result = await base44.entities.Atividade.update(id, data);
       const user = await base44.auth.me();
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Atualizou',
-        entidade: 'Atividade',
-        detalhes: `Atualizou atividade`,
-      });
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Atualizou',
+          entidade: 'Atividade',
+          detalhes: `Atualizou atividade`,
+        });
+      } catch (logError) {
+        console.warn('Falha ao criar log de atualização:', logError);
+      }
       return result;
     },
     onSuccess: () => {
-      // ✅ FECHAMENTO GARANTIDO - fechar modal ANTES de invalidar queries
       setIsDialogOpen(false);
       resetForm();
 
-      // Invalidar queries após fechar modal
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['ranking'] });
-        queryClient.invalidateQueries({ queryKey: ['rankings'] });
         queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
-        queryClient.invalidateQueries({ queryKey: ['supervisores'] });
         setShowSuccessDialog(true);
       }, 200);
     },
     onError: (error) => {
+      submitLockRef.current = false;
       toast.error('❌ Erro ao atualizar atividade', {
         description: error.message || 'Tente novamente',
         duration: 5000,
@@ -430,8 +433,9 @@ export default function Atividades() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // ✅ Prevenir múltiplos envios (inclui estado "registrado")
-    if (registrado || createMutation.isPending || updateMutation.isPending) return;
+    // ✅ Lock anti-double-submit síncrono
+    if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
+    submitLockRef.current = true;
 
     const dataAtual = new Date();
     const dataFormatada = `${dataAtual.getFullYear()}-${String(
@@ -452,7 +456,7 @@ export default function Atividades() {
   };
 
   const openEdit = (atividade) => {
-    setRegistrado(false);
+    submitLockRef.current = false;
     setEditingAtividade(atividade);
     setFormData({
       data: atividade.data,
@@ -577,17 +581,19 @@ export default function Atividades() {
         {canCreate && (
           <Dialog
             open={isDialogOpen}
-            // ✅ AJUSTE CRÍTICO: onOpenChange simples e confiável
             onOpenChange={(open) => {
-              if (!open) resetForm();
               setIsDialogOpen(open);
+              if (!open) {
+                resetForm();
+                submitLockRef.current = false;
+              }
             }}
           >
             <DialogTrigger asChild>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 gap-2"
                 onClick={() => {
-                  setRegistrado(false);
+                  submitLockRef.current = false;
                   setEditingAtividade(null);
                 }}
               >
@@ -816,12 +822,8 @@ export default function Atividades() {
                   {/* ✅ BOTÃO MUDA PARA "REGISTRADO" APÓS CRIAR */}
                   <Button
                     type="submit"
-                    disabled={registrado || createMutation.isPending || updateMutation.isPending}
-                    className={
-                      !editingAtividade && registrado
-                        ? 'bg-gray-600 hover:bg-gray-600 text-white cursor-not-allowed'
-                        : 'bg-emerald-600 hover:bg-emerald-700'
-                    }
+                    disabled={submitLockRef.current || createMutation.isPending || updateMutation.isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700"
                   >
                     {createMutation.isPending || updateMutation.isPending ? (
                       <>
@@ -830,8 +832,6 @@ export default function Atividades() {
                       </>
                     ) : editingAtividade ? (
                       'Atualizar'
-                    ) : registrado ? (
-                      'Registrado'
                     ) : (
                       'Registrar'
                     )}
