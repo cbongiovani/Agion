@@ -576,16 +576,17 @@ export default function Atividades() {
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
-              setIsDialogOpen(open);
               if (!open) {
                 resetForm();
                 submitLockRef.current = false;
               }
+              setIsDialogOpen(open);
             }}
           >
             <DialogTrigger asChild>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                disabled={createMutation.isPending || updateMutation.isPending}
                 onClick={() => {
                   submitLockRef.current = false;
                   setEditingAtividade(null);
