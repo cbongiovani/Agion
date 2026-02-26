@@ -163,11 +163,13 @@ export default function Atividades() {
       // Admin vê TUDO
       if (currentUser?.role === 'admin') return atividadesComAprovacao;
 
-      // Supervisor vê: aprovados de todos + seus próprios (pendentes/rejeitados)
+      // Supervisor vê: aprovados de todos + TODOS seus próprios registros
       if (currentUser?.role === 'supervisor') {
         return atividadesComAprovacao.filter(
           (ativ) =>
+            // ✅ Aprovadas por qualquer pessoa
             idsAprovados.includes(ativ.id) ||
+            // ✅ Criadas pelo supervisor (por email)
             ativ.registrado_por === currentUser.email ||
             ativ.created_by === currentUser.email
         );
