@@ -343,38 +343,6 @@ export default function MeuPerfil() {
         </form>
       </Card>
 
-      {(user.role === 'user' || user.role === 'supervisor') && (
-        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Solicitar Alteração de Função
-              </h3>
-              <p className="text-sm text-gray-400 mt-2">
-                {user.role === 'user' 
-                  ? 'Solicite permissões para registrar atividades e acessar mais funcionalidades do sistema.'
-                  : 'Solicite alteração para outra função do sistema.'
-                }
-              </p>
-            </div>
-            <Button
-              onClick={() => setShowRequestDialog(true)}
-              className="bg-[#ADF802] hover:bg-[#9DE702] text-black"
-            >
-              Solicitar Alteração
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {user.role === 'admin' && (
-        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Usuários Online</h3>
-          <OnlineUsersCounter currentUser={user} />
-        </Card>
-      )}
-
       {user.role === 'supervisor' && minhasAtividadesPendentes.length > 0 && (
         <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -431,6 +399,38 @@ export default function MeuPerfil() {
               </div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {(user.role === 'user' || user.role === 'supervisor') && (
+        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Solicitar Alteração de Função
+              </h3>
+              <p className="text-sm text-gray-400 mt-2">
+                {user.role === 'user' 
+                  ? 'Solicite permissões para registrar atividades e acessar mais funcionalidades do sistema.'
+                  : 'Solicite alteração para outra função do sistema.'
+                }
+              </p>
+            </div>
+            <Button
+              onClick={() => setShowRequestDialog(true)}
+              className="bg-[#ADF802] hover:bg-[#9DE702] text-black"
+            >
+              Solicitar Alteração
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {user.role === 'admin' && (
+        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Usuários Online</h3>
+          <OnlineUsersCounter currentUser={user} />
         </Card>
       )}
 
