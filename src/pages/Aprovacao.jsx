@@ -87,6 +87,10 @@ export default function Aprovacao() {
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
       queryClient.invalidateQueries({ queryKey: ['quizzes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+      queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
       toast.success('Registro aprovado com sucesso!');
       setSelectedItem(null);
       setIsViewDialogOpen(false);
@@ -99,12 +103,40 @@ export default function Aprovacao() {
   const rejeitarMutation = useMutation({
     mutationFn: async (aprovacaoId) => {
       const user = await base44.auth.me();
+      const aprovacao = aprovacoes.find(a => a.id === aprovacaoId);
+      
       await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
         status: 'rejeitado',
         motivo_rejeicao: rejectReason,
         aprovado_por: user.email,
         data_aprovacao: new Date().toISOString(),
       });
+      
+      // Enviar notificação para o supervisor
+      if (aprovacao) {
+        let registro = null;
+        if (aprovacao.tipo === 'atividade') {
+          registro = atividades.find(a => a.id === aprovacao.atividade_id);
+        } else if (aprovacao.tipo === 'fechamento') {
+          registro = fechamentos.find(f => f.id === aprovacao.atividade_id);
+        } else if (aprovacao.tipo === 'warroom') {
+          registro = incidentes.find(i => i.id === aprovacao.atividade_id);
+        }
+        
+        if (registro) {
+          const supervisorEmail = registro.created_by || registro.registrado_por;
+          if (supervisorEmail) {
+            await base44.entities.Notificacao.create({
+              destinatario_id: supervisorEmail,
+              tipo: 'acao_corretiva',
+              titulo: 'Registro Rejeitado',
+              mensagem: `Seu registro foi rejeitado. Motivo: ${rejectReason}`,
+              lida: false,
+            });
+          }
+        }
+      }
+      
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
@@ -115,7 +147,8 @@ export default function Aprovacao() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
-      toast.success('Registro rejeitado!');
+      queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
+      toast.success('Registro rejeitado e supervisor notificado!');
       setSelectedItem(null);
       setIsRejectDialogOpen(false);
       setRejectReason('');

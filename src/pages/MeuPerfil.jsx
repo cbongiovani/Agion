@@ -49,6 +49,50 @@ export default function MeuPerfil() {
     enabled: user?.role === 'admin' || user?.role === 'supervisor',
   });
 
+  const { data: minhasAtividadesPendentes = [] } = useQuery({
+    queryKey: ['minhasAtividadesPendentes', user?.email],
+    queryFn: async () => {
+      if (!user?.email) return [];
+      
+      const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date');
+      const atividades = await base44.entities.Atividade.list();
+      const fechamentos = await base44.entities.FechamentoSemanal.list();
+      const incidentes = await base44.entities.Incidente.list();
+      
+      const pendentes = [];
+      
+      for (const apr of aprovacoes) {
+        if (apr.status === 'pendente' || apr.status === 'rejeitado') {
+          let registro = null;
+          let tipo_display = '';
+          
+          if (apr.tipo === 'atividade') {
+            registro = atividades.find(a => a.id === apr.atividade_id);
+            tipo_display = 'Atividade';
+          } else if (apr.tipo === 'fechamento') {
+            registro = fechamentos.find(f => f.id === apr.atividade_id);
+            tipo_display = 'Fechamento Semanal';
+          } else if (apr.tipo === 'warroom') {
+            registro = incidentes.find(i => i.id === apr.atividade_id);
+            tipo_display = 'Incidente War Room';
+          }
+          
+          if (registro && (registro.created_by === user.email || registro.registrado_por === user.email)) {
+            pendentes.push({
+              ...apr,
+              registro,
+              tipo_display
+            });
+          }
+        }
+      }
+      
+      return pendentes;
+    },
+    enabled: !!user && (user.role === 'supervisor' || user.role === 'admin'),
+    refetchInterval: 30000,
+  });
+
   const updateMutation = useMutation({
     mutationFn: (data) => base44.auth.updateMe(data),
     onSuccess: (updatedUser) => {
@@ -331,11 +375,70 @@ export default function MeuPerfil() {
         </Card>
       )}
 
+      {user.role === 'supervisor' && minhasAtividadesPendentes.length > 0 && (
+        <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-yellow-500" />
+            Meus Registros Pendentes de Aprovação
+          </h3>
+          <div className="space-y-3">
+            {minhasAtividadesPendentes.map((item) => (
+              <div key={item.id} className="bg-[#0f1f35] border border-[#1e3a5f] rounded-lg p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        item.status === 'pendente' 
+                          ? 'bg-yellow-500/20 text-yellow-400' 
+                          : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {item.status === 'pendente' ? 'Aguardando Aprovação' : 'Rejeitado'}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {item.tipo_display}
+                      </span>
+                    </div>
+                    {item.registro && (
+                      <>
+                        {item.tipo === 'atividade' && (
+                          <div className="text-sm text-gray-300">
+                            <p><strong>Tipo:</strong> {item.registro.tipo}</p>
+                            <p><strong>Data:</strong> {new Date(item.registro.data).toLocaleDateString('pt-BR')}</p>
+                            <p><strong>Nota:</strong> {item.registro.nota}/10</p>
+                          </div>
+                        )}
+                        {item.tipo === 'fechamento' && (
+                          <div className="text-sm text-gray-300">
+                            <p><strong>Semana:</strong> {new Date(item.registro.semana_inicio).toLocaleDateString('pt-BR')} - {new Date(item.registro.semana_fim).toLocaleDateString('pt-BR')}</p>
+                          </div>
+                        )}
+                        {item.tipo === 'warroom' && (
+                          <div className="text-sm text-gray-300">
+                            <p><strong>Título:</strong> {item.registro.titulo}</p>
+                            <p><strong>Severidade:</strong> {item.registro.severidade}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {item.status === 'rejeitado' && item.motivo_rejeicao && (
+                      <div className="mt-2 bg-red-500/10 border border-red-500/30 rounded p-2">
+                        <p className="text-xs text-red-400 font-medium mb-1">Motivo da Rejeição:</p>
+                        <p className="text-sm text-gray-300">{item.motivo_rejeicao}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {(user.role === 'admin' || user.role === 'supervisor') && solicitacoes.length > 0 && (
         <Card className="bg-[#0a1628] border-[#1e3a5f] p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-[#ADF802]" />
-            Solicitações Pendentes
+            Solicitações de Função Pendentes
           </h3>
           <div className="space-y-4">
             {solicitacoes.map((solicitacao) => (
