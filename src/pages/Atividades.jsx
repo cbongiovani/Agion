@@ -856,6 +856,22 @@ export default function Atividades() {
             <tbody className="divide-y divide-gray-800">
               {atividadesPaginadas.map((atividade) => (
                 <tr key={atividade.id} className="hover:bg-[#1a1a1a] transition-colors">
+                  <td className="px-4 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(atividade.id)}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedIds);
+                        if (e.target.checked) {
+                          newSet.add(atividade.id);
+                        } else {
+                          newSet.delete(atividade.id);
+                        }
+                        setSelectedIds(newSet);
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
                       {atividade.codigo_atividade || 'N/A'}
