@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ export default function RoleEditor({ isOpen, onClose, resources, roles }) {
   }, {});
 
   // Carregar permissões da role
-  const { data: rolePermissions = [] } = React.useQuery({
+  const { data: rolePermissions = [] } = useQuery({
     queryKey: ['rolePermissionsEditor', selectedRole],
     queryFn: () =>
       selectedRole ? base44.entities.RolePermission.filter({ role_key: selectedRole }) : Promise.resolve([]),
