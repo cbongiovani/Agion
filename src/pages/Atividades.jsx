@@ -793,7 +793,7 @@ export default function Atividades() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
-              {atividadesFiltradas.map((atividade) => (
+              {atividadesPaginadas.map((atividade) => (
                 <tr key={atividade.id} className="hover:bg-[#1a1a1a] transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
