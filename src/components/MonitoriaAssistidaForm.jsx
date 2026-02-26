@@ -59,7 +59,7 @@ const perguntasDefault = [
   }
 ];
 
-export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChange, onNotaChange }) {
+export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChange, onNotaChange, readOnly = false }) {
   const [editingKey, setEditingKey] = useState(null);
   const [editData, setEditData] = useState({});
   const topicos = data;
@@ -75,6 +75,8 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
   const perguntas = getPerguntas();
 
   const handleCheckboxChange = (key, checked) => {
+    if (readOnly) return;
+    
     const newData = {
       ...topicos,
       [key]: checked
@@ -89,6 +91,8 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
   };
 
   const startEdit = (item) => {
+    if (readOnly) return;
+    
     setEditingKey(item.key);
     setEditData({
       pergunta: item.pergunta,
@@ -124,15 +128,16 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
 
   return (
     <div className="space-y-4">
-      {onLinkChange && (
+      {(onLinkChange || readOnly) && (
         <div>
           <Label>Link da Gravação (Teams)</Label>
           <Input
             type="url"
             value={topicos.linkGravacao || ''}
-            onChange={(e) => onLinkChange(e.target.value)}
+            onChange={(e) => !readOnly && onLinkChange && onLinkChange(e.target.value)}
             className="bg-[#1a1a1a] border-gray-700 mt-2"
             placeholder="https://teams.microsoft.com/..."
+            disabled={readOnly}
           />
         </div>
       )}
@@ -191,6 +196,7 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
                     checked={topicos[item.key] || false}
                     onCheckedChange={(checked) => handleCheckboxChange(item.key, checked)}
                     className="mt-1"
+                    disabled={readOnly}
                   />
                   <div className="flex-1">
                     <label htmlFor={item.key} className="text-sm font-medium text-white cursor-pointer block mb-1">

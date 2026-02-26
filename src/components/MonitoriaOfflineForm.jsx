@@ -15,10 +15,12 @@ const topicos = [
   { key: 'encerramento_padrao', label: '10 - Encerramento Padrão', peso: 0.5 }
 ];
 
-export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloChange, onNotaChange }) {
+export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloChange, onNotaChange, readOnly = false }) {
   const topicosValues = data;
   
   const handleTopicoChange = (key, value) => {
+    if (readOnly) return;
+    
     const newData = {
       ...topicosValues,
       [key]: value
@@ -53,15 +55,16 @@ export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloC
 
   return (
     <div className="space-y-4">
-      {onProtocoloChange && (
+      {(onProtocoloChange || readOnly) && (
         <div>
           <Label>Protocolo da Gravação</Label>
           <Input
             type="text"
             value={topicosValues.protocolo || ''}
-            onChange={(e) => onProtocoloChange(e.target.value)}
+            onChange={(e) => !readOnly && onProtocoloChange && onProtocoloChange(e.target.value)}
             className="bg-[#1a1a1a] border-gray-700 mt-2"
             placeholder="Digite o protocolo"
+            disabled={readOnly}
           />
         </div>
       )}
@@ -83,12 +86,14 @@ export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloC
                     key={valor}
                     type="button"
                     onClick={() => handleTopicoChange(topico.key, valor)}
+                    disabled={readOnly}
                     className={`
                       w-8 h-8 rounded border transition-all text-xs font-semibold
                       ${topicosValues[topico.key] === valor
                         ? 'bg-[#ADF802] border-[#ADF802] text-black'
                         : 'bg-[#242424] border-gray-600 text-gray-400 hover:border-gray-500'
                       }
+                      ${readOnly ? 'cursor-default opacity-80' : ''}
                     `}
                   >
                     {valor}
