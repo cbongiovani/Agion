@@ -70,34 +70,25 @@ export default function Atividades() {
   });
 
   const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role, currentUser?.email],
+    queryKey: ['atividades', currentUser?.role],
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
-      // Buscar aprovações
-      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade' });
-      const atividadesAprovadas = aprovacoes
-        .filter(a => a.status === 'aprovado')
-        .map(a => a.atividade_id);
-      
-      // Admin vê tudo
+      // APENAS Admin vê todas (incluindo pendentes)
       if (currentUser?.role === 'admin') {
         return todasAtividades;
       }
       
-      // Supervisor vê: aprovadas + suas próprias pendentes
-      if (currentUser?.role === 'supervisor') {
-        return todasAtividades.filter(ativ => 
-          atividadesAprovadas.includes(ativ.id) || 
-          ativ.registrado_por === currentUser.email
-        );
-      }
+      // Buscar aprovações - pegar TODAS para filtrar corretamente
+      const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
+      const idsAprovados = todasAprovacoes
+        .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
+        .map(a => a.atividade_id);
       
-      // Outros usuários veem APENAS aprovadas
-      return todasAtividades.filter(ativ => atividadesAprovadas.includes(ativ.id));
+      // Todos os outros (incluindo supervisores) veem APENAS aprovadas
+      return todasAtividades.filter(ativ => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
-    refetchOnMount: 'always',
     staleTime: 0,
   });
 
