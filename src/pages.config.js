@@ -50,9 +50,11 @@
 import Analistas from './pages/Analistas';
 import Aprovacao from './pages/Aprovacao';
 import Atividades from './pages/Atividades';
+import AvaliacaoSupervisores from './pages/AvaliacaoSupervisores';
 import Avaliacoes from './pages/Avaliacoes';
 import Certificados from './pages/Certificados';
 import Dashboard from './pages/Dashboard';
+import DashboardOKR from './pages/DashboardOKR';
 import FechamentoSemanal from './pages/FechamentoSemanal';
 import GestaoUsuarios from './pages/GestaoUsuarios';
 import Home from './pages/Home';
@@ -65,8 +67,6 @@ import Ranking from './pages/Ranking';
 import RelatorioSemanal from './pages/RelatorioSemanal';
 import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
-import DashboardOKR from './pages/DashboardOKR';
-import AvaliacaoSupervisores from './pages/AvaliacaoSupervisores';
 import __Layout from './Layout.jsx';
 
 
@@ -74,9 +74,11 @@ export const PAGES = {
     "Analistas": Analistas,
     "Aprovacao": Aprovacao,
     "Atividades": Atividades,
+    "AvaliacaoSupervisores": AvaliacaoSupervisores,
     "Avaliacoes": Avaliacoes,
     "Certificados": Certificados,
     "Dashboard": Dashboard,
+    "DashboardOKR": DashboardOKR,
     "FechamentoSemanal": FechamentoSemanal,
     "GestaoUsuarios": GestaoUsuarios,
     "Home": Home,
@@ -89,8 +91,6 @@ export const PAGES = {
     "RelatorioSemanal": RelatorioSemanal,
     "Supervisores": Supervisores,
     "WarRoom": WarRoom,
-    "DashboardOKR": DashboardOKR,
-    "AvaliacaoSupervisores": AvaliacaoSupervisores,
 }
 
 export const pagesConfig = {
