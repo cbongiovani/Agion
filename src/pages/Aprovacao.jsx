@@ -1,22 +1,54 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle2, XCircle, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import VisualizarAtividade from '@/components/VisualizarAtividade';
 
-// Helper para formatar datas com segurança
+// =========================
+// Helpers
+// =========================
 const formatDateBR = (value) => {
   if (!value) return '--';
   const date = new Date(value);
-  if (isNaN(date.getTime())) return '--';
+  if (Number.isNaN(date.getTime())) return '--';
   return date.toLocaleDateString('pt-BR');
 };
+
+function toArray(maybe) {
+  if (Array.isArray(maybe)) return maybe;
+  if (maybe && Array.isArray(maybe.items)) return maybe.items;
+  return [];
+}
+
+// pega a aprovação mais recente por atividade_id
+function pickLatestByAtividadeId(aprovacoes) {
+  const byId = {};
+  for (const a of aprovacoes) {
+    if (!a?.atividade_id) continue;
+    const id = a.atividade_id;
+
+    const aTime = new Date(a?.created_date || a?.created_at || a?.data_aprovacao || 0).getTime();
+    const bTime = new Date(byId[id]?.created_date || byId[id]?.created_at || byId[id]?.data_aprovacao || 0).getTime();
+
+    if (!byId[id] || aTime >= bTime) byId[id] = a;
+  }
+  return byId;
+}
 
 export default function Aprovacao() {
   const queryClient = useQueryClient();
@@ -25,100 +57,162 @@ export default function Aprovacao() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
+  // =========================
+  // Current user
+  // =========================
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 60 * 1000
   });
 
-  const { data: aprovacoes = [] } = useQuery({
-    queryKey: ['aprovacoes'],
-    queryFn: () => base44.entities.AprovacaoAtividade.filter({ status: 'pendente' }),
-  });
-
-  const { data: atividades = [] } = useQuery({
-    queryKey: ['atividades'],
+  // =========================
+  // Aprovações pendentes (uma vez)
+  // =========================
+  const { data: aprovacoesPendentes = [] } = useQuery({
+    queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
-      const aprovacoesPendentes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
-      const idsNecessarios = aprovacoesPendentes
-        .filter(a => a.tipo === 'atividade' && a.atividade_id)
-        .map(a => a.atividade_id);
-      
-      if (idsNecessarios.length === 0) return [];
-      
-      const todas = await base44.entities.Atividade.list();
-      return todas.filter(a => idsNecessarios.includes(a.id));
+      const raw = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
+      const arr = toArray(raw).filter((a) => a?.status === 'pendente' && a?.atividade_id && a?.tipo);
+      const latest = pickLatestByAtividadeId(arr);
+      return Object.values(latest);
     },
+    staleTime: 5_000
+  });
+
+  // =========================
+  // IDs necessários por tipo
+  // =========================
+  const atividadesIds = useMemo(
+    () => aprovacoesPendentes.filter((a) => a.tipo === 'atividade').map((a) => a.atividade_id),
+    [aprovacoesPendentes]
+  );
+  const fechamentosIds = useMemo(
+    () => aprovacoesPendentes.filter((a) => a.tipo === 'fechamento').map((a) => a.atividade_id),
+    [aprovacoesPendentes]
+  );
+  const incidentesIds = useMemo(
+    () => aprovacoesPendentes.filter((a) => a.tipo === 'warroom').map((a) => a.atividade_id),
+    [aprovacoesPendentes]
+  );
+
+  // =========================
+  // Dados dos registros pendentes
+  // =========================
+  const { data: atividades = [] } = useQuery({
+    queryKey: ['atividadesPendentes', atividadesIds.join('|')],
+    enabled: atividadesIds.length > 0,
+    queryFn: async () => {
+      const raw = await base44.entities.Atividade.list('-created_date', 500);
+      const todas = toArray(raw);
+      const set = new Set(atividadesIds);
+      return todas.filter((a) => set.has(a.id));
+    }
   });
 
   const { data: fechamentos = [] } = useQuery({
-    queryKey: ['fechamentos'],
+    queryKey: ['fechamentosPendentes', fechamentosIds.join('|')],
+    enabled: fechamentosIds.length > 0,
     queryFn: async () => {
-      const aprovacoesPendentes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
-      const idsNecessarios = aprovacoesPendentes
-        .filter(a => a.tipo === 'fechamento' && a.atividade_id)
-        .map(a => a.atividade_id);
-      
-      if (idsNecessarios.length === 0) return [];
-      
-      const todos = await base44.entities.FechamentoSemanal.list();
-      return todos.filter(f => idsNecessarios.includes(f.id));
-    },
+      const raw = await base44.entities.FechamentoSemanal.list('-semana_inicio', 200);
+      const todos = toArray(raw);
+      const set = new Set(fechamentosIds);
+      return todos.filter((f) => set.has(f.id));
+    }
   });
 
   const { data: incidentes = [] } = useQuery({
-    queryKey: ['incidentes'],
+    queryKey: ['incidentesPendentes', incidentesIds.join('|')],
+    enabled: incidentesIds.length > 0,
     queryFn: async () => {
-      const aprovacoesPendentes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
-      const idsNecessarios = aprovacoesPendentes
-        .filter(a => a.tipo === 'warroom' && a.atividade_id)
-        .map(a => a.atividade_id);
-      
-      if (idsNecessarios.length === 0) return [];
-      
-      const todos = await base44.entities.Incidente.list();
-      return todos.filter(i => idsNecessarios.includes(i.id));
-    },
+      const raw = await base44.entities.Incidente.list('-created_date', 200);
+      const todos = toArray(raw);
+      const set = new Set(incidentesIds);
+      return todos.filter((i) => set.has(i.id));
+    }
   });
 
+  // =========================
+  // Outras entidades (avaliacoes/quizzes/questoes) — mantém igual
+  // =========================
   const { data: avaliacoes = [] } = useQuery({
     queryKey: ['avaliacoes'],
-    queryFn: () => base44.entities.Avaliacao.list(),
+    queryFn: () => base44.entities.Avaliacao.list()
   });
 
   const { data: quizzes = [] } = useQuery({
     queryKey: ['quizzes'],
-    queryFn: () => base44.entities.QuizzRelampago.list(),
+    queryFn: () => base44.entities.QuizzRelampago.list()
   });
 
   const { data: questoes = [] } = useQuery({
     queryKey: ['questoes'],
-    queryFn: () => base44.entities.Questao.list(),
+    queryFn: () => base44.entities.Questao.list()
   });
 
-  const { data: supervisores = [] } = useQuery({
+  const { data: supervisoresRaw = [] } = useQuery({
     queryKey: ['supervisores'],
     queryFn: () => base44.entities.Supervisor.list(),
+    staleTime: 5 * 60 * 1000
   });
+  const supervisores = toArray(supervisoresRaw);
 
-  const { data: usuarios = [] } = useQuery({
+  const { data: usuariosRaw = [] } = useQuery({
     queryKey: ['usuarios'],
     queryFn: () => base44.entities.User.list(),
+    staleTime: 5 * 60 * 1000
   });
+  const usuarios = toArray(usuariosRaw);
 
-  const { data: analistas = [] } = useQuery({
+  const { data: analistasRaw = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
+    staleTime: 5 * 60 * 1000
   });
+  const analistas = toArray(analistasRaw);
 
+  const getSupervisorNome = (supervisorId) => {
+    const supervisor = supervisores.find((s) => s.id === supervisorId);
+    if (supervisor) {
+      const usuario = usuarios.find((u) => u.email === supervisor.usuario_email);
+      return usuario?.nome_customizado || usuario?.full_name || supervisor.nome || '-';
+    }
+    return '-';
+  };
+
+  const getAnalistaNome = (analistaId) => {
+    const analista = analistas.find((a) => a.id === analistaId);
+    if (analista) {
+      const usuario = usuarios.find((u) => u.email === analista.usuario_email);
+      return usuario?.nome_customizado || usuario?.full_name || analista.nome || '-';
+    }
+    return '-';
+  };
+
+  // =========================
+  // Filtragens
+  // =========================
+  const atividadesPendentes = aprovacoesPendentes.filter((a) => a.tipo === 'atividade');
+  const fechamentosPendentes = aprovacoesPendentes.filter((a) => a.tipo === 'fechamento');
+  const warroomPendentes = aprovacoesPendentes.filter((a) => a.tipo === 'warroom');
+
+  const avaliacoesPendentes = toArray(avaliacoes).filter((a) => a.status === 'Pendente');
+  const quizzesPendentes = toArray(quizzes).filter((q) => q.status === 'Agendado');
+  const questoesPendentes = toArray(questoes).filter((q) => q.status === 'Pendente');
+
+  // =========================
+  // Mutations
+  // =========================
   const aprovarMutation = useMutation({
     mutationFn: async (item) => {
       const user = await base44.auth.me();
-      
+
+      // Tipos aprovados por AprovacaoAtividade
       if (item.tipo === 'atividade' || item.tipo === 'fechamento' || item.tipo === 'warroom') {
         await base44.entities.AprovacaoAtividade.update(item.id, {
           status: 'aprovado',
           aprovado_por: user.email,
-          data_aprovacao: new Date().toISOString(),
+          data_aprovacao: new Date().toISOString()
         });
       } else if (item.tipo === 'avaliacao') {
         await base44.entities.Avaliacao.update(item.id, { status: 'Concluída' });
@@ -127,87 +221,95 @@ export default function Aprovacao() {
       } else if (item.tipo === 'quizz') {
         await base44.entities.QuizzRelampago.update(item.id, { status: 'Ativo' });
       }
-      
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Atualizou',
-        entidade: 'Aprovação',
-        detalhes: `Aprovou registro ID: ${item.id}`,
-      });
+
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Atualizou',
+          entidade: 'Aprovação',
+          detalhes: `Aprovou registro ID: ${item.id}`
+        });
+      } catch {}
     },
     onSuccess: () => {
-      // Sincronização completa de TODAS as queries afetadas
-      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividadesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['fechamentosPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['incidentesPendentes'] });
+
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
       queryClient.invalidateQueries({ queryKey: ['quizzes'] });
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['ranking'] });
       queryClient.invalidateQueries({ queryKey: ['rankings'] });
       queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
+
       toast.success('Registro aprovado com sucesso!');
       setSelectedItem(null);
       setIsViewDialogOpen(false);
     },
     onError: (error) => {
-      toast.error('Erro ao aprovar: ' + error.message);
-    },
+      toast.error('Erro ao aprovar: ' + (error?.message || 'Tente novamente'));
+    }
   });
 
   const rejeitarMutation = useMutation({
     mutationFn: async (aprovacaoId) => {
       const user = await base44.auth.me();
-      const aprovacao = aprovacoes.find(a => a.id === aprovacaoId);
-      
+      const aprovacao = aprovacoesPendentes.find((a) => a.id === aprovacaoId);
+
       await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
         status: 'rejeitado',
         motivo_rejeicao: rejectReason,
         aprovado_por: user.email,
-        data_aprovacao: new Date().toISOString(),
+        data_aprovacao: new Date().toISOString()
       });
-      
-      // Enviar notificação para o supervisor
+
+      // notificação pro solicitante
       if (aprovacao) {
         let registro = null;
-        if (aprovacao.tipo === 'atividade') {
-          registro = atividades.find(a => a.id === aprovacao.atividade_id);
-        } else if (aprovacao.tipo === 'fechamento') {
-          registro = fechamentos.find(f => f.id === aprovacao.atividade_id);
-        } else if (aprovacao.tipo === 'warroom') {
-          registro = incidentes.find(i => i.id === aprovacao.atividade_id);
-        }
-        
-        if (registro) {
-          const supervisorEmail = registro.created_by || registro.registrado_por;
-          if (supervisorEmail) {
+        if (aprovacao.tipo === 'atividade') registro = atividades.find((a) => a.id === aprovacao.atividade_id);
+        if (aprovacao.tipo === 'fechamento') registro = fechamentos.find((f) => f.id === aprovacao.atividade_id);
+        if (aprovacao.tipo === 'warroom') registro = incidentes.find((i) => i.id === aprovacao.atividade_id);
+
+        const solicitanteEmail = registro?.created_by || registro?.registrado_por;
+        if (solicitanteEmail) {
+          try {
             await base44.entities.Notificacao.create({
-              destinatario_id: supervisorEmail,
+              destinatario_id: solicitanteEmail,
               tipo: 'acao_corretiva',
               titulo: 'Registro Rejeitado',
               mensagem: `Seu registro foi rejeitado. Motivo: ${rejectReason}`,
-              lida: false,
+              lida: false
             });
-          }
+          } catch {}
         }
       }
-      
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Atualizou',
-        entidade: 'Aprovação',
-        detalhes: `Rejeitou registro ID: ${aprovacaoId} - Motivo: ${rejectReason}`,
-      });
+
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Atualizou',
+          entidade: 'Aprovação',
+          detalhes: `Rejeitou registro ID: ${aprovacaoId} - Motivo: ${rejectReason}`
+        });
+      } catch {}
     },
     onSuccess: () => {
-      // Sincronização completa de TODAS as queries afetadas
-      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividadesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['fechamentosPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['incidentesPendentes'] });
+
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -217,46 +319,22 @@ export default function Aprovacao() {
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
-      toast.success('Registro rejeitado e supervisor notificado!');
+
+      toast.success('Registro rejeitado e solicitante notificado!');
       setSelectedItem(null);
       setIsRejectDialogOpen(false);
       setRejectReason('');
     },
     onError: (error) => {
-      toast.error('Erro ao rejeitar: ' + error.message);
-    },
+      toast.error('Erro ao rejeitar: ' + (error?.message || 'Tente novamente'));
+    }
   });
-
-  const getSupervisorNome = (supervisorId) => {
-    const supervisor = supervisores.find(s => s.id === supervisorId);
-    if (supervisor) {
-      const usuario = usuarios.find(u => u.email === supervisor.usuario_email);
-      return usuario?.nome_customizado || usuario?.full_name || supervisor.nome || '-';
-    }
-    return '-';
-  };
-
-  const getAnalistaNome = (analistaId) => {
-    const analista = analistas.find(a => a.id === analistaId);
-    if (analista) {
-      const usuario = usuarios.find(u => u.email === analista.usuario_email);
-      return usuario?.nome_customizado || usuario?.full_name || analista.nome || '-';
-    }
-    return '-';
-  };
-
-  const atividadesPendentes = aprovacoes.filter(a => a.tipo === 'atividade' && a.status === 'pendente');
-  const fechamentosPendentes = aprovacoes.filter(a => a.tipo === 'fechamento' && a.status === 'pendente');
-  const warroomPendentes = aprovacoes.filter(a => a.tipo === 'warroom' && a.status === 'pendente');
-  const avaliacoesPendentes = avaliacoes.filter(a => a.status === 'Pendente');
-  const quizzesPendentes = quizzes.filter(q => q.status === 'Agendado');
-  const questoesPendentes = questoes.filter(q => q.status === 'Pendente');
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Aprovação de Registros</h1>
-        <p className="text-gray-400 mt-1">Gerenciar aprovações de atividades, avaliações e quizzes</p>
+        <p className="text-gray-400 mt-1">Gerenciar aprovações de atividades, fechamentos, war room, avaliações e quizzes</p>
       </div>
 
       <Tabs defaultValue="atividades" className="space-y-4">
@@ -264,17 +342,21 @@ export default function Aprovacao() {
           <TabsTrigger value="atividades" className="relative">
             Atividades
             {(atividadesPendentes.length + fechamentosPendentes.length + warroomPendentes.length) > 0 && (
-              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></div>
+              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
             )}
           </TabsTrigger>
+
           <TabsTrigger value="avaliacoes" className="relative">
             Avaliações
             {(avaliacoesPendentes.length + quizzesPendentes.length + questoesPendentes.length) > 0 && (
-              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></div>
+              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
             )}
           </TabsTrigger>
         </TabsList>
 
+        {/* =========================
+            TAB: Atividades
+        ========================= */}
         <TabsContent value="atividades" className="space-y-6">
           {/* Atividades */}
           <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
@@ -282,21 +364,30 @@ export default function Aprovacao() {
               <Clock className="w-5 h-5 text-yellow-500" />
               Atividades Pendentes ({atividadesPendentes.length})
             </h2>
+
             {atividadesPendentes.length === 0 ? (
               <p className="text-gray-400">Nenhuma atividade pendente de aprovação</p>
             ) : (
               <div className="space-y-3">
                 {atividadesPendentes.map((item) => {
-                  const atividade = atividades.find(a => a.id === item.atividade_id);
+                  const atividade = atividades.find((a) => a.id === item.atividade_id);
                   const supervisorNome = atividade?.supervisor_id ? getSupervisorNome(atividade.supervisor_id) : '-';
+
                   return (
-                    <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
+                    <div
+                      key={item.id}
+                      className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between"
+                    >
                       <div className="flex-1">
                         <p className="text-white font-medium">{atividade?.tipo || 'Atividade'}</p>
                         <p className="text-sm text-gray-400 mt-1">
                           {formatDateBR(atividade?.data)} • {supervisorNome}
                         </p>
+                        {atividade?.codigo_atividade && (
+                          <p className="text-xs text-[#ADF802] font-mono mt-1">🔖 {atividade.codigo_atividade}</p>
+                        )}
                       </div>
+
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -310,15 +401,18 @@ export default function Aprovacao() {
                           <Eye className="w-4 h-4 mr-1" />
                           Visualizar
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => aprovarMutation.mutate({ ...item, tipo: 'atividade' })}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
+                          title="Aprovar"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -328,6 +422,7 @@ export default function Aprovacao() {
                           }}
                           className="text-red-400 hover:text-red-300"
                           disabled={rejeitarMutation.isPending}
+                          title="Rejeitar"
                         >
                           <XCircle className="w-4 h-4" />
                         </Button>
@@ -345,20 +440,26 @@ export default function Aprovacao() {
               <Clock className="w-5 h-5 text-yellow-500" />
               Fechamentos Semanais Pendentes ({fechamentosPendentes.length})
             </h2>
+
             {fechamentosPendentes.length === 0 ? (
               <p className="text-gray-400">Nenhum fechamento pendente de aprovação</p>
             ) : (
               <div className="space-y-3">
                 {fechamentosPendentes.map((item) => {
-                  const fechamento = fechamentos.find(f => f.id === item.atividade_id);
+                  const fechamento = fechamentos.find((f) => f.id === item.atividade_id);
+
                   return (
-                    <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
-                       <div className="flex-1">
-                         <p className="text-white font-medium">Fechamento Semanal</p>
+                    <div
+                      key={item.id}
+                      className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <p className="text-white font-medium">Fechamento Semanal</p>
                         <p className="text-sm text-gray-400 mt-1">
                           {formatDateBR(fechamento?.semana_inicio)} - {formatDateBR(fechamento?.semana_fim)}
                         </p>
                       </div>
+
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -372,15 +473,18 @@ export default function Aprovacao() {
                           <Eye className="w-4 h-4 mr-1" />
                           Visualizar
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => aprovarMutation.mutate({ ...item, tipo: 'fechamento' })}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
+                          title="Aprovar"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -390,6 +494,7 @@ export default function Aprovacao() {
                           }}
                           className="text-red-400 hover:text-red-300"
                           disabled={rejeitarMutation.isPending}
+                          title="Rejeitar"
                         >
                           <XCircle className="w-4 h-4" />
                         </Button>
@@ -407,20 +512,26 @@ export default function Aprovacao() {
               <Clock className="w-5 h-5 text-yellow-500" />
               Incidentes War Room Pendentes ({warroomPendentes.length})
             </h2>
+
             {warroomPendentes.length === 0 ? (
               <p className="text-gray-400">Nenhum incidente pendente de aprovação</p>
             ) : (
               <div className="space-y-3">
                 {warroomPendentes.map((item) => {
-                  const incidente = incidentes.find(i => i.id === item.atividade_id);
+                  const incidente = incidentes.find((i) => i.id === item.atividade_id);
+
                   return (
-                    <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
-                       <div className="flex-1">
-                         <p className="text-white font-medium">{incidente?.titulo}</p>
+                    <div
+                      key={item.id}
+                      className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <p className="text-white font-medium">{incidente?.titulo || 'Incidente'}</p>
                         <p className="text-sm text-gray-400 mt-1">
-                          Severidade: {incidente?.severidade}
+                          Severidade: {incidente?.severidade || '-'}
                         </p>
                       </div>
+
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -434,15 +545,18 @@ export default function Aprovacao() {
                           <Eye className="w-4 h-4 mr-1" />
                           Visualizar
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => aprovarMutation.mutate({ ...item, tipo: 'warroom' })}
                           className="text-green-400 hover:text-green-300"
                           disabled={aprovarMutation.isPending}
+                          title="Aprovar"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -452,6 +566,7 @@ export default function Aprovacao() {
                           }}
                           className="text-red-400 hover:text-red-300"
                           disabled={rejeitarMutation.isPending}
+                          title="Rejeitar"
                         >
                           <XCircle className="w-4 h-4" />
                         </Button>
@@ -464,19 +579,26 @@ export default function Aprovacao() {
           </div>
         </TabsContent>
 
+        {/* =========================
+            TAB: Avaliações
+        ========================= */}
         <TabsContent value="avaliacoes" className="space-y-6">
-           {/* Avaliações */}
-           <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
+          {/* Avaliações */}
+          <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Avaliações Pendentes ({avaliacoesPendentes.length})
             </h2>
+
             {avaliacoesPendentes.length === 0 ? (
               <p className="text-gray-400">Nenhuma avaliação pendente</p>
             ) : (
               <div className="space-y-3">
                 {avaliacoesPendentes.map((item) => (
-                  <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
+                  <div
+                    key={item.id}
+                    className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between"
+                  >
                     <div className="flex-1">
                       <p className="text-white font-medium">{item.titulo}</p>
                       <p className="text-sm text-gray-400 mt-1">
@@ -503,6 +625,7 @@ export default function Aprovacao() {
                         }}
                         className="text-red-400 hover:text-red-300"
                         disabled={rejeitarMutation.isPending}
+                        title="Rejeitar"
                       >
                         <XCircle className="w-4 h-4" />
                       </Button>
@@ -519,12 +642,16 @@ export default function Aprovacao() {
               <Clock className="w-5 h-5 text-yellow-500" />
               Questões Pendentes ({questoesPendentes.length})
             </h2>
+
             {questoesPendentes.length === 0 ? (
               <p className="text-gray-400">Nenhuma questão pendente</p>
             ) : (
               <div className="space-y-3">
                 {questoesPendentes.map((item) => (
-                  <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
+                  <div
+                    key={item.id}
+                    className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between"
+                  >
                     <div className="flex-1">
                       <p className="text-white font-medium text-sm">{item.enunciado}</p>
                       <p className="text-xs text-gray-400 mt-1">
@@ -551,6 +678,7 @@ export default function Aprovacao() {
                         }}
                         className="text-red-400 hover:text-red-300"
                         disabled={rejeitarMutation.isPending}
+                        title="Rejeitar"
                       >
                         <XCircle className="w-4 h-4" />
                       </Button>
@@ -567,16 +695,23 @@ export default function Aprovacao() {
               <Clock className="w-5 h-5 text-yellow-500" />
               Quizzes Agendados ({quizzesPendentes.length})
             </h2>
+
             {quizzesPendentes.length === 0 ? (
               <p className="text-gray-400">Nenhum quiz agendado</p>
             ) : (
               <div className="space-y-3">
                 {quizzesPendentes.map((item) => (
-                  <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
+                  <div
+                    key={item.id}
+                    className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between"
+                  >
                     <div className="flex-1">
                       <p className="text-white font-medium">{item.titulo}</p>
                       <p className="text-sm text-gray-400 mt-1">
-                        {formatDateBR(item.data_inicio)} às {new Date(item.data_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        {formatDateBR(item.data_inicio)} às{' '}
+                        {item.data_inicio
+                          ? new Date(item.data_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                          : '--:--'}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -599,6 +734,7 @@ export default function Aprovacao() {
                         }}
                         className="text-red-400 hover:text-red-300"
                         disabled={rejeitarMutation.isPending}
+                        title="Rejeitar"
                       >
                         <XCircle className="w-4 h-4" />
                       </Button>
@@ -611,22 +747,26 @@ export default function Aprovacao() {
         </TabsContent>
       </Tabs>
 
-      {/* View Dialog */}
+      {/* =========================
+          View Dialog
+      ========================= */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedItem?.tipo === 'atividade' ? 'Visualizar Atividade' : 'Visualizar Registro'}</DialogTitle>
           </DialogHeader>
+
           {selectedItem?.data && selectedItem.tipo === 'atividade' && (
-            <VisualizarAtividade 
+            <VisualizarAtividade
               atividade={selectedItem.data}
               supervisorNome={getSupervisorNome(selectedItem.data.supervisor_id)}
               analistaNome={getAnalistaNome(selectedItem.data.analista_id)}
             />
           )}
+
           {selectedItem?.data && selectedItem.tipo !== 'atividade' && (
             <div className="space-y-4">
-             <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700">
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedItem.tipo === 'fechamento' && (
                     <>
@@ -649,13 +789,14 @@ export default function Aprovacao() {
                         <p className="text-white font-medium mt-1">{selectedItem.data.total_monitorias || 0}</p>
                       </div>
                       {selectedItem.data.observacoes && (
-                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                        <div className="col-span-2 border-b border-gray-700 pb-3">
                           <p className="text-xs text-gray-400 uppercase">Observações</p>
                           <p className="text-white font-medium mt-1">{selectedItem.data.observacoes}</p>
                         </div>
                       )}
                     </>
                   )}
+
                   {selectedItem.tipo === 'warroom' && (
                     <>
                       <div className="border-b border-gray-700 pb-3">
@@ -675,17 +816,18 @@ export default function Aprovacao() {
                         <p className="text-white font-medium mt-1">{selectedItem.data.status || '-'}</p>
                       </div>
                       {selectedItem.data.descricao && (
-                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                        <div className="col-span-2 border-b border-gray-700 pb-3">
                           <p className="text-xs text-gray-400 uppercase">Descrição</p>
                           <p className="text-white font-medium mt-1">{selectedItem.data.descricao}</p>
                         </div>
                       )}
                     </>
                   )}
+
                   {!selectedItem.tipo && (
                     <>
                       {Object.entries(selectedItem.data).map(([key, value]) => (
-                        <div key={key} className="border-b border-[#1e3a5f] pb-3 last:border-0">
+                        <div key={key} className="border-b border-gray-700 pb-3 last:border-0">
                           <p className="text-xs text-gray-400 uppercase tracking-wide">{key.replace(/_/g, ' ')}</p>
                           <p className="text-white font-medium mt-1 break-words">
                             {typeof value === 'object' ? JSON.stringify(value) : String(value || '-')}
@@ -701,7 +843,9 @@ export default function Aprovacao() {
         </DialogContent>
       </Dialog>
 
-      {/* Reject Dialog */}
+      {/* =========================
+          Reject Dialog
+      ========================= */}
       <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
@@ -710,6 +854,7 @@ export default function Aprovacao() {
               Forneça um motivo para a rejeição:
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <div>
             <Textarea
               value={rejectReason}
@@ -718,6 +863,7 @@ export default function Aprovacao() {
               className="bg-[#1a1a1a] border-gray-700 text-white"
             />
           </div>
+
           <AlertDialogFooter>
             <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
             <AlertDialogAction
@@ -736,6 +882,13 @@ export default function Aprovacao() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Debug opcional (remova se quiser) */}
+      {currentUser?.role !== 'admin' && (
+        <div className="text-xs text-gray-600">
+          {/* Mantém silencioso; só evita ESLint complaining em alguns setups */}
+        </div>
+      )}
     </div>
   );
 }
