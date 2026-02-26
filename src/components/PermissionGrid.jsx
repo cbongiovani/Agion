@@ -208,15 +208,9 @@ export default function PermissionGrid({ user, resources, userOverrides, roles, 
       {/* Botões de Ação */}
       <div className="flex gap-3 pt-4 border-t border-[#1e3a5f] mt-4">
         <button
-          onClick={() => onClose?.()}
-          className="flex-1 px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium transition-colors"
-        >
-          Fechar
-        </button>
-        <button
           onClick={handleApply}
           disabled={applying || Object.keys(pendingChanges).length === 0}
-          className={`flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+          className={`w-full px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
             applying || Object.keys(pendingChanges).length === 0
               ? 'bg-gray-500 cursor-not-allowed'
               : 'bg-emerald-600 hover:bg-emerald-700'
