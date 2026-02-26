@@ -135,11 +135,11 @@ export default function Atividades() {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
-      toast.success('✓ Atividade enviada para aprovação da coordenação!', {
-        description: 'Você pode acompanhar o status no seu perfil',
-        duration: 4000,
-      });
       resetForm();
+      toast.success('Atividade enviada para aprovação!', {
+        description: 'Seu registro está sob avaliação da coordenação. Você pode acompanhar o status no seu perfil.',
+        duration: 6000,
+      });
     },
   });
 
