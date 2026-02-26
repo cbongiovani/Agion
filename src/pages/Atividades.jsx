@@ -70,22 +70,31 @@ export default function Atividades() {
   });
 
   const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role],
+    queryKey: ['atividades', currentUser?.role, currentUser?.email],
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
-      // APENAS Admin vê todas (incluindo pendentes)
+      // Admin vê tudo
       if (currentUser?.role === 'admin') {
         return todasAtividades;
       }
       
-      // Buscar aprovações - pegar TODAS para filtrar corretamente
+      // Buscar aprovações
       const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
       const idsAprovados = todasAprovacoes
         .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
         .map(a => a.atividade_id);
       
-      // Todos os outros (incluindo supervisores) veem APENAS aprovadas
+      // Supervisor: vê aprovadas + suas próprias pendentes
+      if (currentUser?.role === 'supervisor') {
+        return todasAtividades.filter(ativ => 
+          idsAprovados.includes(ativ.id) || 
+          ativ.registrado_por === currentUser.email ||
+          ativ.created_by === currentUser.email
+        );
+      }
+      
+      // Outros usuários: apenas aprovadas
       return todasAtividades.filter(ativ => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
