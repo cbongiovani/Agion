@@ -85,7 +85,7 @@ export default function Atividades() {
         .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
         .map(a => a.atividade_id);
       
-      // Supervisor: vê aprovadas + suas próprias pendentes
+      // Supervisor: vê TODAS as atividades aprovadas de todos os supervisores + suas próprias pendentes
       if (currentUser?.role === 'supervisor') {
         return todasAtividades.filter(ativ => 
           idsAprovados.includes(ativ.id) || 
