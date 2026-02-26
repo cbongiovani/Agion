@@ -267,22 +267,16 @@ export default function Layout({ children }) {
           </TooltipProvider>
         </nav>
 
-        {/* Clock Widget - Bottom of Sidebar */}
-        <div className="p-3 border-t border-gray-800 flex-shrink-0 safe-bottom">
+        {/* Widgets - Bottom of Sidebar */}
+        <div className="p-3 border-t border-gray-800 flex-shrink-0 safe-bottom space-y-3">
+          <QuizzNotificationWidget />
           <ClockWidget />
         </div>
       </aside>
 
       {/* Footer - Desktop and Mobile */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50 safe-bottom">
-        <div className="flex items-center justify-between px-4 py-2 gap-4">
-          {/* Widgets - Left Side */}
-          <div className="flex items-center gap-3 flex-1">
-            <QuizzNotificationWidget />
-          </div>
-
-          {/* User Info and Actions - Right Side */}
-          <div className="flex items-center gap-2">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-gray-800 z-50 safe-bottom lg:left-64">
+        <div className="flex items-center justify-end px-4 py-2 gap-2">
             <Link
               to={createPageUrl('MeuPerfil')}
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#0a0a0a] active:bg-[#151515] transition-colors select-none"
