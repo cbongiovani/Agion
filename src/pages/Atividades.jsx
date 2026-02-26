@@ -438,12 +438,17 @@ export default function Atividades() {
 
   const atividadesFiltradas = atividades.filter(ativ => {
     if (filterIdBusca && !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
-    if (filterSupervisor && ativ.supervisor_id !== filterSupervisor) return false;
-    if (filterAnalista && ativ.analista_id !== filterAnalista) return false;
-    if (filterTipo && ativ.tipo !== filterTipo) return false;
+    if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase())) return false;
+    if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase())) return false;
+    if (filterTipo && !ativ.tipo.toLowerCase().includes(filterTipo.toLowerCase())) return false;
     if (filterDataInicio && ativ.data < filterDataInicio) return false;
     if (filterDataFim && ativ.data > filterDataFim) return false;
     return true;
+  }).sort((a, b) => {
+    // Ordenar por Analista alfabeticamente
+    const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
+    const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
+    return analistaA.localeCompare(analistaB);
   });
 
   if (isLoading) {
@@ -697,49 +702,35 @@ export default function Atividades() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <Label className="text-xs text-gray-400">Supervisor</Label>
-            <Select value={filterSupervisor} onValueChange={setFilterSupervisor}>
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-1">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#242424] border-gray-700">
-                <SelectItem value={null}>Todos</SelectItem>
-                {supervisores.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              type="text"
+              placeholder="Digitar supervisor..."
+              value={filterSupervisor}
+              onChange={(e) => setFilterSupervisor(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
           </div>
 
           <div>
             <Label className="text-xs text-gray-400">Analista</Label>
-            <Select value={filterAnalista} onValueChange={setFilterAnalista}>
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-1">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#242424] border-gray-700">
-                <SelectItem value={null}>Todos</SelectItem>
-                {analistas.map(a => (
-                  <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              type="text"
+              placeholder="Digitar analista..."
+              value={filterAnalista}
+              onChange={(e) => setFilterAnalista(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
           </div>
 
           <div>
             <Label className="text-xs text-gray-400">Tipo</Label>
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-1">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#242424] border-gray-700">
-                <SelectItem value={null}>Todos</SelectItem>
-                <SelectItem value="Chamados">Chamados</SelectItem>
-                <SelectItem value="Ligações">Ligações</SelectItem>
-                <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
-                <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
-                <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              type="text"
+              placeholder="Digitar tipo..."
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
           </div>
 
           <div>
