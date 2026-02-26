@@ -184,18 +184,20 @@ export default function Atividades() {
       }
     },
     onSuccess: () => {
-      // Invalidar queries ANTES de fechar
+      // Fechar dialog imediatamente
+      setIsDialogOpen(false);
+      
+      // Resetar form
+      resetForm();
+      
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       
-      // Resetar form e fechar dialog
-      resetForm();
-      setIsDialogOpen(false);
-      
-      // Pequeno delay para garantir fechamento do dialog antes do sucesso
+      // Mostrar mensagem de sucesso após fechamento
       setTimeout(() => {
         setShowSuccessDialog(true);
-      }, 100);
+      }, 200);
     },
     onError: (error) => {
       toast.error('❌ Erro ao registrar atividade', {
@@ -219,17 +221,19 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
+      // Fechar dialog imediatamente
+      setIsDialogOpen(false);
+      
+      // Resetar form
+      resetForm();
+      
       // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       
-      // Resetar e fechar
-      resetForm();
-      setIsDialogOpen(false);
-      
-      // Mostrar sucesso
+      // Mostrar mensagem de sucesso após fechamento
       setTimeout(() => {
         setShowSuccessDialog(true);
-      }, 100);
+      }, 200);
     },
   });
 
@@ -268,7 +272,6 @@ export default function Atividades() {
       status: 'Aberto',
     });
     setEditingAtividade(null);
-    setIsDialogOpen(false);
     setSelectedType('Chamados');
   };
 
