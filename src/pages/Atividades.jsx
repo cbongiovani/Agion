@@ -181,6 +181,18 @@ export default function Atividades() {
           
           // CRÍTICO: Criar registro de aprovação com rollback se falhar
           try {
+            // Verificar se já existe aprovação para este ID (evitar duplicidade)
+            const aprovacaoExistente = await base44.entities.AprovacaoAtividade.filter({
+              atividade_id: result.id,
+              tipo: 'atividade'
+            });
+
+            if (aprovacaoExistente.length > 0) {
+              // ROLLBACK: Deletar atividade recém-criada
+              await base44.entities.Atividade.delete(result.id);
+              throw new Error('Registro de aprovação duplicado. Operação cancelada.');
+            }
+
             await base44.entities.AprovacaoAtividade.create({
               atividade_id: result.id,
               tipo: 'atividade',
@@ -189,7 +201,7 @@ export default function Atividades() {
           } catch (aprovacaoError) {
             // ROLLBACK: Deletar atividade recém-criada
             await base44.entities.Atividade.delete(result.id);
-            throw new Error('Falha ao criar aprovação. Registro cancelado.');
+            throw new Error(aprovacaoError.message || 'Falha ao criar aprovação. Registro cancelado.');
           }
           
           await base44.entities.Log.create({
@@ -225,9 +237,14 @@ export default function Atividades() {
       // Resetar form
       resetForm();
       
-      // Invalidar queries
+      // Invalidar queries (completo para sincronização global)
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['ranking'] });
+      queryClient.invalidateQueries({ queryKey: ['rankings'] });
+      queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+      queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       
       // Mostrar mensagem de sucesso após fechamento
       setTimeout(() => {
@@ -262,8 +279,13 @@ export default function Atividades() {
       // Resetar form
       resetForm();
       
-      // Invalidar queries
+      // Invalidar queries (completo para sincronização global)
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['ranking'] });
+      queryClient.invalidateQueries({ queryKey: ['rankings'] });
+      queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+      queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       
       // Mostrar mensagem de sucesso após fechamento
       setTimeout(() => {
