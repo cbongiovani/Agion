@@ -12,9 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function PermissionGrid({ user, resources, userOverrides, roles }) {
+export default function PermissionGrid({ user, resources, userOverrides, roles, onClose }) {
   const queryClient = useQueryClient();
-  const [saving, setSaving] = useState({});
+  const [pendingChanges, setPendingChanges] = useState({}); // Armazena mudanças antes de aplicar
+  const [applying, setApplying] = useState(false);
 
   // Agrupar recursos por módulo
   const resourcesByModule = resources.reduce((acc, r) => {
@@ -31,9 +32,12 @@ export default function PermissionGrid({ user, resources, userOverrides, roles }
     enabled: !!user.role,
   });
 
-  // Função para obter permissão (precedência: override > role > deny)
+  // Função para obter permissão (precedência: pendingChanges > override > role > deny)
   const getPermission = useCallback(
     (resourceKey, action) => {
+      const key = `${resourceKey}_${action}`;
+      if (pendingChanges[key] !== undefined) return pendingChanges[key];
+
       const override = userOverrides.find(
         (o) => o.resource_key === resourceKey && o.action === action
       );
@@ -44,64 +48,83 @@ export default function PermissionGrid({ user, resources, userOverrides, roles }
       );
       return rolePerms ? rolePerms.allowed : false;
     },
-    [userOverrides, rolePermissions]
+    [pendingChanges, userOverrides, rolePermissions]
   );
 
-  // Função para saber se é override
+  // Função para saber se é override ou mudança pendente
   const isOverride = useCallback(
     (resourceKey, action) => {
-      return userOverrides.some(
+      const key = `${resourceKey}_${action}`;
+      return pendingChanges[key] !== undefined || userOverrides.some(
         (o) => o.resource_key === resourceKey && o.action === action
       );
     },
-    [userOverrides]
+    [pendingChanges, userOverrides]
   );
 
-  // Mutation: Atualizar permissão
-  const updatePermissionMutation = useMutation({
-    mutationFn: async ({ resourceKey, action, allowed }) => {
-      const user = await base44.auth.me();
-      const existing = userOverrides.find(
-        (o) => o.resource_key === resourceKey && o.action === action
-      );
+  // Mutation: Atualizar múltiplas permissões
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async (changes) => {
+      const currentUser = await base44.auth.me();
+      
+      // Aplicar cada mudança
+      for (const [key, allowed] of Object.entries(changes)) {
+        const [resourceKey, action] = key.split('_');
+        const existing = userOverrides.find(
+          (o) => o.resource_key === resourceKey && o.action === action
+        );
 
-      if (existing) {
-        await base44.entities.UserPermissionOverride.update(existing.id, { allowed });
-      } else {
-        await base44.entities.UserPermissionOverride.create({
-          user_email: user.email,
-          resource_key: resourceKey,
-          action,
-          allowed,
-          reason: 'Manual override',
-          created_by: user.email,
-        });
+        if (existing) {
+          await base44.entities.UserPermissionOverride.update(existing.id, { allowed });
+        } else {
+          await base44.entities.UserPermissionOverride.create({
+            user_email: currentUser.email,
+            resource_key: resourceKey,
+            action,
+            allowed,
+            reason: 'Manual override',
+            created_by: currentUser.email,
+          });
+        }
       }
 
       await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
+        usuario_email: currentUser.email,
+        usuario_nome: currentUser.full_name,
         acao: 'Atualizou',
         entidade: 'UserPermissionOverride',
-        detalhes: `${resourceKey}/${action} = ${allowed ? 'SIM' : 'NÃO'} para ${user.email}`,
+        detalhes: `Atualizou ${Object.keys(changes).length} permissão(ões)`,
       });
 
       queryClient.invalidateQueries({ queryKey: ['userOverrides'] });
     },
-    onError: (error) => toast.error('Erro: ' + error.message),
+    onError: (error) => toast.error('Erro ao aplicar permissões: ' + error.message),
   });
 
-  const handlePermissionChange = async (resourceKey, action, allowed) => {
-    setSaving((prev) => ({ ...prev, [`${resourceKey}_${action}`]: true }));
+  const handlePermissionChange = (resourceKey, action, allowed) => {
+    const key = `${resourceKey}_${action}`;
+    setPendingChanges((prev) => ({
+      ...prev,
+      [key]: allowed,
+    }));
+  };
+
+  const handleApply = async () => {
+    if (Object.keys(pendingChanges).length === 0) {
+      toast.info('Nenhuma alteração para aplicar');
+      return;
+    }
+    
+    setApplying(true);
     try {
-      await updatePermissionMutation.mutateAsync({
-        resourceKey,
-        action,
-        allowed,
-      });
-      toast.success(`Permissão atualizada!`);
+      await updatePermissionsMutation.mutateAsync(pendingChanges);
+      toast.success('Permissões aplicadas com sucesso!');
+      setPendingChanges({});
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 500);
     } finally {
-      setSaving((prev) => ({ ...prev, [`${resourceKey}_${action}`]: false }));
+      setApplying(false);
     }
   };
 
