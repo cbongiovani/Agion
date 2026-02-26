@@ -317,6 +317,28 @@ export default function Atividades() {
     },
   });
 
+  const deleteMultipleMutation = useMutation({
+    mutationFn: async () => {
+      const user = await base44.auth.me();
+      for (const id of selectedIds) {
+        await base44.entities.Atividade.delete(id);
+      }
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Atividade',
+        detalhes: `Excluiu ${selectedIds.size} atividades em massa`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      toast.success(`${selectedIds.size} atividades excluídas com sucesso!`);
+      setSelectedIds(new Set());
+      setDeleteMultipleDialogOpen(false);
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       tipo: 'Chamados',
