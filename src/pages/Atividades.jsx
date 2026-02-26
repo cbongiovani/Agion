@@ -800,6 +800,57 @@ export default function Atividades() {
 
       {/* Tabela de Atividades */}
       <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 overflow-hidden">
+        {atividadesFiltradas.length > 0 && (
+          <div className="bg-[#0d0d0d] border-b border-gray-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-400">
+              Mostrando <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, totalRegistros)}</span> de <span className="text-white font-semibold">{totalRegistros}</span> registros
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-gray-400">Registros por página:</Label>
+                <Select value={pageSize.toString()} onValueChange={(val) => {
+                  setPageSize(parseInt(val));
+                  setCurrentPage(1);
+                }}>
+                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#242424] border-gray-700">
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="border-gray-700 h-8"
+                >
+                  ←
+                </Button>
+                <span className="text-sm text-gray-400 min-w-[60px] text-center">
+                  Página {currentPage} de {totalPaginas}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPaginas, currentPage + 1))}
+                  disabled={currentPage === totalPaginas}
+                  className="border-gray-700 h-8"
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedIds.size > 0 && (
           <div className="bg-blue-500/10 border-b border-blue-500/30 px-6 py-3 flex items-center justify-between">
             <span className="text-sm text-blue-400">{selectedIds.size} registro(s) selecionado(s)</span>
