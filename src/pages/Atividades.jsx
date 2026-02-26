@@ -47,6 +47,8 @@ import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
 import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
+import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
+import { MODULES } from '@/components/moduleConstants';
 
 export default function Atividades() {
   const queryClient = useQueryClient();
@@ -81,14 +83,10 @@ export default function Atividades() {
     queryKey: ['modulePermissions', currentUser?.email],
     queryFn: async () => {
       if (!currentUser?.email) return null;
-      const { getUserModulePermissions } = await import('@/components/rbacHelpers');
       return await getUserModulePermissions(currentUser.email, currentUser.role);
     },
     enabled: !!currentUser?.email,
   });
-
-  const { isModuleVisible } = require('@/components/rbacHelpers');
-  const { MODULES } = require('@/components/moduleConstants');
 
   const canCreate =
     currentUser?.role === 'admin' ||
