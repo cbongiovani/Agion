@@ -48,7 +48,13 @@ export default function PerfilAnalista() {
     queryKey: ['atividades', analistaId],
     queryFn: async () => {
       const todas = await base44.entities.Atividade.list('-data');
-      return todas.filter(a => a.analista_id === analistaId);
+      
+      // Buscar aprovações e filtrar SOMENTE as aprovadas
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade', status: 'aprovado' });
+      const idsAprovados = aprovacoes.map(a => a.atividade_id);
+      
+      // Retornar apenas atividades aprovadas do analista
+      return todas.filter(a => a.analista_id === analistaId && idsAprovados.includes(a.id));
     },
     enabled: !!analistaId,
   });

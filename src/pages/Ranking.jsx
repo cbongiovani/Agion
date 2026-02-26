@@ -29,7 +29,16 @@ export default function Ranking() {
 
   const { data: atividades = [], isLoading: loadingAtividades } = useQuery({
     queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list(),
+    queryFn: async () => {
+      const todas = await base44.entities.Atividade.list();
+      
+      // Buscar aprovações e filtrar SOMENTE as aprovadas
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade', status: 'aprovado' });
+      const idsAprovados = aprovacoes.map(a => a.atividade_id);
+      
+      // Retornar APENAS atividades aprovadas
+      return todas.filter(ativ => idsAprovados.includes(ativ.id));
+    },
   });
 
   const { data: rankings = [], isLoading: loadingRankings } = useQuery({

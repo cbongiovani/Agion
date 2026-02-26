@@ -75,17 +75,42 @@ export default function Supervisores() {
 
   const { data: atividades = [] } = useQuery({
      queryKey: ['atividades'],
-     queryFn: () => base44.entities.Atividade.list(),
+     queryFn: async () => {
+       const todas = await base44.entities.Atividade.list();
+       
+       // Buscar aprovações e filtrar SOMENTE as aprovadas para contabilização
+       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade', status: 'aprovado' });
+       const idsAprovados = aprovacoes.map(a => a.atividade_id);
+       
+       // Retornar APENAS atividades aprovadas
+       return todas.filter(ativ => idsAprovados.includes(ativ.id));
+     },
    });
 
    const { data: incidentes = [] } = useQuery({
      queryKey: ['incidentes'],
-     queryFn: () => base44.entities.Incidente.list(),
+     queryFn: async () => {
+       const todos = await base44.entities.Incidente.list();
+       
+       // Buscar aprovações e filtrar SOMENTE os aprovados para contabilização
+       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'warroom', status: 'aprovado' });
+       const idsAprovados = aprovacoes.map(a => a.atividade_id);
+       
+       return todos.filter(inc => idsAprovados.includes(inc.id));
+     },
    });
 
    const { data: fechamentos = [] } = useQuery({
      queryKey: ['fechamentos'],
-     queryFn: () => base44.entities.FechamentoSemanal.list(),
+     queryFn: async () => {
+       const todos = await base44.entities.FechamentoSemanal.list();
+       
+       // Buscar aprovações e filtrar SOMENTE os aprovados para contabilização
+       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'fechamento', status: 'aprovado' });
+       const idsAprovados = aprovacoes.map(a => a.atividade_id);
+       
+       return todos.filter(fech => idsAprovados.includes(fech.id));
+     },
    });
 
   const createMutation = useMutation({
@@ -477,9 +502,8 @@ Seja direto, específico e focado em resultados mensuráveis.`;
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Supervisores</h1>
-          <p className="text-gray-400 mt-1">Gerencie os supervisores do Suporte N1</p>
+          <p className="text-gray-400 mt-1">Visualização dos supervisores do Suporte N1</p>
         </div>
-        {/* Botões removidos - Gestão apenas via Gestão de Usuários */}
       </div>
 
       <div className="space-y-4">

@@ -69,6 +69,12 @@ export default function Atividades() {
     status: 'Aberto',
   });
 
+  // Buscar aprovações separadamente para fazer merge
+  const { data: aprovacoes = [] } = useQuery({
+    queryKey: ['aprovacoes'],
+    queryFn: () => base44.entities.AprovacaoAtividade.list(),
+  });
+
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades', currentUser?.role],
     queryFn: async () => {
@@ -76,18 +82,32 @@ export default function Atividades() {
       
       // Buscar aprovações
       const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
-      const idsAprovados = todasAprovacoes
-        .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
-        .map(a => a.atividade_id);
+      const aprovacaoPorId = {};
+      todasAprovacoes.forEach(aprov => {
+        if (aprov.tipo === 'atividade') {
+          aprovacaoPorId[aprov.atividade_id] = aprov;
+        }
+      });
+      
+      // Anexar status de aprovação em cada atividade
+      const atividadesComAprovacao = todasAtividades.map(ativ => ({
+        ...ativ,
+        aprovacao_status: aprovacaoPorId[ativ.id]?.status || 'pendente',
+        aprovacao_data: aprovacaoPorId[ativ.id]?.data_aprovacao,
+        aprovacao_motivo_rejeicao: aprovacaoPorId[ativ.id]?.motivo_rejeicao
+      }));
+      
+      const idsAprovados = Object.keys(aprovacaoPorId)
+        .filter(id => aprovacaoPorId[id].status === 'aprovado');
       
       // Admin vê TUDO (aprovados + pendentes + rejeitados para gestão)
       if (currentUser?.role === 'admin') {
-        return todasAtividades;
+        return atividadesComAprovacao;
       }
       
       // Supervisor vê: aprovados de todos + seus próprios (pendentes/rejeitados)
       if (currentUser?.role === 'supervisor') {
-        return todasAtividades.filter(ativ => 
+        return atividadesComAprovacao.filter(ativ => 
           idsAprovados.includes(ativ.id) || 
           ativ.registrado_por === currentUser.email ||
           ativ.created_by === currentUser.email
@@ -95,7 +115,7 @@ export default function Atividades() {
       }
       
       // Outros usuários: APENAS aprovadas
-      return todasAtividades.filter(ativ => idsAprovados.includes(ativ.id));
+      return atividadesComAprovacao.filter(ativ => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
     staleTime: 0,
@@ -739,6 +759,7 @@ export default function Atividades() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Registrado Por</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Nota</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Aprovação</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Ações</th>
               </tr>
             </thead>
@@ -778,6 +799,19 @@ export default function Atividades() {
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
                       {atividade.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
+                      atividade.aprovacao_status === 'aprovado' 
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        : atividade.aprovacao_status === 'rejeitado'
+                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                        : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                    }`}>
+                      {atividade.aprovacao_status === 'aprovado' ? '✓ Aprovado' : 
+                       atividade.aprovacao_status === 'rejeitado' ? '✗ Rejeitado' : 
+                       '⏳ Pendente'}
                     </span>
                   </td>
                   <td className="px-4 py-3">

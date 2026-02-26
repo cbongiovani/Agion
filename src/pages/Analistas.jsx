@@ -201,9 +201,8 @@ export default function Analistas() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Analistas</h1>
-          <p className="text-gray-400 mt-1">Gerencie os analistas do Suporte N1</p>
+          <p className="text-gray-400 mt-1">Visualização dos analistas do Suporte N1</p>
         </div>
-        {/* Botão removido - Gestão apenas via Gestão de Usuários */}
       </div>
 
       {/* Desktop Table */}
