@@ -80,12 +80,12 @@ export default function Atividades() {
         .filter(a => a.status === 'aprovado')
         .map(a => a.atividade_id);
       
-      // Admin e Supervisor veem tudo
-      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+      // APENAS Admin vê todas (incluindo pendentes)
+      if (currentUser?.role === 'admin') {
         return todasAtividades;
       }
       
-      // Outros usuários veem APENAS aprovadas
+      // Todos os outros (incluindo supervisores) veem APENAS aprovadas
       return todasAtividades.filter(ativ => atividadesAprovadas.includes(ativ.id));
     },
     enabled: !!currentUser,
