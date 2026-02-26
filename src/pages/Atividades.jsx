@@ -359,7 +359,7 @@ export default function Atividades() {
 
       // Invalidar queries após fechar modal
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['atividades'] });
+        queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['ranking'] });
         queryClient.invalidateQueries({ queryKey: ['rankings'] });
