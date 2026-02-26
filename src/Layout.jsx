@@ -278,8 +278,6 @@ export default function Layout({ children }) {
         <div className="flex items-center justify-between px-4 py-2 gap-4">
           {/* Widgets - Left Side */}
           <div className="flex items-center gap-3 flex-1">
-            <ClockWidget />
-            <div className="h-6 w-px bg-gray-700"></div>
             <QuizzNotificationWidget />
           </div>
 
