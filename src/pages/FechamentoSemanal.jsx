@@ -547,21 +547,34 @@ export default function FechamentoSemanal() {
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">
-                    {getSupervisorNome(fechamento.supervisor_id)}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {getLocalDateString(fechamento.semana_inicio)} - {getLocalDateString(fechamento.semana_fim)}
-                  </p>
-                  {fechamento.analista_id && (
-                    <p className="text-xs text-emerald-400 mt-1">
-                      Analista: {getAnalistaNome(fechamento.analista_id)}
-                    </p>
-                  )}
+                   <h3 className="font-semibold text-white">
+                     {getSupervisorNome(fechamento.supervisor_id)}
+                   </h3>
+                   <p className="text-sm text-gray-400">
+                     {getLocalDateString(fechamento.semana_inicio)} - {getLocalDateString(fechamento.semana_fim)}
+                   </p>
+                   {fechamento.analista_id && (
+                     <p className="text-xs text-emerald-400 mt-1">
+                       Analista: {getAnalistaNome(fechamento.analista_id)}
+                     </p>
+                   )}
+                   <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
+                     fechamento.aprovacao_status === 'aprovado'
+                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                       : fechamento.aprovacao_status === 'rejeitado'
+                       ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                       : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                   }`}>
+                     {fechamento.aprovacao_status === 'aprovado'
+                       ? '✓ Aprovado'
+                       : fechamento.aprovacao_status === 'rejeitado'
+                       ? '✗ Rejeitado'
+                       : '⏳ Pendente'}
+                   </span>
+                 </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="text-center px-4 py-2 bg-[#1a1a1a] rounded-lg">
                   <p className="text-2xl font-bold text-emerald-400">{fechamento.total_ligacoes_next_ip}</p>
                   <p className="text-xs text-gray-400">Ligações</p>
