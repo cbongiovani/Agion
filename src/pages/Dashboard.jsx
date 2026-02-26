@@ -97,16 +97,23 @@ export default function Dashboard() {
   const ultimoFechamento = fechamentos[0] || {};
   const semanaAnterior = fechamentos[1] || {};
 
+  const qualidadeAtual = atividades.length > 0 
+    ? (atividades.reduce((sum, a) => sum + (a.nota || 0), 0) / atividades.length)
+    : 0;
+  const qualidadeAnterior = atividades.length > 1
+    ? (atividades.slice(0, Math.floor(atividades.length / 2)).reduce((sum, a) => sum + (a.nota || 0), 0) / Math.floor(atividades.length / 2))
+    : qualidadeAtual;
+
   const kpis = {
     qualidadeMedia: {
-      valor: atividades.length > 0 
-        ? (atividades.reduce((sum, a) => sum + (a.nota || 0), 0) / atividades.length).toFixed(1)
-        : 0,
+      valor: qualidadeAtual.toFixed(1),
       meta: 8.5,
-      tendencia: (parseFloat(ultimoFechamento.total_monitorias || 0) >= parseFloat(semanaAnterior.total_monitorias || 0)) ? 'up' : 'down'
+      tendencia: qualidadeAtual >= qualidadeAnterior ? 'up' : 'down'
     },
     eficienciaOperacional: {
-      valor: fechamentos.length > 0 ? ((ultimoFechamento.total_ligacoes_next_ip + ultimoFechamento.total_chamados_verdana) / 40).toFixed(0) : 0,
+      valor: fechamentos.length > 0 && ultimoFechamento.total_ligacoes_next_ip != null && ultimoFechamento.total_chamados_verdana != null
+        ? (((ultimoFechamento.total_ligacoes_next_ip || 0) + (ultimoFechamento.total_chamados_verdana || 0)) / 40).toFixed(0) 
+        : 0,
       meta: 100,
       tendencia: 'up'
     },
@@ -133,7 +140,7 @@ export default function Dashboard() {
       keyResults: [
         {
           resultado: 'Atingir média de nota 8.5+',
-          progresso: Math.min((kpis.qualidadeMedia.valor / 8.5) * 100, 100),
+          progresso: Math.min((parseFloat(kpis.qualidadeMedia.valor) / 8.5) * 100, 100),
           atual: kpis.qualidadeMedia.valor,
           meta: 8.5
         },
@@ -150,14 +157,14 @@ export default function Dashboard() {
       keyResults: [
         {
           resultado: 'Processar 800+ atividades/semana',
-          progresso: Math.min(((ultimoFechamento.total_ligacoes_next_ip + ultimoFechamento.total_chamados_verdana + ultimoFechamento.total_monitorias) / 800) * 100, 100),
-          atual: ultimoFechamento.total_ligacoes_next_ip + ultimoFechamento.total_chamados_verdana + ultimoFechamento.total_monitorias,
+          progresso: Math.min((((ultimoFechamento.total_ligacoes_next_ip || 0) + (ultimoFechamento.total_chamados_verdana || 0) + (ultimoFechamento.total_monitorias || 0)) / 800) * 100, 100),
+          atual: (ultimoFechamento.total_ligacoes_next_ip || 0) + (ultimoFechamento.total_chamados_verdana || 0) + (ultimoFechamento.total_monitorias || 0),
           meta: 800
         },
         {
           resultado: 'Manter backlog < 50',
-          progresso: Math.min(((50 - (ultimoFechamento.backlog_final || 0)) / 50) * 100, 100),
-          atual: ultimoFechamento.backlog_final || 0,
+          progresso: ultimoFechamento.backlog_final != null ? Math.min(Math.max(((50 - ultimoFechamento.backlog_final) / 50) * 100, 0), 100) : 0,
+          atual: ultimoFechamento.backlog_final != null ? ultimoFechamento.backlog_final : 0,
           meta: 50
         }
       ]
@@ -181,7 +188,7 @@ export default function Dashboard() {
     }
   ];
 
-  const evolucaoPorSemana = fechamentos.slice(0, 8).reverse().map(f => ({
+  const evolucaoPorSemana = [...fechamentos].slice(0, 8).reverse().map(f => ({
     semana: format(new Date(f.semana_inicio), 'dd/MM', { locale: ptBR }),
     ligacoes: f.total_ligacoes_next_ip || 0,
     chamados: f.total_chamados_verdana || 0,

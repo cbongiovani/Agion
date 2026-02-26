@@ -116,50 +116,69 @@ export default function Atividades() {
         'Feedback Individual': 'FB'
       };
       
-      // Buscar última atividade do mesmo tipo para gerar próximo número
-      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
-      const codigosExistentes = atividadesMesmoTipo
-        .map(a => a.codigo_atividade)
-        .filter(c => c && c.startsWith(prefixos[data.tipo]));
+      // Buscar última atividade do mesmo tipo para gerar próximo número (com retry para race condition)
+      let codigoAtividade;
+      let tentativas = 0;
+      const maxTentativas = 3;
       
-      let proximoNumero = 1;
-      if (codigosExistentes.length > 0) {
-        const numeros = codigosExistentes.map(c => parseInt(c.slice(2)));
-        proximoNumero = Math.max(...numeros) + 1;
+      while (tentativas < maxTentativas) {
+        try {
+          const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
+          const codigosExistentes = atividadesMesmoTipo
+            .map(a => a.codigo_atividade)
+            .filter(c => c && c.startsWith(prefixos[data.tipo]));
+          
+          let proximoNumero = 1;
+          if (codigosExistentes.length > 0) {
+            const numeros = codigosExistentes.map(c => parseInt(c.slice(2)));
+            proximoNumero = Math.max(...numeros) + 1;
+          }
+          
+          codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
+          
+          // Tentar criar - se código duplicado, vai dar erro e retry
+          const result = await base44.entities.Atividade.create({
+            ...data,
+            codigo_atividade: codigoAtividade
+          });
+          
+          // Se chegou aqui, sucesso - sair do loop
+          tentativas = maxTentativas;
+          
+          const user = await base44.auth.me();
+          
+          // Criar registro de aprovação
+          await base44.entities.AprovacaoAtividade.create({
+            atividade_id: result.id,
+            tipo: 'atividade',
+            status: 'pendente'
+          });
+          
+          await base44.entities.Log.create({
+            usuario_email: user.email,
+            usuario_nome: user.full_name,
+            acao: 'Criou',
+            entidade: 'Atividade',
+            detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
+          });
+
+          await notificarCoordenadores(
+            'nova_atividade',
+            'Nova Atividade Registrada',
+            `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
+            'Aprovacao'
+          );
+
+          return result;
+        } catch (error) {
+          tentativas++;
+          if (tentativas >= maxTentativas) {
+            throw error;
+          }
+          // Pequeno delay antes de retry
+          await new Promise(resolve => setTimeout(resolve, 100 * tentativas));
+        }
       }
-      
-      const codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
-      
-      const result = await base44.entities.Atividade.create({
-        ...data,
-        codigo_atividade: codigoAtividade
-      });
-      
-      const user = await base44.auth.me();
-      
-      // Criar registro de aprovação
-      await base44.entities.AprovacaoAtividade.create({
-        atividade_id: result.id,
-        tipo: 'atividade',
-        status: 'pendente'
-      });
-      
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Criou',
-        entidade: 'Atividade',
-        detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
-      });
-
-      await notificarCoordenadores(
-        'nova_atividade',
-        'Nova Atividade Registrada',
-        `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
-        'Aprovacao'
-      );
-
-      return result;
     },
     onSuccess: () => {
       // Fechar dialog de registro IMEDIATAMENTE
@@ -381,6 +400,14 @@ export default function Atividades() {
                 <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {editingAtividade && editingAtividade.codigo_atividade && (
+                  <div className="bg-[#ADF802]/10 border border-[#ADF802]/30 rounded-lg p-3">
+                    <p className="text-sm text-[#ADF802] font-mono">
+                      🔖 Código: <strong>{editingAtividade.codigo_atividade}</strong>
+                    </p>
+                  </div>
+                )}
+                
                 {!editingAtividade && (
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                     <p className="text-sm text-blue-400">

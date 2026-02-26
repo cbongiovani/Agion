@@ -15,11 +15,21 @@ export default function VisualizarAtividade({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {atividade.codigo_atividade && (
+          <div className="sm:col-span-2">
+            <Label>Código da Atividade</Label>
+            <div className="bg-[#ADF802]/10 border border-[#ADF802]/30 rounded-md p-2 mt-2">
+              <p className="text-[#ADF802] font-mono font-bold">{atividade.codigo_atividade}</p>
+            </div>
+          </div>
+        )}
         <div>
           <Label>Data</Label>
           <Input
             type="text"
-            value={new Date(atividade.data).toLocaleDateString('pt-BR')}
+            value={atividade.data && !isNaN(new Date(atividade.data).getTime()) 
+              ? new Date(atividade.data).toLocaleDateString('pt-BR')
+              : 'Data inválida'}
             className="bg-[#1a1a1a] border-gray-700 mt-2 text-white"
             readOnly
             disabled

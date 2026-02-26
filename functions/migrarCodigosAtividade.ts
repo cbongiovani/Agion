@@ -34,13 +34,24 @@ Deno.serve(async (req) => {
     const atualizacoes = [];
 
     for (const atividade of atividades) {
-      // Pular se já tem código
-      if (atividade.codigo_atividade) {
+      const tipo = atividade.tipo;
+      const prefixo = prefixos[tipo];
+      
+      // Validar se código existente está correto
+      const codigoCorreto = atividade.codigo_atividade && 
+                            atividade.codigo_atividade.startsWith(prefixo) &&
+                            /^[A-Z]{2}\d{5}$/.test(atividade.codigo_atividade);
+      
+      // Pular se já tem código válido
+      if (codigoCorreto) {
+        // Atualizar contador baseado no código existente
+        const numeroExistente = parseInt(atividade.codigo_atividade.slice(2));
+        if (numeroExistente >= contadores[tipo]) {
+          contadores[tipo] = numeroExistente + 1;
+        }
         continue;
       }
 
-      const tipo = atividade.tipo;
-      const prefixo = prefixos[tipo];
       const numero = contadores[tipo];
       const codigo = `${prefixo}${String(numero).padStart(5, '0')}`;
 
@@ -52,7 +63,7 @@ Deno.serve(async (req) => {
         codigo_atividade: codigo
       });
 
-      atualizacoes.push({ id: atividade.id, codigo });
+      atualizacoes.push({ id: atividade.id, codigo, antigo: atividade.codigo_atividade || null });
     }
 
     return Response.json({
