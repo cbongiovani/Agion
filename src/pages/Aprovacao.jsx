@@ -72,12 +72,12 @@ export default function Aprovacao() {
   const { data: aprovacoesPendentes = [] } = useQuery({
     queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
-      const raw = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
+      const raw = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
       const arr = toArray(raw).filter((a) => a?.status === 'pendente' && a?.atividade_id && a?.tipo);
       const latest = pickLatestByAtividadeId(arr);
       return Object.values(latest);
     },
-    staleTime: 5_000
+    staleTime: 3_000
   });
 
   // =========================
