@@ -222,7 +222,17 @@ export default function Supervisores() {
        'Feedback Individual': supervisorActivities.filter(a => a.tipo === 'Feedback Individual').length,
      };
 
-     // Contar incidentes (war room) deste supervisor - por supervisor_id direto (tempo real)
+     // Somar valores dos fechamentos semanais aprovados
+     const supervisorFechamentos = fechamentos.filter(f => f.supervisor_id === supervisorId);
+     supervisorFechamentos.forEach(fech => {
+       atividadesPorTipo['Chamados'] += fech.total_chamados_verdana || 0;
+       atividadesPorTipo['Ligações'] += fech.total_ligacoes_next_ip || 0;
+       atividadesPorTipo['Monitoria Offline'] += (fech.total_monitorias || 0) / 2;
+       atividadesPorTipo['Monitoria Assistida'] += (fech.total_monitorias || 0) / 2;
+       atividadesPorTipo['Feedback Individual'] += fech.total_1_1 || 0;
+     });
+
+     // Contar incidentes (war room) deste supervisor
      const incidentesCount = incidentes.filter(i => i.supervisor_id === supervisorId).length;
 
      // Contar fechamentos semanais do supervisor
