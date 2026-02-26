@@ -305,7 +305,7 @@ export default function Aprovacao() {
                   const atividade = atividades.find(a => a.id === item.atividade_id);
                   const supervisorNome = atividade?.supervisor_id ? getSupervisorNome(atividade.supervisor_id) : '-';
                   return (
-                    <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
+                    <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-white font-medium">{atividade?.tipo || 'Atividade'}</p>
                         <p className="text-sm text-gray-400 mt-1">
