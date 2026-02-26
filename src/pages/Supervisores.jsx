@@ -92,12 +92,14 @@ export default function Supervisores() {
    const { data: incidentes = [] } = useQuery({
      queryKey: ['incidentes'],
      queryFn: async () => {
-       const todos = await base44.entities.Incidente.list();
-       
+       const todos = await base44.entities.Incidente.list('-created_date', 300);
+
        // Buscar aprovações e filtrar SOMENTE os aprovados para contabilização
-       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'warroom', status: 'aprovado' });
-       const idsAprovados = aprovacoes.map(a => a.atividade_id);
-       
+       const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
+       const idsAprovados = aprovacoes
+         .filter(a => a.tipo === 'warroom' && a.status === 'aprovado')
+         .map(a => a.atividade_id);
+
        return todos.filter(inc => idsAprovados.includes(inc.id));
      },
    });
@@ -105,12 +107,14 @@ export default function Supervisores() {
    const { data: fechamentos = [] } = useQuery({
      queryKey: ['fechamentos'],
      queryFn: async () => {
-       const todos = await base44.entities.FechamentoSemanal.list();
-       
+       const todos = await base44.entities.FechamentoSemanal.list('-created_date', 200);
+
        // Buscar aprovações e filtrar SOMENTE os aprovados para contabilização
-       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'fechamento', status: 'aprovado' });
-       const idsAprovados = aprovacoes.map(a => a.atividade_id);
-       
+       const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
+       const idsAprovados = aprovacoes
+         .filter(a => a.tipo === 'fechamento' && a.status === 'aprovado')
+         .map(a => a.atividade_id);
+
        return todos.filter(fech => idsAprovados.includes(fech.id));
      },
    });
