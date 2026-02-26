@@ -156,7 +156,7 @@ export default function Layout({ children }) {
     } catch (error) {
       console.error('Erro ao criar log de logout:', error);
     }
-    base44.auth.logout();
+    window.location.href = '/login';
   };
 
   const isActive = (path) => {
