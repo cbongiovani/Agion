@@ -58,7 +58,16 @@ export default function Dashboard() {
 
   const { data: atividades = [], isLoading: loadingAtividades } = useQuery({
     queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list('-data', 100),
+    queryFn: async () => {
+      const todasAtividades = await base44.entities.Atividade.list('-data', 100);
+      
+      // Buscar aprovações para filtrar apenas as aprovadas
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade', status: 'aprovado' });
+      const atividadesAprovadasIds = aprovacoes.map(a => a.atividade_id);
+      
+      // Retornar apenas atividades aprovadas
+      return todasAtividades.filter(ativ => atividadesAprovadasIds.includes(ativ.id));
+    },
     staleTime: 5 * 60 * 1000,
   });
 

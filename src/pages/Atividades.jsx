@@ -31,6 +31,7 @@ export default function Atividades() {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterDataInicio, setFilterDataInicio] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
+  const [filterIdBusca, setFilterIdBusca] = useState('');
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -217,6 +218,7 @@ export default function Atividades() {
     setFilterTipo('');
     setFilterDataInicio('');
     setFilterDataFim('');
+    setFilterIdBusca('');
   };
 
   const handleSubmit = (e) => {
@@ -311,6 +313,7 @@ export default function Atividades() {
   };
 
   const atividadesFiltradas = atividades.filter(ativ => {
+    if (filterIdBusca && !ativ.id.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
     if (filterSupervisor && ativ.supervisor_id !== filterSupervisor) return false;
     if (filterAnalista && ativ.analista_id !== filterAnalista) return false;
     if (filterTipo && ativ.tipo !== filterTipo) return false;
@@ -532,6 +535,19 @@ export default function Atividades() {
           <Filter className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-white">Filtros</h2>
         </div>
+        
+        {/* Campo de Busca por ID */}
+        <div className="mb-4">
+          <Label className="text-xs text-gray-400">Buscar por ID do Registro</Label>
+          <Input
+            type="text"
+            placeholder="Digite o ID do registro..."
+            value={filterIdBusca}
+            onChange={(e) => setFilterIdBusca(e.target.value)}
+            className="bg-[#1a1a1a] border-gray-700 mt-1"
+          />
+        </div>
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <Label className="text-xs text-gray-400">Supervisor</Label>
@@ -601,7 +617,7 @@ export default function Atividades() {
           </div>
         </div>
         
-        {(filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
+        {(filterIdBusca || filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
           <div className="mt-4 flex justify-end">
             <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
               <X className="w-4 h-4" />
@@ -617,6 +633,7 @@ export default function Atividades() {
           <table className="w-full">
             <thead className="bg-[#1a1a1a] border-b border-gray-800">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">ID</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Data</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Tipo</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Supervisor Resp.</th>
@@ -630,6 +647,9 @@ export default function Atividades() {
             <tbody className="divide-y divide-gray-800">
               {atividadesFiltradas.map((atividade) => (
                 <tr key={atividade.id} className="hover:bg-[#1a1a1a] transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-500 font-mono whitespace-nowrap">
+                    {atividade.id.slice(0, 8)}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
                     {getLocalDateString(atividade.data)}
                   </td>
