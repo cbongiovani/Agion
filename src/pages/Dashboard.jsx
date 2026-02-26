@@ -1,24 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import PlanoAcaoIAWidget from '@/components/PlanoAcaoIAWidget';
 
-function toArray(maybeArrayOrObj) {
-  if (Array.isArray(maybeArrayOrObj)) return maybeArrayOrObj;
-  if (maybeArrayOrObj && Array.isArray(maybeArrayOrObj.items)) return maybeArrayOrObj.items;
+function toArray(maybe) {
+  if (Array.isArray(maybe)) return maybe;
+  if (maybe && Array.isArray(maybe.items)) return maybe.items;
   return [];
 }
 
@@ -35,60 +26,41 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true;
     base44.auth.me()
-      .then(user => { if (mounted) setCurrentUser(user); })
+      .then(u => mounted && setCurrentUser(u))
       .catch(() => {});
     return () => { mounted = false; };
   }, []);
 
-  const {
-    data: fechamentosRaw,
-    isLoading: loadingFechamentos,
-    error: errorFechamentos
-  } = useQuery({
+  const { data: fechamentosRaw, isLoading: loadingFechamentos, error: errorFechamentos } = useQuery({
     queryKey: ['fechamentos'],
     queryFn: async () => {
       const todosFechamentos = await base44.entities.FechamentoSemanal.list('-semana_inicio', 12);
-      
-      // Buscar aprovações e filtrar SOMENTE as aprovadas
+
+      // só aprovados
       const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
-      const idsAprovados = aprovacoes
+      const idsAprovados = toArray(aprovacoes)
         .filter(a => a.tipo === 'fechamento' && a.status === 'aprovado')
         .map(a => a.atividade_id);
-      
-      // Retornar APENAS fechamentos aprovados
-      return toArray(todosFechamentos).filter(fech => idsAprovados.includes(fech.id));
+
+      return toArray(todosFechamentos).filter(f => idsAprovados.includes(f.id));
     },
     staleTime: 5 * 60 * 1000,
   });
+
   const fechamentos = toArray(fechamentosRaw);
 
-  const {
-    data: atividadesRaw,
-    isLoading: loadingAtividades,
-    error: errorAtividades
-  } = useQuery({
-    queryKey: ['atividades'],
+  const { data: atividadesRaw, isLoading: loadingAtividades, error: errorAtividades } = useQuery({
+    queryKey: ['atividadesDashboard'],
     queryFn: async () => {
       const todasAtividadesRaw = await base44.entities.Atividade.list('-data', 100);
-      const todasAtividades = toArray(todasAtividadesRaw);
+      const aprovacoesRaw = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade', status: 'aprovado' });
 
-      // pode vir array ou objeto {items:[]}
-      const aprovacoesRaw = await base44.entities.AprovacaoAtividade.filter({
-        tipo: 'atividade',
-        status: 'aprovado'
-      });
-      const aprovacoes = toArray(aprovacoesRaw);
-
-      const aprovadasIds = new Set(
-        aprovacoes
-          .map(a => a?.atividade_id)
-          .filter(Boolean)
-      );
-
-      return todasAtividades.filter(a => aprovadasIds.has(a?.id));
+      const aprovadasIds = new Set(toArray(aprovacoesRaw).map(a => a.atividade_id).filter(Boolean));
+      return toArray(todasAtividadesRaw).filter(a => aprovadasIds.has(a.id));
     },
     staleTime: 5 * 60 * 1000,
   });
+
   const atividades = toArray(atividadesRaw);
 
   const { data: analistasRaw, error: errorAnalistas } = useQuery({
@@ -118,14 +90,11 @@ export default function Dashboard() {
 
   if (anyError) {
     return (
-      <div className="bg-[#1a1a1a] border border-red-900/50 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-400">Erro ao carregar o Dashboard</h2>
-        <p className="text-gray-400 mt-2">
-          Abra o Console (F12) para ver detalhes. Se quiser, me cole aqui o erro exato.
+      <div className="bg-[#1a1a1a] border border-red-500/30 rounded-lg p-6">
+        <h2 className="text-white font-bold text-lg">Erro ao carregar o Dashboard</h2>
+        <p className="text-gray-400 mt-2 text-sm">
+          Abra o Console (F12) para ver detalhes. Erro: <span className="text-red-300">{String(anyError?.message || anyError)}</span>
         </p>
-        <pre className="text-xs text-gray-500 mt-4 whitespace-pre-wrap">
-          {String(anyError?.message || anyError)}
-        </pre>
       </div>
     );
   }
@@ -139,8 +108,7 @@ export default function Dashboard() {
   const qualidadeAnterior = atividades.length > 1
     ? (atividades
         .slice(0, Math.max(1, Math.floor(atividades.length / 2)))
-        .reduce((sum, a) => sum + (Number(a?.nota) || 0), 0) /
-      Math.max(1, Math.floor(atividades.length / 2)))
+        .reduce((sum, a) => sum + (Number(a?.nota) || 0), 0) / Math.max(1, Math.floor(atividades.length / 2)))
     : qualidadeAtual;
 
   const coberturaTreinamento = analistas.length
@@ -158,10 +126,9 @@ export default function Dashboard() {
       tendencia: qualidadeAtual >= qualidadeAnterior ? 'up' : 'down',
     },
     eficienciaOperacional: {
-      valor:
-        ultimoFechamento?.total_ligacoes_next_ip != null && ultimoFechamento?.total_chamados_verdana != null
-          ? (((Number(ultimoFechamento?.total_ligacoes_next_ip) || 0) + (Number(ultimoFechamento?.total_chamados_verdana) || 0)) / 40).toFixed(0)
-          : '0',
+      valor: ultimoFechamento?.total_ligacoes_next_ip != null && ultimoFechamento?.total_chamados_verdana != null
+        ? (((Number(ultimoFechamento?.total_ligacoes_next_ip) || 0) + (Number(ultimoFechamento?.total_chamados_verdana) || 0)) / 40).toFixed(0)
+        : '0',
       meta: '100%',
       tendencia: 'up',
     },
@@ -185,7 +152,7 @@ export default function Dashboard() {
       ligacoes: Number(f?.total_ligacoes_next_ip) || 0,
       chamados: Number(f?.total_chamados_verdana) || 0,
     }))
-    .filter(row => row.semana !== '—');
+    .filter(r => r.semana !== '—');
 
   return (
     <div className="space-y-8">
