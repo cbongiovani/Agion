@@ -124,26 +124,7 @@ export default function GestaoUsuarios() {
       .sort((a, b) => displayName(a).localeCompare(displayName(b)));
   }, [users, searchTerm, filterRole, filterStatus]);
 
-  // Access check
-  if (loadingUser) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[#ADF802]" />
-      </div>
-    );
-  }
-
-  // 👉 Se quiser somente coordenador, troca aqui para: currentUser?.role !== 'admin'
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'supervisor') {
-    return (
-      <div className="text-center py-12">
-        <Lock className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-white text-lg">Acesso restrito a Administradores</p>
-      </div>
-    );
-  }
-
-  // Mutations
+  // Mutations (must be before early returns)
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, data }) => {
       const actor = await base44.auth.me();
@@ -193,6 +174,25 @@ export default function GestaoUsuarios() {
     },
     onError: (error) => toast.error('Erro: ' + error.message),
   });
+
+  // Access check
+  if (loadingUser) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ADF802]" />
+      </div>
+    );
+  }
+
+  // 👉 Se quiser somente coordenador, troca aqui para: currentUser?.role !== 'admin'
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'supervisor') {
+    return (
+      <div className="text-center py-12">
+        <Lock className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <p className="text-white text-lg">Acesso restrito a Administradores</p>
+      </div>
+    );
+  }
 
   // Handlers
   const openEditUser = (u) => {
