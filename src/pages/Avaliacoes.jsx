@@ -45,14 +45,49 @@ export default function Avaliacoes() {
 
   const { data: avaliacoes = [] } = useQuery({
     queryKey: ['avaliacoes'],
-    queryFn: () => base44.entities.Avaliacao.list('-created_date'),
+    queryFn: async () => {
+      const todasAvaliacoes = await base44.entities.Avaliacao.list('-created_date');
+      
+      // Se for admin, mostra todas
+      if (currentUser?.role === 'admin') {
+        return todasAvaliacoes;
+      }
+      
+      // Para outros usuários, mostra apenas aprovadas
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'avaliacao' });
+      const aprovadas = aprovacoes
+        .filter(a => a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
+      return todasAvaliacoes.filter(aval => aprovadas.includes(aval.id));
+    },
+    enabled: !!currentUser,
   });
 
   const salvarQuestaoMutation = useMutation({
-    mutationFn: (data) => base44.entities.Questao.create(data),
+    mutationFn: async (data) => {
+      const result = await base44.entities.Questao.create(data);
+      
+      // Criar registro de aprovação
+      await base44.entities.AprovacaoAtividade.create({
+        atividade_id: result.id,
+        tipo: 'questao',
+        status: 'pendente'
+      });
+      
+      await notificarCoordenadores(
+        'nova_questao',
+        'Nova Questão Criada',
+        `Uma nova questão foi criada: ${data.enunciado.substring(0, 50)}... - Aguardando aprovação`,
+        'Aprovacao'
+      );
+      
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
-      toast.success('Questão salva com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      toast.success('Questão enviada para aprovação!');
       setQuestaoGerada(null);
       setIsGerarQuestaoOpen(false);
       resetForm();
@@ -101,14 +136,29 @@ export default function Avaliacoes() {
           criado_por: currentUser?.email
         });
         
+        // Criar registro de aprovação para cada prova
+        await base44.entities.AprovacaoAtividade.create({
+          atividade_id: prova.id,
+          tipo: 'avaliacao',
+          status: 'pendente'
+        });
+        
         provasCriadas.push(prova);
       }
+      
+      await notificarCoordenadores(
+        'novas_avaliacoes',
+        'Novas Avaliações Geradas',
+        `${provasCriadas.length} avaliações foram geradas para ${periodo} ${ano} - Aguardando aprovação`,
+        'Aprovacao'
+      );
       
       return provasCriadas;
     },
     onSuccess: (provas) => {
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
-      toast.success(`${provas.length} provas geradas com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      toast.success(`${provas.length} provas enviadas para aprovação!`);
       setIsGerarProvaOpen(false);
     },
     onError: (error) => {

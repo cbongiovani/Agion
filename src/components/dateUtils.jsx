@@ -35,7 +35,13 @@ export function ensureCorrectDate(dateString) {
     return dateString;
   }
   
-  // Se for uma data completa com hora, extrai apenas a parte da data
+  // Se for uma string de data ISO ou datetime-local input
+  // Extrai apenas a parte da data sem fazer parsing (evita conversão de timezone)
+  if (typeof dateString === 'string' && dateString.includes('-')) {
+    return dateString.split('T')[0];
+  }
+  
+  // Último recurso: cria a data mantendo o timezone local
   const d = new Date(dateString);
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');

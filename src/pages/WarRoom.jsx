@@ -86,7 +86,23 @@ export default function WarRoom() {
 
   const { data: incidentes = [], isLoading } = useQuery({
     queryKey: ['incidentes'],
-    queryFn: () => base44.entities.Incidente.list('-data_inicio'),
+    queryFn: async () => {
+      const todosIncidentes = await base44.entities.Incidente.list('-data_inicio');
+      
+      // Se for admin, mostra todos
+      if (currentUser?.role === 'admin') {
+        return todosIncidentes;
+      }
+      
+      // Para outros usuários, mostra apenas aprovados
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'warroom' });
+      const aprovados = aprovacoes
+        .filter(a => a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
+      return todosIncidentes.filter(inc => aprovados.includes(inc.id));
+    },
+    enabled: !!currentUser,
   });
 
   const { data: supervisores = [] } = useQuery({
@@ -98,17 +114,26 @@ export default function WarRoom() {
     mutationFn: async (data) => {
       const result = await base44.entities.Incidente.create(data);
       const user = await base44.auth.me();
+      
+      // Criar registro de aprovação
+      await base44.entities.AprovacaoAtividade.create({
+        atividade_id: result.id,
+        tipo: 'warroom',
+        status: 'pendente'
+      });
+      
       await notificarCoordenadores(
         'novo_incidente',
         'Novo Incidente Registrado',
-        `${user.full_name} registrou incidente: ${data.titulo} (${data.severidade})`,
-        'WarRoom'
+        `${user.full_name} registrou incidente: ${data.titulo} (${data.severidade}) - Aguardando aprovação`,
+        'Aprovacao'
       );
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
-      toast.success('Incidente registrado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      toast.success('Incidente enviado para aprovação!');
       clearDraft();
       resetForm();
     },

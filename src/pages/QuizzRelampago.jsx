@@ -56,7 +56,23 @@ export default function QuizzRelampago() {
 
   const { data: quizzes = [], isLoading: loadingQuizzes } = useQuery({
     queryKey: ['quizzRelampago'],
-    queryFn: () => base44.entities.QuizzRelampago.list('-created_date', 50),
+    queryFn: async () => {
+      const todosQuizzes = await base44.entities.QuizzRelampago.list('-created_date', 50);
+      
+      // Se for admin ou supervisor, mostra todos
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+        return todosQuizzes;
+      }
+      
+      // Para analistas, mostra apenas aprovados
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'quizz' });
+      const aprovados = aprovacoes
+        .filter(a => a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
+      return todosQuizzes.filter(q => aprovados.includes(q.id));
+    },
+    enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -95,6 +111,13 @@ export default function QuizzRelampago() {
     mutationFn: async (data) => {
       const quizz = await base44.entities.QuizzRelampago.create(data.quizz);
       
+      // Criar registro de aprovação
+      await base44.entities.AprovacaoAtividade.create({
+        atividade_id: quizz.id,
+        tipo: 'quizz',
+        status: 'pendente'
+      });
+      
       const perguntasData = data.perguntas.map((p, idx) => ({
         ...p,
         quizz_id: quizz.id,
@@ -103,11 +126,19 @@ export default function QuizzRelampago() {
       
       await base44.entities.PerguntaQuizz.bulkCreate(perguntasData);
       
+      await notificarCoordenadores(
+        'novo_quizz',
+        'Novo Quizz Criado',
+        `${currentUser?.full_name || 'Um coordenador'} criou um novo quizz: ${data.quizz.titulo} - Aguardando aprovação`,
+        'Aprovacao'
+      );
+      
       return quizz;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quizzRelampago'] });
-      toast.success('Quizz criado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      toast.success('Quizz enviado para aprovação!');
       resetForm();
       setIsCreateDialogOpen(false);
     },

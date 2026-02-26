@@ -63,7 +63,23 @@ export default function Atividades() {
 
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list('-created_date'),
+    queryFn: async () => {
+      const todasAtividades = await base44.entities.Atividade.list('-created_date');
+      
+      // Se for admin, mostra todas
+      if (currentUser?.role === 'admin') {
+        return todasAtividades;
+      }
+      
+      // Para outros usuários, mostra apenas aprovadas
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade' });
+      const aprovadas = aprovacoes
+        .filter(a => a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
+      return todasAtividades.filter(ativ => aprovadas.includes(ativ.id));
+    },
+    enabled: !!currentUser,
   });
 
   const { data: supervisores = [] } = useQuery({
@@ -85,6 +101,14 @@ export default function Atividades() {
     mutationFn: async (data) => {
       const result = await base44.entities.Atividade.create(data);
       const user = await base44.auth.me();
+      
+      // Criar registro de aprovação
+      await base44.entities.AprovacaoAtividade.create({
+        atividade_id: result.id,
+        tipo: 'atividade',
+        status: 'pendente'
+      });
+      
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
@@ -96,15 +120,16 @@ export default function Atividades() {
       await notificarCoordenadores(
         'nova_atividade',
         'Nova Atividade Registrada',
-        `${user.full_name} registrou uma nova atividade do tipo ${data.tipo}`,
-        'Atividade'
+        `${user.full_name} registrou uma nova atividade do tipo ${data.tipo} - Aguardando aprovação`,
+        'Aprovacao'
       );
 
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      toast.success('Atividade registrada com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      toast.success('Atividade enviada para aprovação!');
       resetForm();
     },
   });

@@ -61,7 +61,23 @@ export default function FechamentoSemanal() {
 
   const { data: fechamentos = [], isLoading } = useQuery({
     queryKey: ['fechamentos'],
-    queryFn: () => base44.entities.FechamentoSemanal.list('-created_date'),
+    queryFn: async () => {
+      const todosFechamentos = await base44.entities.FechamentoSemanal.list('-created_date');
+      
+      // Se for admin, mostra todos
+      if (currentUser?.role === 'admin') {
+        return todosFechamentos;
+      }
+      
+      // Para outros usuários, mostra apenas aprovados
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'fechamento' });
+      const aprovados = aprovacoes
+        .filter(a => a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
+      return todosFechamentos.filter(fech => aprovados.includes(fech.id));
+    },
+    enabled: !!currentUser,
   });
 
   const { data: supervisores = [] } = useQuery({
@@ -83,6 +99,14 @@ export default function FechamentoSemanal() {
     mutationFn: async (data) => {
       const result = await base44.entities.FechamentoSemanal.create(data);
       const user = await base44.auth.me();
+      
+      // Criar registro de aprovação
+      await base44.entities.AprovacaoAtividade.create({
+        atividade_id: result.id,
+        tipo: 'fechamento',
+        status: 'pendente'
+      });
+      
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
@@ -95,15 +119,16 @@ export default function FechamentoSemanal() {
       await notificarCoordenadores(
         'novo_fechamento',
         'Novo Fechamento Semanal',
-        `${user.full_name} registrou fechamento semanal para ${supervisor?.nome || 'supervisor'}`,
-        'FechamentoSemanal'
+        `${user.full_name} registrou fechamento semanal para ${supervisor?.nome || 'supervisor'} - Aguardando aprovação`,
+        'Aprovacao'
       );
       
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
-      toast.success('Fechamento registrado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      toast.success('Fechamento enviado para aprovação!');
       clearDraft();
       resetForm();
     },
