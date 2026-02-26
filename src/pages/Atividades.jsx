@@ -389,7 +389,9 @@ export default function Atividades() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Atividade excluída com sucesso!');
       setDeleteId(null);
     },
@@ -410,7 +412,9 @@ export default function Atividades() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(`${selectedIds.size} atividades excluídas com sucesso!`);
       setSelectedIds(new Set());
       setDeleteMultipleDialogOpen(false);
