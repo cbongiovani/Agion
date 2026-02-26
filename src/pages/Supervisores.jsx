@@ -76,12 +76,14 @@ export default function Supervisores() {
   const { data: atividades = [] } = useQuery({
      queryKey: ['atividades'],
      queryFn: async () => {
-       const todas = await base44.entities.Atividade.list();
-       
+       const todas = await base44.entities.Atividade.list('-created_date', 500);
+
        // Buscar aprovações e filtrar SOMENTE as aprovadas para contabilização
-       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade', status: 'aprovado' });
-       const idsAprovados = aprovacoes.map(a => a.atividade_id);
-       
+       const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
+       const idsAprovados = aprovacoes
+         .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
+         .map(a => a.atividade_id);
+
        // Retornar APENAS atividades aprovadas
        return todas.filter(ativ => idsAprovados.includes(ativ.id));
      },
