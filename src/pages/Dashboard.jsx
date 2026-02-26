@@ -166,17 +166,15 @@ export default function Dashboard() {
     },
   };
 
-  const evolucaoPorSemana = useMemo(() => {
-    return [...fechamentos]
-      .slice(0, 8)
-      .reverse()
-      .map(f => ({
-        semana: safeDateLabel(f?.semana_inicio),
-        ligacoes: Number(f?.total_ligacoes_next_ip) || 0,
-        chamados: Number(f?.total_chamados_verdana) || 0,
-      }))
-      .filter(row => row.semana !== '—'); // evita gráfico “quebrado” com datas inválidas
-  }, [fechamentos]);
+  const evolucaoPorSemana = [...fechamentos]
+    .slice(0, 8)
+    .reverse()
+    .map(f => ({
+      semana: safeDateLabel(f?.semana_inicio),
+      ligacoes: Number(f?.total_ligacoes_next_ip) || 0,
+      chamados: Number(f?.total_chamados_verdana) || 0,
+    }))
+    .filter(row => row.semana !== '—');
 
   return (
     <div className="space-y-8">
