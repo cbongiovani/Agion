@@ -207,6 +207,75 @@ export default function Dashboard() {
 
 
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Qualidade Média', valor: kpis.qualidadeMedia.valor, meta: kpis.qualidadeMedia.meta, icon: '📊' },
+          { label: 'Eficiência Operacional', valor: `${kpis.eficienciaOperacional.valor}%`, meta: '100%', icon: '⚙️' },
+          { label: 'Cobertura Treinamento', valor: `${kpis.coberturaTreinamento.valor}%`, meta: '100%', icon: '🎓' },
+          { label: 'Satisfação Analista', valor: `${kpis.satisfacaoAnalista.valor}%`, meta: '100%', icon: '😊' },
+        ].map((kpi, idx) => (
+          <div key={idx} className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 hover:border-[#ADF802]/30 transition-colors">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-400 text-sm mb-2">{kpi.label}</p>
+                <p className="text-3xl font-bold text-white">{kpi.valor}</p>
+                <p className="text-gray-500 text-xs mt-2">Meta: {kpi.meta}</p>
+              </div>
+              <span className="text-2xl">{kpi.icon}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* OKR Progress */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-white">Objetivos e Resultados (OKRs)</h2>
+        {okrs.map((okr, idx) => (
+          <div key={idx} className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-[#ADF802] mb-4">{okr.objetivo}</h3>
+            <div className="space-y-4">
+              {okr.keyResults.map((kr, krIdx) => (
+                <div key={krIdx}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-300 text-sm">{kr.resultado}</span>
+                    <span className="text-gray-400 text-xs">{kr.progresso.toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-800 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-[#ADF802] to-emerald-500 h-2 rounded-full"
+                      style={{ width: `${kr.progresso}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-gray-500 text-xs">Atual: {kr.atual}</span>
+                    <span className="text-gray-500 text-xs">Meta: {kr.meta}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Weekly Evolution Chart */}
+      {evolucaoPorSemana.length > 0 && (
+        <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Evolução por Semana</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={evolucaoPorSemana}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey="semana" stroke="#666" />
+              <YAxis stroke="#666" />
+              <Tooltip contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333' }} />
+              <Legend />
+              <Bar dataKey="ligacoes" fill="#3b82f6" name="Ligações" />
+              <Bar dataKey="chamados" fill="#06b6d4" name="Chamados" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* Agente IA - Planos de Ação baseados em Supervisores */}
       {currentUser?.role === 'admin' && (
         <PlanoAcaoIAWidget currentUser={currentUser} />
