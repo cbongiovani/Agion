@@ -34,6 +34,8 @@ export default function Atividades() {
   const [filterDataInicio, setFilterDataInicio] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
   const [filterIdBusca, setFilterIdBusca] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
