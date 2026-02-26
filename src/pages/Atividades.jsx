@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
 import { getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
@@ -50,9 +51,68 @@ import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
 import { MODULES } from '@/components/moduleConstants';
 
+// =====================
+// Helpers
+// =====================
+function toArray(maybe) {
+  if (Array.isArray(maybe)) return maybe;
+  if (maybe && Array.isArray(maybe.items)) return maybe.items;
+  return [];
+}
+
+function pickLatestApprovalForKey(approvals) {
+  // key = `${tipo}:${atividade_id}`
+  const map = new Map();
+  for (const a of approvals) {
+    if (!a?.tipo || !a?.atividade_id) continue;
+    const key = `${a.tipo}:${a.atividade_id}`;
+    const t = new Date(a?.created_date || a?.created_at || a?.data_aprovacao || 0).getTime();
+    const prev = map.get(key);
+    const pt = prev ? new Date(prev?.created_date || prev?.created_at || prev?.data_aprovacao || 0).getTime() : -1;
+    if (!prev || t >= pt) map.set(key, a);
+  }
+  return Array.from(map.values());
+}
+
+async function ensureApprovalIdempotente({ tipo, atividade_id, solicitante_email }) {
+  // Regra:
+  // - Se já existe aprovação p/ (tipo, atividade_id), NÃO cria outra.
+  // - Se existir e estiver rejeitado, volta pra pendente (limpa motivo).
+  // - Se existir e estiver pendente, só garante campos mínimos.
+  // - Se existir e estiver aprovado, mantém.
+  const existentesRaw = await base44.entities.AprovacaoAtividade.filter({ tipo, atividade_id });
+  const existentes = toArray(existentesRaw);
+
+  if (existentes.length > 0) {
+    const latest = pickLatestApprovalForKey(existentes)[0];
+    if (!latest?.id) return latest;
+
+    if (latest.status === 'aprovado') return latest;
+
+    await base44.entities.AprovacaoAtividade.update(latest.id, {
+      status: 'pendente',
+      aprovado_por: null,
+      data_aprovacao: null,
+      motivo_rejeicao: null,
+      solicitante_email: solicitante_email || latest.solicitante_email || null,
+    });
+
+    return latest;
+  }
+
+  // Não existe: cria
+  return await base44.entities.AprovacaoAtividade.create({
+    atividade_id,
+    tipo,
+    status: 'pendente',
+    solicitante_email: solicitante_email || null,
+  });
+}
+
 export default function Atividades() {
   const queryClient = useQueryClient();
-  const submitLockRef = useRef(false); // ✅ Lock síncrono anti-double-submit
+  const submitLockRef = useRef(false);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -75,6 +135,7 @@ export default function Atividades() {
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 60 * 1000,
   });
 
   const { data: modulePermissions } = useQuery({
@@ -113,87 +174,79 @@ export default function Atividades() {
     nota: '',
     comentario: '',
     status: 'Aberto',
+    data: '',
   });
 
-  // Buscar aprovações separadamente para fazer merge
-  const { data: aprovacoes = [] } = useQuery({
-    queryKey: ['aprovacoes'],
-    queryFn: () => base44.entities.AprovacaoAtividade.list(),
+  const { data: supervisoresRaw = [] } = useQuery({
+    queryKey: ['supervisores'],
+    queryFn: () => base44.entities.Supervisor.list(),
+    staleTime: 5 * 60 * 1000,
   });
+  const supervisores = toArray(supervisoresRaw);
 
+  const { data: analistasRaw = [] } = useQuery({
+    queryKey: ['analistas'],
+    queryFn: () => base44.entities.Analista.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const analistas = toArray(analistasRaw);
+
+  const { data: usuariosRaw = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const usuarios = toArray(usuariosRaw);
+
+  // ✅ carrega atividades + junta aprovação mais recente (sem duplicar)
   const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role],
-    staleTime: 2000, // Evita refetches múltiplos em 2 segundos
+    queryKey: ['atividades', currentUser?.role, currentUser?.email],
+    enabled: !!currentUser,
+    staleTime: 5 * 1000,
     queryFn: async () => {
-      const todasAtividades = await base44.entities.Atividade.list('-created_date');
-      
-      // ✅ DEFESA: Deduplicação por ID
-      const mapUnique = {};
-      todasAtividades.forEach((ativ) => {
-        if (!mapUnique[ativ.id]) {
-          mapUnique[ativ.id] = ativ;
-        }
-      });
-      const atividadesUnicas = Object.values(mapUnique);
+      const [ativRaw, aprovRaw] = await Promise.all([
+        base44.entities.Atividade.list('-created_date', 500),
+        base44.entities.AprovacaoAtividade.list('-created_date', 500),
+      ]);
 
-      // ✅ Buscar aprovações uma única vez
-      const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
-      const aprovacaoPorId = {};
-      todasAprovacoes.forEach((aprov) => {
-        // Deduplica por atividade_id: pega a mais recente se houver múltiplas
-        if (aprov.tipo === 'atividade') {
-          if (!aprovacaoPorId[aprov.atividade_id]) {
-            aprovacaoPorId[aprov.atividade_id] = aprov;
-          }
-        }
-      });
+      const todas = toArray(ativRaw);
 
-      // Anexar status de aprovação em cada atividade
-      const atividadesComAprovacao = atividadesUnicas.map((ativ) => ({
-        ...ativ,
-        aprovacao_status: aprovacaoPorId[ativ.id]?.status || 'pendente',
-        aprovacao_data: aprovacaoPorId[ativ.id]?.data_aprovacao,
-        aprovacao_motivo_rejeicao: aprovacaoPorId[ativ.id]?.motivo_rejeicao,
-      }));
-
-      const idsAprovados = Object.keys(aprovacaoPorId).filter(
-        (id) => aprovacaoPorId[id].status === 'aprovado'
+      const aprov = pickLatestApprovalForKey(
+        toArray(aprovRaw).filter(a => a?.tipo === 'atividade' && a?.atividade_id)
       );
 
-      // Admin vê TUDO
-      if (currentUser?.role === 'admin') return atividadesComAprovacao;
+      const aprovByAtividade = new Map(aprov.map(a => [a.atividade_id, a]));
 
-      // Supervisor vê: aprovados de todos + TODOS seus próprios registros
-      if (currentUser?.role === 'supervisor') {
-        return atividadesComAprovacao.filter(
-          (ativ) =>
-            // ✅ Aprovadas por qualquer pessoa
-            idsAprovados.includes(ativ.id) ||
-            // ✅ Criadas pelo supervisor (por email)
-            ativ.registrado_por === currentUser.email ||
-            ativ.created_by === currentUser.email
+      const atividadesComAprovacao = todas.map(a => {
+        const ap = aprovByAtividade.get(a.id);
+        return {
+          ...a,
+          aprovacao_status: ap?.status || 'pendente',
+          aprovacao_data: ap?.data_aprovacao,
+          aprovacao_motivo_rejeicao: ap?.motivo_rejeicao,
+        };
+      });
+
+      // ids aprovados
+      const aprovadosSet = new Set(
+        aprov.filter(a => a.status === 'aprovado').map(a => a.atividade_id)
+      );
+
+      // Admin vê tudo
+      if (currentUser.role === 'admin') return atividadesComAprovacao;
+
+      // Supervisor vê: aprovadas de todos + as dele (pendente/rejeitado)
+      if (currentUser.role === 'supervisor') {
+        return atividadesComAprovacao.filter(a =>
+          aprovadosSet.has(a.id) ||
+          a.registrado_por === currentUser.email ||
+          a.created_by === currentUser.email
         );
       }
 
-      // Outros usuários: APENAS aprovadas
-      return atividadesComAprovacao.filter((ativ) => idsAprovados.includes(ativ.id));
+      // Outros: apenas aprovadas
+      return atividadesComAprovacao.filter(a => aprovadosSet.has(a.id));
     },
-    enabled: !!currentUser,
-  });
-
-  const { data: supervisores = [] } = useQuery({
-    queryKey: ['supervisores'],
-    queryFn: () => base44.entities.Supervisor.list(),
-  });
-
-  const { data: analistas = [] } = useQuery({
-    queryKey: ['analistas'],
-    queryFn: () => base44.entities.Analista.list(),
-  });
-
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
   });
 
   const resetForm = () => {
@@ -210,10 +263,37 @@ export default function Atividades() {
       nota: '',
       comentario: '',
       status: 'Aberto',
+      data: '',
     });
     setEditingAtividade(null);
     setSelectedType('Chamados');
-    submitLockRef.current = false; // ✅ liberar lock
+    submitLockRef.current = false;
+  };
+
+  const getSupervisorNome = (id) => {
+    const supervisor = supervisores.find((s) => s.id === id);
+    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
+  };
+
+  const getAnalistaNome = (id) => {
+    const analista = analistas.find((a) => a.id === id);
+    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+  };
+
+  const handleAnalistaChange = (analistaId) => {
+    const analista = analistas.find((a) => a.id === analistaId);
+    setFormData(prev => ({
+      ...prev,
+      analista_id: analistaId,
+      supervisor_id: analista?.supervisor_id || '',
+    }));
+  };
+
+  const handleTipoChange = (tipo) => {
+    setSelectedType(tipo);
+    setFormData(prev => ({ ...prev, tipo }));
   };
 
   const createMutation = useMutation({
@@ -226,127 +306,108 @@ export default function Atividades() {
         'Feedback Individual': 'FB',
       };
 
-      let codigoAtividade;
-      let tentativas = 0;
-      const maxTentativas = 3;
+      // gera código (melhor esforço — sem “retry” que duplica)
+      const atividadesMesmoTipoRaw = await base44.entities.Atividade.filter({ tipo: data.tipo });
+      const atividadesMesmoTipo = toArray(atividadesMesmoTipoRaw);
 
-      while (tentativas < maxTentativas) {
-        try {
-          const atividadesMesmoTipo = await base44.entities.Atividade.filter({
-            tipo: data.tipo,
-          });
+      const codigosExistentes = atividadesMesmoTipo
+        .map((a) => a.codigo_atividade)
+        .filter((c) => c && c.startsWith(prefixos[data.tipo]));
 
-          const codigosExistentes = atividadesMesmoTipo
-            .map((a) => a.codigo_atividade)
-            .filter((c) => c && c.startsWith(prefixos[data.tipo]));
-
-          let proximoNumero = 1;
-          if (codigosExistentes.length > 0) {
-            const numeros = codigosExistentes.map((c) => parseInt(c.slice(2)));
-            proximoNumero = Math.max(...numeros) + 1;
-          }
-
-          codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(
-            5,
-            '0'
-          )}`;
-
-          const user = await base44.auth.me();
-
-          const result = await base44.entities.Atividade.create({
-            ...data,
-            codigo_atividade: codigoAtividade,
-            registrado_por: user.email,
-          });
-
-          // Criar aprovação
-          await base44.entities.AprovacaoAtividade.create({
-            atividade_id: result.id,
-            tipo: 'atividade',
-            status: 'pendente',
-          });
-
-          // Log - isolado para não quebrar fluxo
-          try {
-            await base44.entities.Log.create({
-              usuario_email: user.email,
-              usuario_nome: user.full_name,
-              acao: 'Criou',
-              entidade: 'Atividade',
-              detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
-            });
-          } catch (logError) {
-            console.warn('Erro ao criar log:', logError);
-          }
-
-          // Notificação - isolada para não quebrar fluxo
-          try {
-            await notificarCoordenadores(
-              'nova_atividade',
-              'Nova Atividade Registrada',
-              `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
-              'Aprovacao'
-            );
-          } catch (notifError) {
-            console.warn('Erro ao notificar:', notifError);
-          }
-
-          return result;
-        } catch (error) {
-          tentativas++;
-          if (tentativas >= maxTentativas) throw error;
-          await new Promise((resolve) => setTimeout(resolve, 100 * tentativas));
-        }
+      let proximoNumero = 1;
+      if (codigosExistentes.length > 0) {
+        const numeros = codigosExistentes.map((c) => parseInt(c.slice(2), 10)).filter(n => Number.isFinite(n));
+        proximoNumero = (numeros.length ? Math.max(...numeros) : 0) + 1;
       }
-    },
 
-    // ✅ AJUSTE CRÍTICO: FECHA O MODAL SEM DEPENDER DE onOpenChange “inteligente”
+      const codigo_atividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
+
+      const user = await base44.auth.me();
+
+      const atividade = await base44.entities.Atividade.create({
+        ...data,
+        codigo_atividade,
+        registrado_por: user.email,
+      });
+
+      // ✅ aprovação idempotente (não duplica)
+      await ensureApprovalIdempotente({
+        tipo: 'atividade',
+        atividade_id: atividade.id,
+        solicitante_email: user.email,
+      });
+
+      // Log / notificação (não quebra o fluxo se falhar)
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Criou',
+          entidade: 'Atividade',
+          detalhes: `Registrou atividade ${codigo_atividade} do tipo ${data.tipo}`,
+        });
+      } catch {}
+
+      try {
+        await notificarCoordenadores(
+          'nova_atividade',
+          'Nova Atividade Registrada',
+          `${user.full_name} registrou uma nova atividade ${codigo_atividade} do tipo ${data.tipo} - Aguardando aprovação`,
+          'Aprovacao'
+        );
+      } catch {}
+
+      return atividade;
+    },
     onSuccess: () => {
-      submitLockRef.current = false; // Liberar lock antes de fechar
-      
-      // Fechar modal
+      // fecha modal primeiro (evita re-render duplicado)
       setTimeout(() => {
         setIsDialogOpen(false);
         resetForm();
       }, 50);
 
-      // Invalidar queries
+      // depois sincroniza
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+        queryClient.invalidateQueries({ queryKey: ['atividades'] });
         queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['ranking'] });
         queryClient.invalidateQueries({ queryKey: ['rankings'] });
         queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
-        queryClient.invalidateQueries({ queryKey: ['supervisores'] });
         setShowSuccessDialog(true);
-      }, 400);
+      }, 300);
     },
-
     onError: (error) => {
-      submitLockRef.current = false; // CRÍTICO: Liberar lock em caso de erro
       toast.error('❌ Erro ao registrar atividade', {
-        description: error.message || 'Tente novamente',
+        description: error?.message || 'Tente novamente',
         duration: 5000,
       });
+      submitLockRef.current = false;
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const result = await base44.entities.Atividade.update(id, data);
       const user = await base44.auth.me();
+      const result = await base44.entities.Atividade.update(id, data);
+
+      // ✅ Se supervisor re-enviar depois de rejeitado, volta pra pendente sem duplicar
+      await ensureApprovalIdempotente({
+        tipo: 'atividade',
+        atividade_id: id,
+        solicitante_email: user.email,
+      });
+
       try {
         await base44.entities.Log.create({
           usuario_email: user.email,
           usuario_nome: user.full_name,
           acao: 'Atualizou',
           entidade: 'Atividade',
-          detalhes: `Atualizou atividade`,
+          detalhes: `Atualizou atividade ${id}`,
         });
-      } catch (logError) {
-        console.warn('Falha ao criar log de atualização:', logError);
-      }
+      } catch {}
+
       return result;
     },
     onSuccess: () => {
@@ -354,18 +415,18 @@ export default function Atividades() {
       resetForm();
 
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+        queryClient.invalidateQueries({ queryKey: ['atividades'] });
+        queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['ranking'] });
-        queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
         setShowSuccessDialog(true);
       }, 200);
     },
     onError: (error) => {
       toast.error('❌ Erro ao atualizar atividade', {
-        description: error.message || 'Tente novamente',
+        description: error?.message || 'Tente novamente',
         duration: 5000,
       });
+      submitLockRef.current = false;
     },
   });
 
@@ -373,17 +434,19 @@ export default function Atividades() {
     mutationFn: async (id) => {
       const user = await base44.auth.me();
       await base44.entities.Atividade.delete(id);
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Excluiu',
-        entidade: 'Atividade',
-        detalhes: `Excluiu atividade`,
-      });
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Excluiu',
+          entidade: 'Atividade',
+          detalhes: `Excluiu atividade ${id}`,
+        });
+      } catch {}
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Atividade excluída com sucesso!');
       setDeleteId(null);
@@ -396,17 +459,19 @@ export default function Atividades() {
       for (const id of selectedIds) {
         await base44.entities.Atividade.delete(id);
       }
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Excluiu',
-        entidade: 'Atividade',
-        detalhes: `Excluiu ${selectedIds.size} atividades em massa`,
-      });
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Excluiu',
+          entidade: 'Atividade',
+          detalhes: `Excluiu ${selectedIds.size} atividades em massa`,
+        });
+      } catch {}
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(`${selectedIds.size} atividades excluídas com sucesso!`);
       setSelectedIds(new Set());
@@ -427,14 +492,13 @@ export default function Atividades() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // ✅ Lock anti-double-submit síncrono
     if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
     submitLockRef.current = true;
 
     const dataAtual = new Date();
-    const dataFormatada = `${dataAtual.getFullYear()}-${String(
-      dataAtual.getMonth() + 1
-    ).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+    const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(
+      dataAtual.getDate()
+    ).padStart(2, '0')}`;
 
     const payload = {
       ...formData,
@@ -471,32 +535,6 @@ export default function Atividades() {
     setIsDialogOpen(true);
   };
 
-  const getSupervisorNome = (id) => {
-    const supervisor = supervisores.find((s) => s.id === id);
-    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
-    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
-  };
-
-  const getAnalistaNome = (id) => {
-    const analista = analistas.find((a) => a.id === id);
-    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
-    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
-  };
-
-  const handleAnalistaChange = (analistaId) => {
-    const analista = analistas.find((a) => a.id === analistaId);
-    setFormData({
-      ...formData,
-      analista_id: analistaId,
-      supervisor_id: analista?.supervisor_id || '',
-    });
-  };
-
-  const handleTipoChange = (tipo) => {
-    setSelectedType(tipo);
-    setFormData({ ...formData, tipo });
-  };
-
   const getTipoColor = (tipo) => {
     const colors = {
       Chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -520,38 +558,25 @@ export default function Atividades() {
     return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
-  const atividadesFiltradas = atividades
-    .filter((ativ) => {
-      if (
-        filterIdBusca &&
-        !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())
-      )
-        return false;
-      if (
-        filterSupervisor &&
-        !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase())
-      )
-        return false;
-      if (
-        filterAnalista &&
-        !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase())
-      )
-        return false;
-      if (filterTipo && !ativ.tipo.toLowerCase().includes(filterTipo.toLowerCase()))
-        return false;
-      if (filterDataInicio && ativ.data < filterDataInicio) return false;
-      if (filterDataFim && ativ.data > filterDataFim) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
-      const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
-      return analistaA.localeCompare(analistaB);
-    });
+  const atividadesFiltradas = useMemo(() => {
+    return atividades
+      .filter((ativ) => {
+        if (filterIdBusca && !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
+        if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase()))
+          return false;
+        if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase()))
+          return false;
+        if (filterTipo && !String(ativ.tipo || '').toLowerCase().includes(filterTipo.toLowerCase())) return false;
+        if (filterDataInicio && ativ.data < filterDataInicio) return false;
+        if (filterDataFim && ativ.data > filterDataFim) return false;
+        return true;
+      })
+      .sort((a, b) => getAnalistaNome(a.analista_id).toLowerCase().localeCompare(getAnalistaNome(b.analista_id).toLowerCase()));
+  }, [atividades, filterIdBusca, filterSupervisor, filterAnalista, filterTipo, filterDataInicio, filterDataFim]);
 
   // Paginação
   const totalRegistros = atividadesFiltradas.length;
-  const totalPaginas = Math.ceil(totalRegistros / pageSize);
+  const totalPaginas = Math.ceil(totalRegistros / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
@@ -576,17 +601,16 @@ export default function Atividades() {
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
+              setIsDialogOpen(open);
               if (!open) {
                 resetForm();
                 submitLockRef.current = false;
               }
-              setIsDialogOpen(open);
             }}
           >
             <DialogTrigger asChild>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 gap-2"
-                disabled={createMutation.isPending || updateMutation.isPending}
                 onClick={() => {
                   submitLockRef.current = false;
                   setEditingAtividade(null);
@@ -603,7 +627,7 @@ export default function Atividades() {
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {editingAtividade && editingAtividade.codigo_atividade && (
+                {editingAtividade?.codigo_atividade && (
                   <div className="bg-[#ADF802]/10 border border-[#ADF802]/30 rounded-lg p-3">
                     <p className="text-sm text-[#ADF802] font-mono">
                       🔖 Código: <strong>{editingAtividade.codigo_atividade}</strong>
@@ -689,9 +713,7 @@ export default function Atividades() {
                       placeholder="Ex: #12345"
                       maxLength="10"
                       value={formData.ticket_acompanhado}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ticket_acompanhado: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
@@ -703,9 +725,7 @@ export default function Atividades() {
                     <Input
                       type="text"
                       value={formData.protocolo_gravacao}
-                      onChange={(e) =>
-                        setFormData({ ...formData, protocolo_gravacao: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
@@ -714,12 +734,8 @@ export default function Atividades() {
                 {selectedType === 'Monitoria Offline' && (
                   <MonitoriaOfflineForm
                     data={formData.topicos_monitoria_offline}
-                    onChange={(topicos) =>
-                      setFormData({ ...formData, topicos_monitoria_offline: topicos })
-                    }
-                    onProtocoloChange={(protocolo) =>
-                      setFormData({ ...formData, protocolo_gravacao: protocolo })
-                    }
+                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
+                    onProtocoloChange={(protocolo) => setFormData({ ...formData, protocolo_gravacao: protocolo })}
                     onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
@@ -727,12 +743,8 @@ export default function Atividades() {
                 {selectedType === 'Monitoria Assistida' && (
                   <MonitoriaAssistidaForm
                     data={formData.topicos_monitoria_assistida}
-                    onChange={(topicos) =>
-                      setFormData({ ...formData, topicos_monitoria_assistida: topicos })
-                    }
-                    onLinkChange={(link) =>
-                      setFormData({ ...formData, link_gravacao_teams: link })
-                    }
+                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
+                    onLinkChange={(link) => setFormData({ ...formData, link_gravacao_teams: link })}
                     onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
@@ -740,10 +752,7 @@ export default function Atividades() {
                 {selectedType === 'Feedback Individual' && (
                   <div>
                     <Label>Tipo de Feedback</Label>
-                    <Select
-                      value={formData.tipo_feedback}
-                      onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}
-                    >
+                    <Select value={formData.tipo_feedback} onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}>
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                         <SelectValue />
                       </SelectTrigger>
@@ -773,10 +782,7 @@ export default function Atividades() {
 
                     <div>
                       <Label>Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(val) => setFormData({ ...formData, status: val })}
-                      >
+                      <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
                         <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                           <SelectValue />
                         </SelectTrigger>
@@ -814,7 +820,6 @@ export default function Atividades() {
                     Cancelar
                   </Button>
 
-                  {/* ✅ BOTÃO MUDA PARA "REGISTRADO" APÓS CRIAR */}
                   <Button
                     type="submit"
                     disabled={submitLockRef.current || createMutation.isPending || updateMutation.isPending}
@@ -911,12 +916,7 @@ export default function Atividades() {
           </div>
         </div>
 
-        {(filterIdBusca ||
-          filterSupervisor ||
-          filterAnalista ||
-          filterTipo ||
-          filterDataInicio ||
-          filterDataFim) && (
+        {(filterIdBusca || filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
           <div className="mt-4 flex justify-end">
             <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
               <X className="w-4 h-4" />
@@ -926,7 +926,7 @@ export default function Atividades() {
         )}
       </div>
 
-      {/* Tabela de Atividades */}
+      {/* Tabela */}
       <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 overflow-hidden">
         {atividadesFiltradas.length > 0 && (
           <div className="bg-[#0d0d0d] border-b border-gray-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -941,7 +941,7 @@ export default function Atividades() {
                 <Select
                   value={pageSize.toString()}
                   onValueChange={(val) => {
-                    setPageSize(parseInt(val));
+                    setPageSize(parseInt(val, 10));
                     setCurrentPage(1);
                   }}
                 >
@@ -1041,12 +1041,15 @@ export default function Atividades() {
                       className="cursor-pointer"
                     />
                   </td>
+
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
                       {atividade.codigo_atividade || 'N/A'}
                     </span>
                   </td>
+
                   <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{getLocalDateString(atividade.data)}</td>
+
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
@@ -1055,17 +1058,26 @@ export default function Atividades() {
                       <AtividadeInfoTooltip tipo={atividade.tipo} />
                     </div>
                   </td>
+
                   <td className="px-4 py-3 text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</td>
                   <td className="px-4 py-3 text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</td>
+
                   <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[150px]">
                     {atividade.registrado_por || atividade.created_by}
                   </td>
+
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>{atividade.nota}</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>
+                      {atividade.nota}
+                    </span>
                   </td>
+
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>{atividade.status}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
+                      {atividade.status}
+                    </span>
                   </td>
+
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
@@ -1083,6 +1095,7 @@ export default function Atividades() {
                         : '⏳ Pendente'}
                     </span>
                   </td>
+
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <Button
@@ -1094,6 +1107,7 @@ export default function Atividades() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
+
                       {canEdit && (
                         <Button
                           variant="ghost"
@@ -1105,6 +1119,7 @@ export default function Atividades() {
                           <Pencil className="w-4 h-4" />
                         </Button>
                       )}
+
                       {canDelete && (
                         <Button
                           variant="ghost"
@@ -1128,15 +1143,13 @@ export default function Atividades() {
           <div className="text-center py-12">
             <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">
-              {atividades.length === 0
-                ? 'Nenhuma atividade registrada'
-                : 'Nenhuma atividade encontrada com os filtros aplicados'}
+              {atividades.length === 0 ? 'Nenhuma atividade registrada' : 'Nenhuma atividade encontrada com os filtros aplicados'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Dialog de Visualização */}
+      {/* Dialog de Visualização (mantive simples: se você já usa VisualizarAtividade separado, pode plugar aqui) */}
       <Dialog open={!!viewingAtividade} onOpenChange={() => setViewingAtividade(null)}>
         <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1163,87 +1176,7 @@ export default function Atividades() {
                   <p className="text-xs text-gray-400 mb-1">Analista</p>
                   <p className="text-white">{getAnalistaNome(viewingAtividade.analista_id)}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Nota</p>
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${getNotaBadgeColor(viewingAtividade.nota)}`}>
-                    {viewingAtividade.nota}/10
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Status</p>
-                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(viewingAtividade.status)}`}>
-                    {viewingAtividade.status}
-                  </span>
-                </div>
               </div>
-
-              {viewingAtividade.protocolo_gravacao && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Protocolo da Gravação</p>
-                  <p className="text-white">{viewingAtividade.protocolo_gravacao}</p>
-                </div>
-              )}
-
-              {viewingAtividade.link_gravacao_teams && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Link Teams</p>
-                  <a
-                    href={viewingAtividade.link_gravacao_teams}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-400 hover:underline text-sm"
-                  >
-                    {viewingAtividade.link_gravacao_teams}
-                  </a>
-                </div>
-              )}
-
-              {viewingAtividade.ticket_acompanhado && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Ticket</p>
-                  <p className="text-white">{viewingAtividade.ticket_acompanhado}</p>
-                </div>
-              )}
-
-              {viewingAtividade.tipo_feedback && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Tipo de Feedback</p>
-                  <p className="text-white">{viewingAtividade.tipo_feedback}</p>
-                </div>
-              )}
-
-              {viewingAtividade.comentario && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Comentário</p>
-                  <p className="text-gray-300 text-sm">{viewingAtividade.comentario}</p>
-                </div>
-              )}
-
-              {viewingAtividade.tipo === 'Monitoria Offline' && viewingAtividade.topicos_monitoria_offline && (
-                <div>
-                  <MonitoriaOfflineForm
-                    data={{
-                      ...viewingAtividade.topicos_monitoria_offline,
-                      protocolo: viewingAtividade.protocolo_gravacao,
-                    }}
-                    onChange={() => {}}
-                    readOnly={true}
-                  />
-                </div>
-              )}
-
-              {viewingAtividade.tipo === 'Monitoria Assistida' && viewingAtividade.topicos_monitoria_assistida && (
-                <div>
-                  <MonitoriaAssistidaForm
-                    data={{
-                      ...viewingAtividade.topicos_monitoria_assistida,
-                      linkGravacao: viewingAtividade.link_gravacao_teams,
-                    }}
-                    onChange={() => {}}
-                    readOnly={true}
-                  />
-                </div>
-              )}
 
               <div className="flex justify-end pt-4 border-t border-gray-800">
                 <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">
@@ -1315,10 +1248,6 @@ export default function Atividades() {
               <p className="flex items-start gap-2">
                 <span className="text-blue-400 text-xl">🔔</span>
                 <span>Você será <strong className="text-white">notificado</strong> assim que a atividade for avaliada.</span>
-              </p>
-              <p className="flex items-start gap-2">
-                <span className="text-purple-400 text-xl">👤</span>
-                <span>Acompanhe o status no seu <strong className="text-white">Perfil</strong>.</span>
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
