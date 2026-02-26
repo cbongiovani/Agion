@@ -46,6 +46,11 @@ export function canEditModule(permissions, moduleKey) {
   return permissions?.modules?.[moduleKey]?.edit === true;
 }
 
+// Checar se usuário pode deletar no módulo
+export function canDeleteModule(permissions, moduleKey) {
+  return permissions?.modules?.[moduleKey]?.delete === true;
+}
+
 // Filtrar itens de navegação visíveis
 export function getVisibleNavItems(permissions, allItems) {
   return allItems.filter((item) => isModuleVisible(permissions, item.permKey));
