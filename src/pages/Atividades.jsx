@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
+// src/pages/Atividades.jsx
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +31,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 import {
   Plus,
   Pencil,
@@ -39,9 +46,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+
 import { getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
@@ -53,32 +58,104 @@ import { MODULES } from '@/components/moduleConstants';
 export default function Atividades() {
   const queryClient = useQueryClient();
 
-  // ✅ Lock anti-double-submit (síncrono)
-  const submitLockRef = useRef(false);
+  // ===== Helpers (corrigem 422 + duplicação) =====
+  const normalizeId = (v) => {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v === 'string') {
+      const t = v.trim();
+      if (!t) return undefined;
+      if (/^\d+$/.test(t)) return Number(t);
+      return t;
+    }
+    return v;
+  };
 
+  const stripEmpty = (obj) => {
+    const out = {};
+    Object.entries(obj).forEach(([k, v]) => {
+      if (v === '' || v === null || v === undefined) return;
+      out[k] = v;
+    });
+    return out;
+  };
+
+  const ensureApprovalForActivity = async (atividadeId) => {
+    const existentes = await base44.entities.AprovacaoAtividade.filter({
+      tipo: 'atividade',
+      atividade_id: atividadeId,
+    });
+    if (Array.isArray(existentes) && existentes.length > 0) return existentes[0];
+
+    return await base44.entities.AprovacaoAtividade.create({
+      tipo: 'atividade',
+      atividade_id: atividadeId,
+      status: 'pendente',
+    });
+  };
+
+  // ===== UI State =====
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [selectedType, setSelectedType] = useState('Chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-  // Filtros
+  // filtros
   const [filterSupervisor, setFilterSupervisor] = useState('');
   const [filterAnalista, setFilterAnalista] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterDataInicio, setFilterDataInicio] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
   const [filterIdBusca, setFilterIdBusca] = useState('');
+
+  // paginação + seleção em massa
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
 
+  const [selectedType, setSelectedType] = useState('Chamados');
+  const [formData, setFormData] = useState({
+    // data só é editável quando editar
+    data: '',
+    tipo: 'Chamados',
+    analista_id: '',
+    supervisor_id: '',
+    protocolo_gravacao: '',
+    link_gravacao_teams: '',
+    ticket_acompanhado: '',
+    tipo_feedback: '',
+    topicos_monitoria_offline: {},
+    topicos_monitoria_assistida: {},
+    nota: '',
+    comentario: '',
+    status: 'Aberto',
+  });
+
+  const resetForm = () => {
+    setFormData({
+      data: '',
+      tipo: 'Chamados',
+      analista_id: '',
+      supervisor_id: '',
+      protocolo_gravacao: '',
+      link_gravacao_teams: '',
+      ticket_acompanhado: '',
+      tipo_feedback: '',
+      topicos_monitoria_offline: {},
+      topicos_monitoria_assistida: {},
+      nota: '',
+      comentario: '',
+      status: 'Aberto',
+    });
+    setEditingAtividade(null);
+    setSelectedType('Chamados');
+  };
+
+  // ===== Queries =====
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
-    staleTime: 60 * 1000,
   });
 
   const { data: modulePermissions } = useQuery({
@@ -88,6 +165,7 @@ export default function Atividades() {
       return await getUserModulePermissions(currentUser.email, currentUser.role);
     },
     enabled: !!currentUser?.email,
+    staleTime: 60 * 1000,
   });
 
   const canCreate =
@@ -104,76 +182,68 @@ export default function Atividades() {
     currentUser?.role === 'admin' ||
     modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
-  const [formData, setFormData] = useState({
-    tipo: 'Chamados',
-    analista_id: '',
-    supervisor_id: '',
-    protocolo_gravacao: '',
-    link_gravacao_teams: '',
-    ticket_acompanhado: '',
-    tipo_feedback: '',
-    topicos_monitoria_offline: {},
-    topicos_monitoria_assistida: {},
-    nota: '',
-    comentario: '',
-    status: 'Aberto',
-  });
-
-  // Carregamentos base
   const { data: supervisores = [] } = useQuery({
     queryKey: ['supervisores'],
     queryFn: () => base44.entities.Supervisor.list(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: analistas = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ['usuarios'],
     queryFn: () => base44.entities.User.list(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 
-  // ✅ Lista + merge de aprovação
-  const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role],
-    enabled: !!currentUser,
-    staleTime: 3000,
+  // Aprovacoes: pega todas e deduplica por atividade_id (mais recente primeiro)
+  const { data: aprovacoesPorAtividade = [] } = useQuery({
+    queryKey: ['aprovacoesAtividadeMap'],
     queryFn: async () => {
-      const todasAtividades = await base44.entities.Atividade.list('-created_date');
+      const all = await base44.entities.AprovacaoAtividade.list('-created_date', 800);
+      const map = new Map(); // key: atividade_id -> aprovacao
+      for (const a of all || []) {
+        if (a?.tipo !== 'atividade') continue;
+        const key = a.atividade_id;
+        if (!key) continue;
+        if (!map.has(key)) {
+          map.set(key, a); // como está ordenado por -created_date, o primeiro é o mais recente
+        }
+      }
+      return Array.from(map.entries()).map(([atividadeId, aprovacao]) => ({
+        atividadeId,
+        aprovacao,
+      }));
+    },
+    enabled: !!currentUser,
+    staleTime: 10 * 1000,
+  });
 
-      // Dedup por id
-      const mapUnique = {};
-      (todasAtividades || []).forEach((ativ) => {
-        const id = String(ativ?.id);
-        if (!id) return;
-        if (!mapUnique[id]) mapUnique[id] = ativ;
-      });
-      const atividadesUnicas = Object.values(mapUnique);
+  const aprovacaoMap = useMemo(() => {
+    const m = new Map();
+    for (const it of aprovacoesPorAtividade) m.set(it.atividadeId, it.aprovacao);
+    return m;
+  }, [aprovacoesPorAtividade]);
 
-      // Aprovações
-      const todasAprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 1000);
-      const aprovacaoPorAtividadeId = {};
+  const { data: atividades = [], isLoading } = useQuery({
+    queryKey: ['atividades', currentUser?.role, currentUser?.email],
+    queryFn: async () => {
+      const todasAtividades = await base44.entities.Atividade.list('-created_date', 800);
 
-      (todasAprovacoes || []).forEach((aprov) => {
-        if (aprov?.tipo !== 'atividade') return;
-        const aId = String(aprov?.atividade_id);
-        if (!aId) return;
+      // dedup por id
+      const unique = new Map();
+      for (const a of todasAtividades || []) {
+        if (a?.id && !unique.has(a.id)) unique.set(a.id, a);
+      }
+      const atividadesUnicas = Array.from(unique.values());
 
-        // pega a mais recente
-        const newTime = new Date(aprov?.created_date || aprov?.created_at || aprov?.data_aprovacao || 0).getTime();
-        const old = aprovacaoPorAtividadeId[aId];
-        const oldTime = new Date(old?.created_date || old?.created_at || old?.data_aprovacao || 0).getTime();
-        if (!old || newTime >= oldTime) aprovacaoPorAtividadeId[aId] = aprov;
-      });
-
+      // anexa aprovacao (se existir)
       const atividadesComAprovacao = atividadesUnicas.map((ativ) => {
-        const id = String(ativ.id);
-        const aprov = aprovacaoPorAtividadeId[id];
+        const aprov = aprovacaoMap.get(ativ.id);
         return {
           ...ativ,
           aprovacao_status: aprov?.status || 'pendente',
@@ -182,52 +252,31 @@ export default function Atividades() {
         };
       });
 
-      const idsAprovados = new Set(
-        Object.keys(aprovacaoPorAtividadeId).filter(
-          (id) => aprovacaoPorAtividadeId[id]?.status === 'aprovado'
-        )
-      );
-
       // Admin vê tudo
       if (currentUser?.role === 'admin') return atividadesComAprovacao;
 
-      // Supervisor: aprovados + próprios (pendentes/rejeitados)
+      // Supervisor vê: aprovadas de todos + as dele (pendente/rejeitado)
       if (currentUser?.role === 'supervisor') {
         return atividadesComAprovacao.filter((ativ) => {
-          const id = String(ativ.id);
-          return (
-            idsAprovados.has(id) ||
-            ativ.registrado_por === currentUser.email ||
-            ativ.created_by === currentUser.email
-          );
+          const aprov = aprovacaoMap.get(ativ.id);
+          const isApproved = aprov?.status === 'aprovado';
+          const isMine =
+            ativ.registrado_por === currentUser.email || ativ.created_by === currentUser.email;
+          return isApproved || isMine;
         });
       }
 
-      // Outros: apenas aprovadas
-      return atividadesComAprovacao.filter((ativ) => idsAprovados.has(String(ativ.id)));
+      // demais: só aprovadas
+      return atividadesComAprovacao.filter((ativ) => {
+        const aprov = aprovacaoMap.get(ativ.id);
+        return aprov?.status === 'aprovado';
+      });
     },
+    enabled: !!currentUser,
+    staleTime: 5 * 1000,
   });
 
-  const resetForm = () => {
-    setFormData({
-      tipo: 'Chamados',
-      analista_id: '',
-      supervisor_id: '',
-      protocolo_gravacao: '',
-      link_gravacao_teams: '',
-      ticket_acompanhado: '',
-      tipo_feedback: '',
-      topicos_monitoria_offline: {},
-      topicos_monitoria_assistida: {},
-      nota: '',
-      comentario: '',
-      status: 'Aberto',
-    });
-    setEditingAtividade(null);
-    setSelectedType('Chamados');
-    submitLockRef.current = false;
-  };
-
+  // ===== Nome helpers =====
   const getSupervisorNome = (id) => {
     const supervisor = supervisores.find((s) => String(s.id) === String(id));
     const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
@@ -240,20 +289,71 @@ export default function Atividades() {
     return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
   };
 
+  // ===== UI Behavior =====
+  useEffect(() => {
+    if (isDialogOpen) return;
+    setSelectedIds(new Set());
+  }, [isDialogOpen]);
+
+  const limparFiltros = () => {
+    setFilterSupervisor('');
+    setFilterAnalista('');
+    setFilterTipo('');
+    setFilterDataInicio('');
+    setFilterDataFim('');
+    setFilterIdBusca('');
+    setCurrentPage(1);
+  };
+
   const handleAnalistaChange = (analistaId) => {
     const analista = analistas.find((a) => String(a.id) === String(analistaId));
     setFormData((prev) => ({
       ...prev,
-      analista_id: String(analistaId),
+      analista_id: analistaId,
       supervisor_id: analista?.supervisor_id ? String(analista.supervisor_id) : '',
     }));
   };
 
   const handleTipoChange = (tipo) => {
     setSelectedType(tipo);
-    setFormData((prev) => ({ ...prev, tipo }));
+    setFormData((prev) => ({
+      ...prev,
+      tipo,
+      // reseta campos específicos quando troca tipo
+      protocolo_gravacao: prev.protocolo_gravacao,
+      link_gravacao_teams: prev.link_gravacao_teams,
+      ticket_acompanhado: prev.ticket_acompanhado,
+      tipo_feedback: prev.tipo_feedback,
+      topicos_monitoria_offline: prev.topicos_monitoria_offline || {},
+      topicos_monitoria_assistida: prev.topicos_monitoria_assistida || {},
+    }));
   };
 
+  const getTipoColor = (tipo) => {
+    const colors = {
+      Chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      Ligações: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      'Monitoria Offline': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      'Monitoria Assistida': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      'Feedback Individual': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    };
+    return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  };
+
+  const getNotaBadgeColor = (nota) => {
+    const n = Number(nota) || 0;
+    if (n >= 9) return 'bg-emerald-500 text-white';
+    if (n >= 7) return 'bg-yellow-500 text-black';
+    return 'bg-red-500 text-white';
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'Concluído') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (status === 'Em evolução') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  };
+
+  // ===== Mutations =====
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const prefixos = {
@@ -264,107 +364,86 @@ export default function Atividades() {
         'Feedback Individual': 'FB',
       };
 
-      // ✅ validações mínimas (evita “não aconteceu nada”)
-      if (!data?.analista_id) {
-        throw new Error('Selecione um Analista.');
-      }
-      if (!data?.supervisor_id) {
-        throw new Error('Supervisor não identificado. Selecione o Analista novamente.');
-      }
-
-      // gera código
-      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
-      const codigosExistentes = (atividadesMesmoTipo || [])
-        .map((a) => a.codigo_atividade)
-        .filter((c) => c && c.startsWith(prefixos[data.tipo]));
-      let proximoNumero = 1;
-      if (codigosExistentes.length > 0) {
-        const numeros = codigosExistentes.map((c) => parseInt(String(c).slice(2), 10)).filter((n) => !Number.isNaN(n));
-        proximoNumero = (numeros.length ? Math.max(...numeros) : 0) + 1;
-      }
-      const codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
-
       const user = await base44.auth.me();
+      const maxTentativas = 3;
+      let lastError = null;
 
-      // ✅ cria atividade
-      const atividadeCriada = await base44.entities.Atividade.create({
-        ...data,
-        codigo_atividade: codigoAtividade,
-        registrado_por: user.email,
-      });
-
-      const atividadeId = String(atividadeCriada?.id);
-
-      // ✅ idempotência da aprovação: se já existir, não criar de novo
-      try {
-        const jaExiste = await base44.entities.AprovacaoAtividade.filter({
-          atividade_id: atividadeId,
-          tipo: 'atividade',
-        });
-
-        if (!jaExiste || jaExiste.length === 0) {
-          await base44.entities.AprovacaoAtividade.create({
-            atividade_id: atividadeId,
-            tipo: 'atividade',
-            status: 'pendente',
-          });
-        }
-      } catch (aprovacaoError) {
-        // ✅ rollback para não “sumir” a criação
+      for (let t = 1; t <= maxTentativas; t++) {
         try {
-          await base44.entities.Atividade.delete(atividadeId);
-        } catch {}
-        throw new Error(aprovacaoError?.message || 'Falha ao criar aprovação. Registro cancelado.');
+          // gera código por tipo
+          const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
+
+          const codigosExistentes = (atividadesMesmoTipo || [])
+            .map((a) => a.codigo_atividade)
+            .filter((c) => c && String(c).startsWith(prefixos[data.tipo]));
+
+          let proximoNumero = 1;
+          if (codigosExistentes.length) {
+            const numeros = codigosExistentes
+              .map((c) => parseInt(String(c).slice(2), 10))
+              .filter((n) => !isNaN(n));
+            proximoNumero = (numeros.length ? Math.max(...numeros) : 0) + 1;
+          }
+
+          const codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
+
+          // cria atividade com payload limpo + registrado_por
+          const created = await base44.entities.Atividade.create({
+            ...data,
+            codigo_atividade: codigoAtividade,
+            registrado_por: user.email,
+          });
+
+          // garante aprovação sem duplicar
+          await ensureApprovalForActivity(created.id);
+
+          // log + notificação
+          try {
+            await base44.entities.Log.create({
+              usuario_email: user.email,
+              usuario_nome: user.full_name,
+              acao: 'Criou',
+              entidade: 'Atividade',
+              detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
+            });
+          } catch {}
+
+          try {
+            await notificarCoordenadores(
+              'nova_atividade',
+              'Nova Atividade Registrada',
+              `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
+              'Aprovacao'
+            );
+          } catch {}
+
+          return created;
+        } catch (err) {
+          lastError = err;
+          await new Promise((r) => setTimeout(r, 150 * t));
+        }
       }
 
-      // logs + notificação
-      try {
-        await base44.entities.Log.create({
-          usuario_email: user.email,
-          usuario_nome: user.full_name,
-          acao: 'Criou',
-          entidade: 'Atividade',
-          detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
-        });
-      } catch {}
-
-      try {
-        await notificarCoordenadores(
-          'nova_atividade',
-          'Nova Atividade Registrada',
-          `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
-          'Aprovacao'
-        );
-      } catch {}
-
-      return atividadeCriada;
+      throw lastError || new Error('Falha ao criar atividade.');
     },
-
     onSuccess: () => {
-      // ✅ FECHA MODAL SEM ENROLO
       setIsDialogOpen(false);
       resetForm();
 
-      // ✅ invalida as queries CERTAS (incluindo a tela de aprovação)
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role, currentUser?.email] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesAtividadeMap'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-      queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 
       setShowSuccessDialog(true);
     },
-
     onError: (error) => {
       toast.error('❌ Erro ao registrar atividade', {
-        description: error?.message || 'Tente novamente',
-        duration: 5000,
+        description: error?.message || 'Validação recusada (422). Verifique campos obrigatórios.',
+        duration: 7000,
       });
-    },
-
-    onSettled: () => {
-      // ✅ SEMPRE libera lock
-      submitLockRef.current = false;
     },
   });
 
@@ -383,22 +462,21 @@ export default function Atividades() {
       } catch {}
       return result;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setIsDialogOpen(false);
       resetForm();
+
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role, currentUser?.email] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
       setShowSuccessDialog(true);
     },
     onError: (error) => {
       toast.error('❌ Erro ao atualizar atividade', {
         description: error?.message || 'Tente novamente',
-        duration: 5000,
+        duration: 6000,
       });
-    },
-    onSettled: () => {
-      submitLockRef.current = false;
     },
   });
 
@@ -418,20 +496,21 @@ export default function Atividades() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role, currentUser?.email] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesAtividadeMap'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Atividade excluída com sucesso!');
       setDeleteId(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir', { description: error?.message || 'Tente novamente' });
     },
   });
 
   const deleteMultipleMutation = useMutation({
     mutationFn: async () => {
       const user = await base44.auth.me();
-      for (const id of selectedIds) {
-        await base44.entities.Atividade.delete(id);
-      }
+      for (const id of selectedIds) await base44.entities.Atividade.delete(id);
       try {
         await base44.entities.Log.create({
           usuario_email: user.email,
@@ -444,43 +523,50 @@ export default function Atividades() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role, currentUser?.email] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesAtividadeMap'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(`${selectedIds.size} atividades excluídas com sucesso!`);
       setSelectedIds(new Set());
       setDeleteMultipleDialogOpen(false);
     },
+    onError: (error) => {
+      toast.error('Erro ao excluir em massa', { description: error?.message || 'Tente novamente' });
+    },
   });
 
-  const limparFiltros = () => {
-    setFilterSupervisor('');
-    setFilterAnalista('');
-    setFilterTipo('');
-    setFilterDataInicio('');
-    setFilterDataFim('');
-    setFilterIdBusca('');
-    setCurrentPage(1);
-  };
-
+  // ===== Submit =====
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (createMutation.isPending || updateMutation.isPending) return;
 
-    // ✅ lock anti-double-submit
-    if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
-    submitLockRef.current = true;
+    // validações (evita 422 silencioso)
+    if (!formData.tipo) {
+      toast.error('Selecione o tipo da atividade.');
+      return;
+    }
+    if (!formData.analista_id) {
+      toast.error('Selecione o analista.');
+      return;
+    }
 
     const dataAtual = new Date();
-    const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(
-      dataAtual.getDate()
-    ).padStart(2, '0')}`;
+    const dataFormatada = `${dataAtual.getFullYear()}-${String(
+      dataAtual.getMonth() + 1
+    ).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
 
-    const payload = {
+    const payloadRaw = {
       ...formData,
-      data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
-      nota: parseFloat(formData.nota) || 0,
-      tipo: selectedType,
+      data: editingAtividade
+        ? ensureCorrectDate(formData.data)
+        : dataFormatada,
+
+      analista_id: normalizeId(formData.analista_id),
+      supervisor_id: normalizeId(formData.supervisor_id),
+      nota: Number(formData.nota) || 0,
     };
+
+    const payload = stripEmpty(payloadRaw);
 
     if (editingAtividade) {
       updateMutation.mutate({ id: editingAtividade.id, data: payload });
@@ -490,7 +576,6 @@ export default function Atividades() {
   };
 
   const openEdit = (atividade) => {
-    submitLockRef.current = false;
     setEditingAtividade(atividade);
     setFormData({
       data: atividade.data,
@@ -511,61 +596,60 @@ export default function Atividades() {
     setIsDialogOpen(true);
   };
 
-  const getTipoColor = (tipo) => {
-    const colors = {
-      Chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      Ligações: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-      'Monitoria Offline': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      'Monitoria Assistida': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-      'Feedback Individual': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    };
-    return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-  };
+  // ===== filtros + paginação =====
+  const atividadesFiltradas = useMemo(() => {
+    return (atividades || [])
+      .filter((ativ) => {
+        if (filterIdBusca && !String(ativ.codigo_atividade || '').toLowerCase().includes(filterIdBusca.toLowerCase()))
+          return false;
 
-  const getNotaBadgeColor = (nota) => {
-    const n = Number(nota || 0);
-    if (n >= 9) return 'bg-emerald-500 text-white';
-    if (n >= 7) return 'bg-yellow-500 text-black';
-    return 'bg-red-500 text-white';
-  };
+        if (filterSupervisor) {
+          const nome = getSupervisorNome(ativ.supervisor_id).toLowerCase();
+          if (!nome.includes(filterSupervisor.toLowerCase())) return false;
+        }
 
-  const getStatusColor = (status) => {
-    if (status === 'Concluído') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-    if (status === 'Em evolução') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-    return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-  };
+        if (filterAnalista) {
+          const nome = getAnalistaNome(ativ.analista_id).toLowerCase();
+          if (!nome.includes(filterAnalista.toLowerCase())) return false;
+        }
 
-  const atividadesFiltradas = (atividades || [])
-    .filter((ativ) => {
-      if (filterIdBusca && !String(ativ.codigo_atividade || '').toLowerCase().includes(filterIdBusca.toLowerCase()))
-        return false;
+        if (filterTipo && !String(ativ.tipo || '').toLowerCase().includes(filterTipo.toLowerCase()))
+          return false;
 
-      if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase()))
-        return false;
+        if (filterDataInicio && String(ativ.data || '') < filterDataInicio) return false;
+        if (filterDataFim && String(ativ.data || '') > filterDataFim) return false;
 
-      if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase()))
-        return false;
-
-      if (filterTipo && !String(ativ.tipo || '').toLowerCase().includes(filterTipo.toLowerCase()))
-        return false;
-
-      if (filterDataInicio && String(ativ.data || '') < filterDataInicio) return false;
-      if (filterDataFim && String(ativ.data || '') > filterDataFim) return false;
-
-      return true;
-    })
-    .sort((a, b) => {
-      const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
-      const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
-      return analistaA.localeCompare(analistaB);
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        const aa = getAnalistaNome(a.analista_id).toLowerCase();
+        const bb = getAnalistaNome(b.analista_id).toLowerCase();
+        return aa.localeCompare(bb);
+      });
+  }, [
+    atividades,
+    filterIdBusca,
+    filterSupervisor,
+    filterAnalista,
+    filterTipo,
+    filterDataInicio,
+    filterDataFim,
+    supervisores,
+    analistas,
+    usuarios,
+  ]);
 
   const totalRegistros = atividadesFiltradas.length;
-  const totalPaginas = Math.ceil(totalRegistros / pageSize) || 1;
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
 
+  useEffect(() => {
+    if (currentPage > totalPaginas) setCurrentPage(totalPaginas);
+  }, [totalPaginas, currentPage]);
+
+  // ===== Loading =====
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -576,6 +660,7 @@ export default function Atividades() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Atividades</h1>
@@ -587,18 +672,16 @@ export default function Atividades() {
             open={isDialogOpen}
             onOpenChange={(open) => {
               setIsDialogOpen(open);
-              if (!open) {
-                resetForm();
-                submitLockRef.current = false;
-              }
+              if (!open) resetForm();
             }}
           >
             <DialogTrigger asChild>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 gap-2"
                 onClick={() => {
-                  submitLockRef.current = false;
                   setEditingAtividade(null);
+                  setSelectedType('Chamados');
+                  resetForm();
                 }}
               >
                 <Plus className="w-4 h-4" />
@@ -636,7 +719,7 @@ export default function Atividades() {
                       <Input
                         type="date"
                         value={formData.data}
-                        onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                        onChange={(e) => setFormData((p) => ({ ...p, data: e.target.value }))}
                         className="bg-[#1a1a1a] border-gray-700 mt-2"
                         required
                       />
@@ -680,11 +763,18 @@ export default function Atividades() {
                     </Select>
                   </div>
 
-                  {formData.supervisor_id && (
+                  {formData.supervisor_id ? (
                     <div>
                       <Label>Supervisor Responsável</Label>
                       <div className="bg-[#1a1a1a] border border-gray-700 rounded-md p-2 mt-2">
                         <p className="text-white">{getSupervisorNome(formData.supervisor_id)}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="opacity-70">
+                      <Label>Supervisor Responsável</Label>
+                      <div className="bg-[#1a1a1a] border border-gray-700 rounded-md p-2 mt-2">
+                        <p className="text-gray-400">Selecione um analista para preencher</p>
                       </div>
                     </div>
                   )}
@@ -695,10 +785,10 @@ export default function Atividades() {
                     <Label>Ticket</Label>
                     <Input
                       type="text"
-                      placeholder="Ex: #12345"
-                      maxLength="20"
+                      placeholder="Ex: 12345"
+                      maxLength={20}
                       value={formData.ticket_acompanhado}
-                      onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
+                      onChange={(e) => setFormData((p) => ({ ...p, ticket_acompanhado: e.target.value }))}
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
@@ -710,7 +800,7 @@ export default function Atividades() {
                     <Input
                       type="text"
                       value={formData.protocolo_gravacao}
-                      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                      onChange={(e) => setFormData((p) => ({ ...p, protocolo_gravacao: e.target.value }))}
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
@@ -719,27 +809,30 @@ export default function Atividades() {
                 {selectedType === 'Monitoria Offline' && (
                   <MonitoriaOfflineForm
                     data={formData.topicos_monitoria_offline}
-                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
-                    onProtocoloChange={(protocolo) => setFormData({ ...formData, protocolo_gravacao: protocolo })}
-                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
+                    onChange={(topicos) => setFormData((p) => ({ ...p, topicos_monitoria_offline: topicos }))}
+                    onProtocoloChange={(protocolo) => setFormData((p) => ({ ...p, protocolo_gravacao: protocolo }))}
+                    onNotaChange={(nota) => setFormData((p) => ({ ...p, nota, status: 'Concluído' }))}
                   />
                 )}
 
                 {selectedType === 'Monitoria Assistida' && (
                   <MonitoriaAssistidaForm
                     data={formData.topicos_monitoria_assistida}
-                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
-                    onLinkChange={(link) => setFormData({ ...formData, link_gravacao_teams: link })}
-                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
+                    onChange={(topicos) => setFormData((p) => ({ ...p, topicos_monitoria_assistida: topicos }))}
+                    onLinkChange={(link) => setFormData((p) => ({ ...p, link_gravacao_teams: link }))}
+                    onNotaChange={(nota) => setFormData((p) => ({ ...p, nota, status: 'Concluído' }))}
                   />
                 )}
 
                 {selectedType === 'Feedback Individual' && (
                   <div>
                     <Label>Tipo de Feedback</Label>
-                    <Select value={formData.tipo_feedback} onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}>
+                    <Select
+                      value={formData.tipo_feedback}
+                      onValueChange={(val) => setFormData((p) => ({ ...p, tipo_feedback: val }))}
+                    >
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
                         <SelectItem value="Positivo">Positivo</SelectItem>
@@ -759,7 +852,7 @@ export default function Atividades() {
                         max="10"
                         step="0.5"
                         value={formData.nota}
-                        onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                        onChange={(e) => setFormData((p) => ({ ...p, nota: e.target.value }))}
                         className="bg-[#1a1a1a] border-gray-700 mt-2"
                         required
                       />
@@ -767,7 +860,10 @@ export default function Atividades() {
 
                     <div>
                       <Label>Status</Label>
-                      <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(val) => setFormData((p) => ({ ...p, status: val }))}
+                      >
                         <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                           <SelectValue />
                         </SelectTrigger>
@@ -785,7 +881,7 @@ export default function Atividades() {
                   <Label>Comentário</Label>
                   <Textarea
                     value={formData.comentario}
-                    onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
+                    onChange={(e) => setFormData((p) => ({ ...p, comentario: e.target.value }))}
                     className="bg-[#1a1a1a] border-gray-700 mt-2 h-24"
                     placeholder="Detalhes adicionais..."
                   />
@@ -807,7 +903,7 @@ export default function Atividades() {
 
                   <Button
                     type="submit"
-                    disabled={submitLockRef.current || createMutation.isPending || updateMutation.isPending}
+                    disabled={createMutation.isPending || updateMutation.isPending}
                     className="bg-emerald-600 hover:bg-emerald-700"
                   >
                     {createMutation.isPending || updateMutation.isPending ? (
@@ -901,7 +997,12 @@ export default function Atividades() {
           </div>
         </div>
 
-        {(filterIdBusca || filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
+        {(filterIdBusca ||
+          filterSupervisor ||
+          filterAnalista ||
+          filterTipo ||
+          filterDataInicio ||
+          filterDataFim) && (
           <div className="mt-4 flex justify-end">
             <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
               <X className="w-4 h-4" />
@@ -916,8 +1017,11 @@ export default function Atividades() {
         {atividadesFiltradas.length > 0 && (
           <div className="bg-[#0d0d0d] border-b border-gray-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-400">
-              Mostrando <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, totalRegistros)}</span> de{' '}
-              <span className="text-white font-semibold">{totalRegistros}</span> registros
+              Mostrando{' '}
+              <span className="text-white font-semibold">
+                {startIndex + 1}-{Math.min(endIndex, totalRegistros)}
+              </span>{' '}
+              de <span className="text-white font-semibold">{totalRegistros}</span> registros
             </div>
 
             <div className="flex items-center gap-4">
@@ -975,7 +1079,11 @@ export default function Atividades() {
               <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="border-gray-700 h-8">
                 Desselecionar Tudo
               </Button>
-              <Button size="sm" onClick={() => setDeleteMultipleDialogOpen(true)} className="bg-red-600 hover:bg-red-700 h-8 gap-2">
+              <Button
+                size="sm"
+                onClick={() => setDeleteMultipleDialogOpen(true)}
+                className="bg-red-600 hover:bg-red-700 h-8 gap-2"
+              >
                 <Trash2 className="w-4 h-4" />
                 Deletar Selecionados
               </Button>
@@ -1026,12 +1134,17 @@ export default function Atividades() {
                       className="cursor-pointer"
                     />
                   </td>
+
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
                       {atividade.codigo_atividade || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{getLocalDateString(atividade.data)}</td>
+
+                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
+                    {getLocalDateString(atividade.data)}
+                  </td>
+
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
@@ -1040,17 +1153,31 @@ export default function Atividades() {
                       <AtividadeInfoTooltip tipo={atividade.tipo} />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[150px]">
-                    {atividade.registrado_por || atividade.created_by}
+
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {getSupervisorNome(atividade.supervisor_id)}
                   </td>
+
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {getAnalistaNome(atividade.analista_id)}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[180px]">
+                    {atividade.registrado_por || atividade.created_by || '-'}
+                  </td>
+
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>{atividade.nota}</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>
+                      {Number(atividade.nota) || 0}
+                    </span>
                   </td>
+
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>{atividade.status}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
+                      {atividade.status || 'Aberto'}
+                    </span>
                   </td>
+
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
@@ -1068,6 +1195,7 @@ export default function Atividades() {
                         : '⏳ Pendente'}
                     </span>
                   </td>
+
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <Button
@@ -1079,6 +1207,7 @@ export default function Atividades() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
+
                       {canEdit && (
                         <Button
                           variant="ghost"
@@ -1090,6 +1219,7 @@ export default function Atividades() {
                           <Pencil className="w-4 h-4" />
                         </Button>
                       )}
+
                       {canDelete && (
                         <Button
                           variant="ghost"
@@ -1113,13 +1243,108 @@ export default function Atividades() {
           <div className="text-center py-12">
             <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">
-              {atividades.length === 0 ? 'Nenhuma atividade registrada' : 'Nenhuma atividade encontrada com os filtros aplicados'}
+              {atividades.length === 0
+                ? 'Nenhuma atividade registrada'
+                : 'Nenhuma atividade encontrada com os filtros aplicados'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Dialog de Exclusão */}
+      {/* Visualização rápida (simples) */}
+      <Dialog open={!!viewingAtividade} onOpenChange={() => setViewingAtividade(null)}>
+        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Atividade</DialogTitle>
+          </DialogHeader>
+
+          {viewingAtividade && (
+            <div className="space-y-4">
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Código</p>
+                    <p className="text-white font-medium">{viewingAtividade.codigo_atividade || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Data</p>
+                    <p className="text-white font-medium">{getLocalDateString(viewingAtividade.data)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Tipo</p>
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getTipoColor(viewingAtividade.tipo)}`}>
+                      {viewingAtividade.tipo}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Aprovação</p>
+                    <p className="text-white font-medium">{viewingAtividade.aprovacao_status || 'pendente'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Supervisor</p>
+                    <p className="text-white font-medium">{getSupervisorNome(viewingAtividade.supervisor_id)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Analista</p>
+                    <p className="text-white font-medium">{getAnalistaNome(viewingAtividade.analista_id)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Nota</p>
+                    <p className="text-white font-medium">{Number(viewingAtividade.nota) || 0}/10</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Status</p>
+                    <p className="text-white font-medium">{viewingAtividade.status || '-'}</p>
+                  </div>
+                </div>
+
+                {viewingAtividade.ticket_acompanhado && (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-400 mb-1">Ticket</p>
+                    <p className="text-white font-medium">{viewingAtividade.ticket_acompanhado}</p>
+                  </div>
+                )}
+
+                {viewingAtividade.protocolo_gravacao && (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-400 mb-1">Protocolo</p>
+                    <p className="text-white font-medium">{viewingAtividade.protocolo_gravacao}</p>
+                  </div>
+                )}
+
+                {viewingAtividade.link_gravacao_teams && (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-400 mb-1">Link Teams</p>
+                    <a
+                      href={viewingAtividade.link_gravacao_teams}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 hover:underline text-sm"
+                    >
+                      {viewingAtividade.link_gravacao_teams}
+                    </a>
+                  </div>
+                )}
+
+                {viewingAtividade.comentario && (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-400 mb-1">Comentário</p>
+                    <p className="text-gray-300 text-sm">{viewingAtividade.comentario}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
@@ -1130,14 +1355,18 @@ export default function Atividades() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate(deleteId)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de Exclusão em Massa */}
+      {/* Exclusão em massa */}
       <AlertDialog open={deleteMultipleDialogOpen} onOpenChange={setDeleteMultipleDialogOpen}>
         <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
@@ -1159,7 +1388,7 @@ export default function Atividades() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de Sucesso */}
+      {/* Sucesso */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <AlertDialogContent className="bg-gradient-to-br from-emerald-900/30 to-emerald-950/50 border-2 border-emerald-500/50 backdrop-blur-xl">
           <AlertDialogHeader>
@@ -1169,12 +1398,16 @@ export default function Atividades() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              Atividade Registrada com Sucesso!
+              Atividade enviada para aprovação!
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base text-gray-300 space-y-3 pt-4">
               <p className="flex items-start gap-2">
                 <span className="text-emerald-400 text-xl">📋</span>
-                <span>Seu registro foi <strong className="text-white">enviado para aprovação</strong> do coordenador.</span>
+                <span>Seu registro foi <strong className="text-white">criado</strong> e está <strong className="text-white">pendente</strong>.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-blue-400 text-xl">🔔</span>
+                <span>O coordenador verá na aba <strong className="text-white">Aprovação</strong>.</span>
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1183,9 +1416,10 @@ export default function Atividades() {
               onClick={() => {
                 setShowSuccessDialog(false);
                 queryClient.invalidateQueries({ queryKey: ['atividades'] });
-                queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+                queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role, currentUser?.email] });
+                queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+                queryClient.invalidateQueries({ queryKey: ['aprovacoesAtividadeMap'] });
                 queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-                queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
               }}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 text-base"
             >
