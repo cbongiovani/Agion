@@ -129,6 +129,7 @@ export default function Atividades() {
 
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades', currentUser?.role],
+    staleTime: 2000, // Evita refetches múltiplos em 2 segundos
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       // Remove duplicatas
