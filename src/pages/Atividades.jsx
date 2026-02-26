@@ -800,10 +800,47 @@ export default function Atividades() {
 
       {/* Tabela de Atividades */}
       <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 overflow-hidden">
+        {selectedIds.size > 0 && (
+          <div className="bg-blue-500/10 border-b border-blue-500/30 px-6 py-3 flex items-center justify-between">
+            <span className="text-sm text-blue-400">{selectedIds.size} registro(s) selecionado(s)</span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedIds(new Set())}
+                className="border-gray-700 h-8"
+              >
+                Desselecionar Tudo
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setDeleteMultipleDialogOpen(true)}
+                className="bg-red-600 hover:bg-red-700 h-8 gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Deletar Selecionados
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#1a1a1a] border-b border-gray-800">
               <tr>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === atividadesPaginadas.length && atividadesPaginadas.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(atividadesPaginadas.map(a => a.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">ID</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Data</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Tipo</th>
