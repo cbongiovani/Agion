@@ -56,6 +56,21 @@ export default function Aprovacao() {
     queryFn: () => base44.entities.Questao.list(),
   });
 
+  const { data: supervisores = [] } = useQuery({
+    queryKey: ['supervisores'],
+    queryFn: () => base44.entities.Supervisor.list(),
+  });
+
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const { data: analistas = [] } = useQuery({
+    queryKey: ['analistas'],
+    queryFn: () => base44.entities.Analista.list(),
+  });
+
   const aprovarMutation = useMutation({
     mutationFn: async (item) => {
       const user = await base44.auth.me();
@@ -158,6 +173,24 @@ export default function Aprovacao() {
     },
   });
 
+  const getSupervisorNome = (supervisorId) => {
+    const supervisor = supervisores.find(s => s.id === supervisorId);
+    if (supervisor) {
+      const usuario = usuarios.find(u => u.email === supervisor.usuario_email);
+      return usuario?.nome_customizado || usuario?.full_name || supervisor.nome || '-';
+    }
+    return '-';
+  };
+
+  const getAnalistaNome = (analistaId) => {
+    const analista = analistas.find(a => a.id === analistaId);
+    if (analista) {
+      const usuario = usuarios.find(u => u.email === analista.usuario_email);
+      return usuario?.nome_customizado || usuario?.full_name || analista.nome || '-';
+    }
+    return '-';
+  };
+
   const atividadesPendentes = aprovacoes.filter(a => a.tipo === 'atividade' && a.status === 'pendente');
   const fechamentosPendentes = aprovacoes.filter(a => a.tipo === 'fechamento' && a.status === 'pendente');
   const warroomPendentes = aprovacoes.filter(a => a.tipo === 'warroom' && a.status === 'pendente');
@@ -209,12 +242,13 @@ export default function Aprovacao() {
               <div className="space-y-3">
                 {atividadesPendentes.map((item) => {
                   const atividade = atividades.find(a => a.id === item.atividade_id);
+                  const supervisorNome = atividade?.supervisor_id ? getSupervisorNome(atividade.supervisor_id) : '-';
                   return (
                     <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-white font-medium">{atividade?.tipo || 'Atividade'}</p>
                         <p className="text-sm text-gray-400 mt-1">
-                          {new Date(atividade?.data).toLocaleDateString('pt-BR')}
+                          {new Date(atividade?.data).toLocaleDateString('pt-BR')} • {supervisorNome}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -541,14 +575,136 @@ export default function Aprovacao() {
             <div className="space-y-4">
               <div className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(selectedItem.data).map(([key, value]) => (
-                    <div key={key} className="border-b border-[#1e3a5f] pb-3 last:border-0">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-white font-medium mt-1 break-words">
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value || '-')}
-                      </p>
-                    </div>
-                  ))}
+                  {selectedItem.tipo === 'atividade' && (
+                    <>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Tipo de Atividade</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.tipo || '-'}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Data</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.data ? new Date(selectedItem.data.data).toLocaleDateString('pt-BR') : '-'}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Supervisor Responsável</p>
+                        <p className="text-white font-medium mt-1">{getSupervisorNome(selectedItem.data.supervisor_id)}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Analista</p>
+                        <p className="text-white font-medium mt-1">{getAnalistaNome(selectedItem.data.analista_id)}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Nota</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.nota}/10</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Status</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.status || '-'}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Registrado Por</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.registrado_por || selectedItem.data.created_by || '-'}</p>
+                      </div>
+                      {selectedItem.data.comentario && (
+                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Comentário</p>
+                          <p className="text-white font-medium mt-1">{selectedItem.data.comentario}</p>
+                        </div>
+                      )}
+                      {selectedItem.data.protocolo_gravacao && (
+                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Protocolo da Gravação</p>
+                          <p className="text-white font-medium mt-1">{selectedItem.data.protocolo_gravacao}</p>
+                        </div>
+                      )}
+                      {selectedItem.data.link_gravacao_teams && (
+                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Link da Gravação Teams</p>
+                          <a href={selectedItem.data.link_gravacao_teams} target="_blank" className="text-blue-400 hover:underline break-all">
+                            {selectedItem.data.link_gravacao_teams}
+                          </a>
+                        </div>
+                      )}
+                      {selectedItem.data.ticket_acompanhado && (
+                        <div className="border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Ticket</p>
+                          <p className="text-white font-medium mt-1">{selectedItem.data.ticket_acompanhado}</p>
+                        </div>
+                      )}
+                      {selectedItem.data.tipo_feedback && (
+                        <div className="border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Tipo de Feedback</p>
+                          <p className="text-white font-medium mt-1">{selectedItem.data.tipo_feedback}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {selectedItem.tipo === 'fechamento' && (
+                    <>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Período</p>
+                        <p className="text-white font-medium mt-1">
+                          {new Date(selectedItem.data.semana_inicio).toLocaleDateString('pt-BR')} - {new Date(selectedItem.data.semana_fim).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Total Ligações Next IP</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.total_ligacoes_next_ip || 0}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Total Chamados Verdana</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.total_chamados_verdana || 0}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Total Monitorias</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.total_monitorias || 0}</p>
+                      </div>
+                      {selectedItem.data.observacoes && (
+                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Observações</p>
+                          <p className="text-white font-medium mt-1">{selectedItem.data.observacoes}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {selectedItem.tipo === 'warroom' && (
+                    <>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Título</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.titulo || '-'}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Severidade</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.severidade || '-'}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Categoria</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.categoria || '-'}</p>
+                      </div>
+                      <div className="border-b border-[#1e3a5f] pb-3">
+                        <p className="text-xs text-gray-400 uppercase">Status</p>
+                        <p className="text-white font-medium mt-1">{selectedItem.data.status || '-'}</p>
+                      </div>
+                      {selectedItem.data.descricao && (
+                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
+                          <p className="text-xs text-gray-400 uppercase">Descrição</p>
+                          <p className="text-white font-medium mt-1">{selectedItem.data.descricao}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {!selectedItem.tipo && (
+                    <>
+                      {Object.entries(selectedItem.data).map(([key, value]) => (
+                        <div key={key} className="border-b border-[#1e3a5f] pb-3 last:border-0">
+                          <p className="text-xs text-gray-400 uppercase tracking-wide">{key.replace(/_/g, ' ')}</p>
+                          <p className="text-white font-medium mt-1 break-words">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value || '-')}
+                          </p>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
