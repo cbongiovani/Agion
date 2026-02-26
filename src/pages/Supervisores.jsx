@@ -56,10 +56,17 @@ export default function Supervisores() {
        queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
      });
 
+     const unsubscribeAprovacoes = base44.entities.AprovacaoAtividade.subscribe(() => {
+       queryClient.invalidateQueries({ queryKey: ['atividades'] });
+       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
+       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
+     });
+
      return () => {
        unsubscribeAtividades();
        unsubscribeIncidentes();
        unsubscribeFechamentos();
+       unsubscribeAprovacoes();
      };
    }, [queryClient]);
 
