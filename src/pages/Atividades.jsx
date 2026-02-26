@@ -257,44 +257,37 @@ export default function Atividades() {
             registrado_por: user.email,
           });
 
-          // Aprovação (com rollback)
-          try {
-            const aprovacaoExistente = await base44.entities.AprovacaoAtividade.filter({
-              atividade_id: result.id,
-              tipo: 'atividade',
-            });
-
-            if (aprovacaoExistente.length > 0) {
-              await base44.entities.Atividade.delete(result.id);
-              throw new Error('Registro de aprovação duplicado. Operação cancelada.');
-            }
-
-            await base44.entities.AprovacaoAtividade.create({
-              atividade_id: result.id,
-              tipo: 'atividade',
-              status: 'pendente',
-            });
-          } catch (aprovacaoError) {
-            await base44.entities.Atividade.delete(result.id);
-            throw new Error(
-              aprovacaoError.message || 'Falha ao criar aprovação. Registro cancelado.'
-            );
-          }
-
-          await base44.entities.Log.create({
-            usuario_email: user.email,
-            usuario_nome: user.full_name,
-            acao: 'Criou',
-            entidade: 'Atividade',
-            detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
+          // Criar aprovação
+          await base44.entities.AprovacaoAtividade.create({
+            atividade_id: result.id,
+            tipo: 'atividade',
+            status: 'pendente',
           });
 
-          await notificarCoordenadores(
-            'nova_atividade',
-            'Nova Atividade Registrada',
-            `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
-            'Aprovacao'
-          );
+          // Log - isolado para não quebrar fluxo
+          try {
+            await base44.entities.Log.create({
+              usuario_email: user.email,
+              usuario_nome: user.full_name,
+              acao: 'Criou',
+              entidade: 'Atividade',
+              detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
+            });
+          } catch (logError) {
+            console.warn('Erro ao criar log:', logError);
+          }
+
+          // Notificação - isolada para não quebrar fluxo
+          try {
+            await notificarCoordenadores(
+              'nova_atividade',
+              'Nova Atividade Registrada',
+              `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
+              'Aprovacao'
+            );
+          } catch (notifError) {
+            console.warn('Erro ao notificar:', notifError);
+          }
 
           return result;
         } catch (error) {
