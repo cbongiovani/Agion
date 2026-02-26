@@ -59,9 +59,10 @@ const perguntasDefault = [
   }
 ];
 
-export default function MonitoriaAssistidaForm({ topicos = {}, onChange, linkGravacao, onLinkChange }) {
+export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChange }) {
   const [editingKey, setEditingKey] = useState(null);
   const [editData, setEditData] = useState({});
+  const topicos = data;
 
   // Recuperar perguntas salvas ou usar default
   const getPerguntas = () => {
@@ -116,16 +117,18 @@ export default function MonitoriaAssistidaForm({ topicos = {}, onChange, linkGra
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label>Link da Gravação (Teams)</Label>
-        <Input
-          type="url"
-          value={linkGravacao}
-          onChange={(e) => onLinkChange(e.target.value)}
-          className="bg-[#1a1a1a] border-gray-700 mt-2"
-          placeholder="https://teams.microsoft.com/..."
-        />
-      </div>
+      {onLinkChange && (
+        <div>
+          <Label>Link da Gravação (Teams)</Label>
+          <Input
+            type="url"
+            value={topicos.linkGravacao || ''}
+            onChange={(e) => onLinkChange(e.target.value)}
+            className="bg-[#1a1a1a] border-gray-700 mt-2"
+            placeholder="https://teams.microsoft.com/..."
+          />
+        </div>
+      )}
 
       <div className="border-t border-gray-700 pt-4">
         <Label className="text-base mb-3 block">Avaliação Técnica - Conhecimento</Label>

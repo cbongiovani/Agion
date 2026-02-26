@@ -765,10 +765,47 @@ export default function Atividades() {
                 <div>
                   <p className="text-xs text-gray-400 mb-2">Tópicos Avaliados (Monitoria Offline)</p>
                   <div className="bg-[#1a1a1a] rounded-lg p-3 space-y-1">
-                    {Object.entries(viewingAtividade.topicos_monitoria_offline).map(([key, value]) => (
-                      <div key={key} className="flex justify-between text-sm">
-                        <span className="text-gray-400">{key.replace(/_/g, ' ')}</span>
-                        <span className="text-white font-medium">{value}/5</span>
+                    {Object.entries(viewingAtividade.topicos_monitoria_offline).map(([key, value]) => {
+                      const labels = {
+                        'saudacao_padrao': 'Saudação Padrão de Atendimento',
+                        'validacao_loja': 'Validação da loja e colaborador em linha',
+                        'dominio_problema': 'Domínio/conhecimento do problema',
+                        'comunicacao_direta': 'Comunicação direta e objetiva',
+                        'dominio_conclusao': 'Domínio na condução da ligação',
+                        'tratou_respeito': 'Tratou a loja com respeito',
+                        'teve_equilibrio': 'Teve Equilíbrio Emocional',
+                        'ruido_ambiente': 'Ruído no Ambiente/mutar o telefone',
+                        'retorno_loja': 'Retorno para a loja',
+                        'encerramento_padrao': 'Encerramento Padrão'
+                      };
+                      return (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-gray-400">{labels[key] || key.replace(/_/g, ' ')}</span>
+                          <span className="text-white font-medium">{value}/5</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {viewingAtividade.topicos_monitoria_assistida && viewingAtividade.topicos_monitoria_assistida.perguntas && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Avaliação Técnica (Monitoria Assistida)</p>
+                  <div className="bg-[#1a1a1a] rounded-lg p-3 space-y-3">
+                    {viewingAtividade.topicos_monitoria_assistida.perguntas.map((item, idx) => (
+                      <div key={idx} className="border-b border-gray-700 pb-2 last:border-0 last:pb-0">
+                        <div className="flex items-start gap-2 mb-1">
+                          <div className={`w-4 h-4 rounded border mt-0.5 flex items-center justify-center text-xs ${
+                            viewingAtividade.topicos_monitoria_assistida[item.key] 
+                              ? 'bg-emerald-500 border-emerald-500 text-white' 
+                              : 'border-gray-600'
+                          }`}>
+                            {viewingAtividade.topicos_monitoria_assistida[item.key] && '✓'}
+                          </div>
+                          <p className="text-sm text-white font-medium flex-1">{item.pergunta}</p>
+                        </div>
+                        <p className="text-xs text-emerald-400 ml-6">✓ {item.resposta}</p>
                       </div>
                     ))}
                   </div>

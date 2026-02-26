@@ -15,7 +15,9 @@ const topicos = [
   { key: 'encerramento_padrao', label: '10 - Encerramento Padrão', peso: 0.5 }
 ];
 
-export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onChange, protocolo, onProtocoloChange }) {
+export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloChange }) {
+  const topicosValues = data;
+  
   const handleTopicoChange = (key, value) => {
     onChange({
       ...topicosValues,
@@ -44,16 +46,18 @@ export default function MonitoriaOfflineForm({ topicos: topicosValues = {}, onCh
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label>Protocolo da Gravação</Label>
-        <Input
-          type="text"
-          value={protocolo}
-          onChange={(e) => onProtocoloChange(e.target.value)}
-          className="bg-[#1a1a1a] border-gray-700 mt-2"
-          placeholder="Digite o protocolo"
-        />
-      </div>
+      {onProtocoloChange && (
+        <div>
+          <Label>Protocolo da Gravação</Label>
+          <Input
+            type="text"
+            value={topicosValues.protocolo || ''}
+            onChange={(e) => onProtocoloChange(e.target.value)}
+            className="bg-[#1a1a1a] border-gray-700 mt-2"
+            placeholder="Digite o protocolo"
+          />
+        </div>
+      )}
 
       <div className="border-t border-gray-700 pt-4">
         <Label className="text-base mb-3 block">Tópicos de Avaliação</Label>
