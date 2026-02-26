@@ -137,6 +137,7 @@ export default function Aprovacao() {
       });
     },
     onSuccess: () => {
+      // Sincronização completa de TODAS as queries afetadas
       queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
@@ -145,6 +146,11 @@ export default function Aprovacao() {
       queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
       queryClient.invalidateQueries({ queryKey: ['incidentes'] });
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['ranking'] });
+      queryClient.invalidateQueries({ queryKey: ['rankings'] });
+      queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+      queryClient.invalidateQueries({ queryKey: ['supervisores'] });
       toast.success('Registro aprovado com sucesso!');
       setSelectedItem(null);
       setIsViewDialogOpen(false);
@@ -200,8 +206,17 @@ export default function Aprovacao() {
       });
     },
     onSuccess: () => {
+      // Sincronização completa de TODAS as queries afetadas
       queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['ranking'] });
+      queryClient.invalidateQueries({ queryKey: ['rankings'] });
+      queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+      queryClient.invalidateQueries({ queryKey: ['supervisores'] });
+      queryClient.invalidateQueries({ queryKey: ['fechamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['incidentes'] });
       toast.success('Registro rejeitado e supervisor notificado!');
       setSelectedItem(null);
       setIsRejectDialogOpen(false);
@@ -237,10 +252,25 @@ export default function Aprovacao() {
   const quizzesPendentes = quizzes.filter(q => q.status === 'Agendado');
   const questoesPendentes = questoes.filter(q => q.status === 'Pendente');
 
+  const isLoadingAny = !atividades.length || !fechamentos.length || !incidentes.length;
+
   if (currentUser?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center h-96">
         <p className="text-gray-400 text-lg">Acesso apenas para coordenadores</p>
+      </div>
+    );
+  }
+
+  if (isLoadingAny) {
+    return (
+      <div className="space-y-6">
+        <div className="h-12 bg-[#1a1a1a] rounded-lg animate-pulse"></div>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 bg-[#0f1f35] rounded-lg animate-pulse"></div>
+          ))}
+        </div>
       </div>
     );
   }
