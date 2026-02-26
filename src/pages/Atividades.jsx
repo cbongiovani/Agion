@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2, Filter, Loader2, Eye, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
