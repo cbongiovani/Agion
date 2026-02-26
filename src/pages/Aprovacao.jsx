@@ -121,7 +121,14 @@ export default function Aprovacao() {
       const user = await base44.auth.me();
       const aprovacao = aprovacoes.find(a => a.id === aprovacaoId);
       
-      // Enviar notificação para o supervisor antes de deletar
+      await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
+        status: 'rejeitado',
+        motivo_rejeicao: rejectReason,
+        aprovado_por: user.email,
+        data_aprovacao: new Date().toISOString(),
+      });
+      
+      // Enviar notificação para o supervisor
       if (aprovacao) {
         let registro = null;
         if (aprovacao.tipo === 'atividade') {
@@ -144,26 +151,14 @@ export default function Aprovacao() {
             });
           }
         }
-        
-        // Deletar a atividade/registro rejeitado
-        if (aprovacao.tipo === 'atividade' && aprovacao.atividade_id) {
-          await base44.entities.Atividade.delete(aprovacao.atividade_id);
-        } else if (aprovacao.tipo === 'fechamento' && aprovacao.atividade_id) {
-          await base44.entities.FechamentoSemanal.delete(aprovacao.atividade_id);
-        } else if (aprovacao.tipo === 'warroom' && aprovacao.atividade_id) {
-          await base44.entities.Incidente.delete(aprovacao.atividade_id);
-        }
-        
-        // Deletar o registro de aprovação
-        await base44.entities.AprovacaoAtividade.delete(aprovacaoId);
       }
       
       await base44.entities.Log.create({
         usuario_email: user.email,
         usuario_nome: user.full_name,
-        acao: 'Excluiu',
+        acao: 'Atualizou',
         entidade: 'Aprovação',
-        detalhes: `Rejeitou e excluiu registro ID: ${aprovacaoId} - Motivo: ${rejectReason}`,
+        detalhes: `Rejeitou registro ID: ${aprovacaoId} - Motivo: ${rejectReason}`,
       });
     },
     onSuccess: () => {

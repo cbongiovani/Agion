@@ -74,8 +74,8 @@ export default function Atividades() {
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
-      // Admin vê tudo
-      if (currentUser?.role === 'admin') {
+      // Admin e Supervisor veem TUDO (mesma visualização)
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
         return todasAtividades;
       }
       
@@ -85,7 +85,7 @@ export default function Atividades() {
         .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
         .map(a => a.atividade_id);
       
-      // Supervisor e outros usuários: apenas aprovadas
+      // Outros usuários: apenas aprovadas
       return todasAtividades.filter(ativ => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
