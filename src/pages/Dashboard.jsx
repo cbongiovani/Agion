@@ -46,7 +46,18 @@ export default function Dashboard() {
     error: errorFechamentos
   } = useQuery({
     queryKey: ['fechamentos'],
-    queryFn: () => base44.entities.FechamentoSemanal.list('-semana_inicio', 12),
+    queryFn: async () => {
+      const todosFechamentos = await base44.entities.FechamentoSemanal.list('-semana_inicio', 12);
+      
+      // Buscar aprovações e filtrar SOMENTE as aprovadas
+      const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
+      const idsAprovados = aprovacoes
+        .filter(a => a.tipo === 'fechamento' && a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
+      // Retornar APENAS fechamentos aprovados
+      return toArray(todosFechamentos).filter(fech => idsAprovados.includes(fech.id));
+    },
     staleTime: 5 * 60 * 1000,
   });
   const fechamentos = toArray(fechamentosRaw);
