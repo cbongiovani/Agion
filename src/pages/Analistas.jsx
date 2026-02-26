@@ -204,64 +204,6 @@ export default function Analistas() {
           <p className="text-gray-400 mt-1">Gerencie os analistas do Suporte N1</p>
         </div>
         {/* Botão removido - Gestão apenas via Gestão de Usuários */}
-          <DialogContent className="bg-[#242424] border-gray-800 text-white">
-            <DialogHeader>
-              <DialogTitle>{editingAnalista ? 'Editar Analista' : 'Novo Analista'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="bg-[#1a1a1a] border-gray-700 mt-2"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="supervisor">Supervisor</Label>
-                <Select
-                  value={formData.supervisor_id}
-                  onValueChange={(value) => setFormData({ ...formData, supervisor_id: value })}
-                >
-                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                    <SelectValue placeholder="Selecione um supervisor" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#242424] border-gray-700">
-                    {supervisores.map((sup) => (
-                      <SelectItem key={sup.id} value={sup.id}>
-                        {sup.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="usuario_email">E-mail Vinculado (Opcional)</Label>
-                <Input
-                  id="usuario_email"
-                  type="email"
-                  value={formData.usuario_email}
-                  onChange={(e) => setFormData({ ...formData, usuario_email: e.target.value })}
-                  className="bg-[#1a1a1a] border-gray-700 mt-2"
-                  placeholder="Email do usuário no sistema"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Vincule o email do usuário que terá acesso ao painel como este analista
-                </p>
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                  {editingAnalista ? 'Atualizar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Desktop Table */}

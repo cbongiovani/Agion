@@ -480,43 +480,6 @@ Seja direto, específico e focado em resultados mensuráveis.`;
           <p className="text-gray-400 mt-1">Gerencie os supervisores do Suporte N1</p>
         </div>
         {/* Botões removidos - Gestão apenas via Gestão de Usuários */}
-            <DialogContent className="bg-[#242424] border-gray-800 text-white">
-            <DialogHeader>
-              <DialogTitle>{editingSupervisor ? 'Editar Supervisor' : 'Novo Supervisor'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="bg-[#1a1a1a] border-gray-700 mt-2"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="equipe">Equipe</Label>
-                <Input
-                  id="equipe"
-                  value={formData.equipe}
-                  onChange={(e) => setFormData({ ...formData, equipe: e.target.value })}
-                  className="bg-[#1a1a1a] border-gray-700 mt-2"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                  {editingSupervisor ? 'Atualizar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
-            </DialogContent>
-          </Dialog>
-        </div>
       </div>
 
       <div className="space-y-4">
