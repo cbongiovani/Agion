@@ -135,9 +135,17 @@ export default function Atividades() {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
-      resetForm();
-      toast.success('Atividade enviada para aprovação!', {
-        description: 'Seu registro está sob avaliação da coordenação. Você pode acompanhar o status no seu perfil.',
+      
+      // Fechar o diálogo e resetar o formulário
+      setIsDialogOpen(false);
+      
+      // Resetar o formulário após um pequeno delay para garantir que o diálogo foi fechado
+      setTimeout(() => {
+        resetForm();
+      }, 100);
+      
+      toast.success('Atividade registrada e enviada para aprovação!', {
+        description: 'Seu registro está pendente de avaliação pela coordenação. Acompanhe o status no seu perfil.',
         duration: 6000,
       });
     },
@@ -158,8 +166,16 @@ export default function Atividades() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      
+      // Fechar o diálogo
+      setIsDialogOpen(false);
+      
+      // Resetar após um pequeno delay
+      setTimeout(() => {
+        resetForm();
+      }, 100);
+      
       toast.success('Atividade atualizada com sucesso!');
-      resetForm();
     },
   });
 
@@ -493,11 +509,18 @@ export default function Atividades() {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-                  <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700">
+                  <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700" disabled={createMutation.isPending || updateMutation.isPending}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                    {editingAtividade ? 'Atualizar' : 'Registrar'}
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {editingAtividade ? 'Atualizando...' : 'Registrando...'}
+                      </>
+                    ) : (
+                      editingAtividade ? 'Atualizar' : 'Registrar'
+                    )}
                   </Button>
                 </div>
               </form>
