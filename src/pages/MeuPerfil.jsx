@@ -120,6 +120,7 @@ export default function MeuPerfil() {
         foto_url: updatedUser.foto_url || ''
       };
       queryClient.setQueryData(['currentUser'], newUserData);
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['pendingRequests'] });
       setFormData({
         nome_customizado: newUserData.nome_customizado,

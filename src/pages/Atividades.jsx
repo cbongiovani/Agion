@@ -77,34 +77,32 @@ export default function Atividades() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: permissoesUsuario } = useQuery({
-    queryKey: ['permissoesUsuario', currentUser?.email],
+  const { data: modulePermissions } = useQuery({
+    queryKey: ['modulePermissions', currentUser?.email],
     queryFn: async () => {
       if (!currentUser?.email) return null;
-      const perms = await base44.entities.PermissaoUsuario.filter({
-        usuario_email: currentUser.email,
-      });
-      return perms.length > 0 ? perms[0] : null;
+      const { getUserModulePermissions } = await import('@/components/rbacHelpers');
+      return await getUserModulePermissions(currentUser.email, currentUser.role);
     },
     enabled: !!currentUser?.email,
   });
 
+  const { isModuleVisible } = require('@/components/rbacHelpers');
+  const { MODULES } = require('@/components/moduleConstants');
+
   const canCreate =
     currentUser?.role === 'admin' ||
     currentUser?.role === 'supervisor' ||
-    permissoesUsuario?.permissoes_atividades?.criar ||
-    false;
+    isModuleVisible(modulePermissions, MODULES.ATIVIDADES);
 
   const canEdit =
     currentUser?.role === 'admin' ||
     currentUser?.role === 'supervisor' ||
-    permissoesUsuario?.permissoes_atividades?.editar ||
-    false;
+    modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
   const canDelete =
     currentUser?.role === 'admin' ||
-    permissoesUsuario?.permissoes_atividades?.deletar ||
-    false;
+    modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
   const [formData, setFormData] = useState({
     tipo: 'Chamados',
