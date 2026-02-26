@@ -74,18 +74,19 @@ export default function Atividades() {
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
+      // Buscar aprovações
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade' });
+      const atividadesAprovadas = aprovacoes
+        .filter(a => a.status === 'aprovado')
+        .map(a => a.atividade_id);
+      
       // Admin e Supervisor veem tudo
       if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
         return todasAtividades;
       }
       
-      // Outros usuários veem apenas aprovadas
-      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade' });
-      const aprovadas = aprovacoes
-        .filter(a => a.status === 'aprovado')
-        .map(a => a.atividade_id);
-      
-      return todasAtividades.filter(ativ => aprovadas.includes(ativ.id));
+      // Outros usuários veem APENAS aprovadas
+      return todasAtividades.filter(ativ => atividadesAprovadas.includes(ativ.id));
     },
     enabled: !!currentUser,
   });
@@ -181,12 +182,18 @@ export default function Atividades() {
       }
     },
     onSuccess: () => {
-      // Fechar dialog de registro IMEDIATAMENTE
-      setIsDialogOpen(false);
-      resetForm();
+      // Invalidar queries ANTES de fechar
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       
-      // Mostrar dialog de sucesso GARANTIDO
-      setShowSuccessDialog(true);
+      // Resetar form e fechar dialog
+      resetForm();
+      setIsDialogOpen(false);
+      
+      // Pequeno delay para garantir fechamento do dialog antes do sucesso
+      setTimeout(() => {
+        setShowSuccessDialog(true);
+      }, 100);
     },
     onError: (error) => {
       toast.error('❌ Erro ao registrar atividade', {
@@ -210,12 +217,17 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
-      // Fechar dialog e resetar
-      setIsDialogOpen(false);
-      resetForm();
+      // Invalidar queries
+      queryClient.invalidateQueries({ queryKey: ['atividades'] });
       
-      // Mostrar dialog de sucesso
-      setShowSuccessDialog(true);
+      // Resetar e fechar
+      resetForm();
+      setIsDialogOpen(false);
+      
+      // Mostrar sucesso
+      setTimeout(() => {
+        setShowSuccessDialog(true);
+      }, 100);
     },
   });
 
@@ -275,10 +287,13 @@ export default function Atividades() {
       return;
     }
 
+    const dataAtual = new Date();
+    const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+
     const payload = {
       ...formData,
       // Sempre usa a data atual de registro para novas atividades
-      data: editingAtividade ? ensureCorrectDate(formData.data) : formatDateToInput(new Date()),
+      data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
       nota: parseFloat(formData.nota) || 0,
     };
 
@@ -386,8 +401,10 @@ export default function Atividades() {
         </div>
         {canCreate && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            if (!open) resetForm();
-            setIsDialogOpen(open);
+            if (!open && !createMutation.isPending && !updateMutation.isPending) {
+              resetForm();
+              setIsDialogOpen(open);
+            }
           }}>
             <DialogTrigger asChild>
               <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
