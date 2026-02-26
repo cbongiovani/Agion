@@ -53,7 +53,22 @@ export default function Analistas() {
 
   const { data: atividades = [] } = useQuery({
     queryKey: ['atividades'],
-    queryFn: () => base44.entities.Atividade.list(),
+    queryFn: async () => {
+      const todasAtividades = await base44.entities.Atividade.list();
+      const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
+      
+      const aprovacaoPorId = {};
+      todasAprovacoes.forEach((aprov) => {
+        if (aprov.tipo === 'atividade') {
+          aprovacaoPorId[aprov.atividade_id] = aprov;
+        }
+      });
+      
+      // Retornar apenas atividades aprovadas
+      return todasAtividades.filter(ativ => 
+        aprovacaoPorId[ativ.id]?.status === 'aprovado'
+      );
+    },
   });
 
   const createMutation = useMutation({
@@ -179,13 +194,13 @@ export default function Analistas() {
   };
 
   const getMediaAnalista = (analistaId) => {
-    const atividadesAn = atividades.filter(a => a.analista_id === analistaId);
+    const atividadesAn = atividades.filter((a) => a.analista_id === analistaId);
     if (atividadesAn.length === 0) return null;
     return atividadesAn.reduce((sum, a) => sum + (a.nota || 0), 0) / atividadesAn.length;
   };
 
   const getTotalAtividades = (analistaId) => {
-    return atividades.filter(a => a.analista_id === analistaId).length;
+    return atividades.filter((a) => a.analista_id === analistaId).length;
   };
 
   if (isLoading) {
