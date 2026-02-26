@@ -5,14 +5,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Filter, Loader2, Eye, AlertTriangle, X } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Filter,
+  Loader2,
+  Eye,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
+import { getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
@@ -26,7 +56,10 @@ export default function Atividades() {
   const [selectedType, setSelectedType] = useState('Chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  
+
+  // ✅ NOVO: controla o botão "Registrado" e ajuda a evitar double submit
+  const [registrado, setRegistrado] = useState(false);
+
   // Filtros
   const [filterSupervisor, setFilterSupervisor] = useState('');
   const [filterAnalista, setFilterAnalista] = useState('');
@@ -48,15 +81,30 @@ export default function Atividades() {
     queryKey: ['permissoesUsuario', currentUser?.email],
     queryFn: async () => {
       if (!currentUser?.email) return null;
-      const perms = await base44.entities.PermissaoUsuario.filter({ usuario_email: currentUser.email });
+      const perms = await base44.entities.PermissaoUsuario.filter({
+        usuario_email: currentUser.email,
+      });
       return perms.length > 0 ? perms[0] : null;
     },
     enabled: !!currentUser?.email,
   });
 
-  const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || permissoesUsuario?.permissoes_atividades?.criar || false;
-  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || permissoesUsuario?.permissoes_atividades?.editar || false;
-  const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.deletar || false;
+  const canCreate =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'supervisor' ||
+    permissoesUsuario?.permissoes_atividades?.criar ||
+    false;
+
+  const canEdit =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'supervisor' ||
+    permissoesUsuario?.permissoes_atividades?.editar ||
+    false;
+
+  const canDelete =
+    currentUser?.role === 'admin' ||
+    permissoesUsuario?.permissoes_atividades?.deletar ||
+    false;
 
   const [formData, setFormData] = useState({
     tipo: 'Chamados',
@@ -83,43 +131,43 @@ export default function Atividades() {
     queryKey: ['atividades', currentUser?.role],
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
-      
+
       // Buscar aprovações
       const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
       const aprovacaoPorId = {};
-      todasAprovacoes.forEach(aprov => {
+      todasAprovacoes.forEach((aprov) => {
         if (aprov.tipo === 'atividade') {
           aprovacaoPorId[aprov.atividade_id] = aprov;
         }
       });
-      
+
       // Anexar status de aprovação em cada atividade
-      const atividadesComAprovacao = todasAtividades.map(ativ => ({
+      const atividadesComAprovacao = todasAtividades.map((ativ) => ({
         ...ativ,
         aprovacao_status: aprovacaoPorId[ativ.id]?.status || 'pendente',
         aprovacao_data: aprovacaoPorId[ativ.id]?.data_aprovacao,
-        aprovacao_motivo_rejeicao: aprovacaoPorId[ativ.id]?.motivo_rejeicao
+        aprovacao_motivo_rejeicao: aprovacaoPorId[ativ.id]?.motivo_rejeicao,
       }));
-      
-      const idsAprovados = Object.keys(aprovacaoPorId)
-        .filter(id => aprovacaoPorId[id].status === 'aprovado');
-      
-      // Admin vê TUDO (aprovados + pendentes + rejeitados para gestão)
-      if (currentUser?.role === 'admin') {
-        return atividadesComAprovacao;
-      }
-      
+
+      const idsAprovados = Object.keys(aprovacaoPorId).filter(
+        (id) => aprovacaoPorId[id].status === 'aprovado'
+      );
+
+      // Admin vê TUDO
+      if (currentUser?.role === 'admin') return atividadesComAprovacao;
+
       // Supervisor vê: aprovados de todos + seus próprios (pendentes/rejeitados)
       if (currentUser?.role === 'supervisor') {
-        return atividadesComAprovacao.filter(ativ => 
-          idsAprovados.includes(ativ.id) || 
-          ativ.registrado_por === currentUser.email ||
-          ativ.created_by === currentUser.email
+        return atividadesComAprovacao.filter(
+          (ativ) =>
+            idsAprovados.includes(ativ.id) ||
+            ativ.registrado_por === currentUser.email ||
+            ativ.created_by === currentUser.email
         );
       }
-      
+
       // Outros usuários: APENAS aprovadas
-      return atividadesComAprovacao.filter(ativ => idsAprovados.includes(ativ.id));
+      return atividadesComAprovacao.filter((ativ) => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
     staleTime: 0,
@@ -140,59 +188,77 @@ export default function Atividades() {
     queryFn: () => base44.entities.User.list(),
   });
 
+  const resetForm = () => {
+    setFormData({
+      tipo: 'Chamados',
+      analista_id: '',
+      supervisor_id: '',
+      protocolo_gravacao: '',
+      link_gravacao_teams: '',
+      ticket_acompanhado: '',
+      tipo_feedback: '',
+      topicos_monitoria_offline: {},
+      topicos_monitoria_assistida: {},
+      nota: '',
+      comentario: '',
+      status: 'Aberto',
+    });
+    setEditingAtividade(null);
+    setSelectedType('Chamados');
+    setRegistrado(false); // ✅ garante reset do estado do botão
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      // Gerar código automático baseado no tipo
       const prefixos = {
-        'Chamados': 'CH',
-        'Ligações': 'LG',
+        Chamados: 'CH',
+        Ligações: 'LG',
         'Monitoria Offline': 'MO',
         'Monitoria Assistida': 'MA',
-        'Feedback Individual': 'FB'
+        'Feedback Individual': 'FB',
       };
-      
-      // Buscar última atividade do mesmo tipo para gerar próximo número (com retry para race condition)
+
       let codigoAtividade;
       let tentativas = 0;
       const maxTentativas = 3;
-      
+
       while (tentativas < maxTentativas) {
         try {
-          const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
+          const atividadesMesmoTipo = await base44.entities.Atividade.filter({
+            tipo: data.tipo,
+          });
+
           const codigosExistentes = atividadesMesmoTipo
-            .map(a => a.codigo_atividade)
-            .filter(c => c && c.startsWith(prefixos[data.tipo]));
-          
+            .map((a) => a.codigo_atividade)
+            .filter((c) => c && c.startsWith(prefixos[data.tipo]));
+
           let proximoNumero = 1;
           if (codigosExistentes.length > 0) {
-            const numeros = codigosExistentes.map(c => parseInt(c.slice(2)));
+            const numeros = codigosExistentes.map((c) => parseInt(c.slice(2)));
             proximoNumero = Math.max(...numeros) + 1;
           }
-          
-          codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
-          
-          // Tentar criar - se código duplicado, vai dar erro e retry
+
+          codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(
+            5,
+            '0'
+          )}`;
+
           const user = await base44.auth.me();
-          
+
           const result = await base44.entities.Atividade.create({
             ...data,
             codigo_atividade: codigoAtividade,
-            registrado_por: user.email
+            registrado_por: user.email,
           });
-          
-          // Se chegou aqui, sucesso - sair do loop
-          tentativas = maxTentativas;
-          
-          // CRÍTICO: Criar registro de aprovação com rollback se falhar
+
+          // Aprovação (com rollback)
           try {
-            // Verificar se já existe aprovação para este ID (evitar duplicidade)
             const aprovacaoExistente = await base44.entities.AprovacaoAtividade.filter({
               atividade_id: result.id,
-              tipo: 'atividade'
+              tipo: 'atividade',
             });
 
             if (aprovacaoExistente.length > 0) {
-              // ROLLBACK: Deletar atividade recém-criada
               await base44.entities.Atividade.delete(result.id);
               throw new Error('Registro de aprovação duplicado. Operação cancelada.');
             }
@@ -200,14 +266,15 @@ export default function Atividades() {
             await base44.entities.AprovacaoAtividade.create({
               atividade_id: result.id,
               tipo: 'atividade',
-              status: 'pendente'
+              status: 'pendente',
             });
           } catch (aprovacaoError) {
-            // ROLLBACK: Deletar atividade recém-criada
             await base44.entities.Atividade.delete(result.id);
-            throw new Error(aprovacaoError.message || 'Falha ao criar aprovação. Registro cancelado.');
+            throw new Error(
+              aprovacaoError.message || 'Falha ao criar aprovação. Registro cancelado.'
+            );
           }
-          
+
           await base44.entities.Log.create({
             usuario_email: user.email,
             usuario_nome: user.full_name,
@@ -226,22 +293,17 @@ export default function Atividades() {
           return result;
         } catch (error) {
           tentativas++;
-          if (tentativas >= maxTentativas) {
-            throw error;
-          }
-          // Pequeno delay antes de retry
-          await new Promise(resolve => setTimeout(resolve, 100 * tentativas));
+          if (tentativas >= maxTentativas) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 100 * tentativas));
         }
       }
     },
+
+    // ✅ AJUSTE CRÍTICO: FECHA O MODAL SEM DEPENDER DE onOpenChange “inteligente”
     onSuccess: () => {
-      // Fechar dialog imediatamente
-      setIsDialogOpen(false);
-      
-      // Resetar form
-      resetForm();
-      
-      // Invalidar queries (completo para sincronização global)
+      setRegistrado(true);
+
+      // sincroniza tudo
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -249,13 +311,17 @@ export default function Atividades() {
       queryClient.invalidateQueries({ queryKey: ['rankings'] });
       queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
-      
-      // Mostrar mensagem de sucesso após fechamento
+
+      // ✅ FECHAMENTO GARANTIDO
       setTimeout(() => {
+        setIsDialogOpen(false);
+        resetForm(); // também limpa registrado
         setShowSuccessDialog(true);
-      }, 200);
+      }, 900);
     },
+
     onError: (error) => {
+      setRegistrado(false);
       toast.error('❌ Erro ao registrar atividade', {
         description: error.message || 'Tente novamente',
         duration: 5000,
@@ -277,24 +343,25 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
-      // Fechar dialog imediatamente
-      setIsDialogOpen(false);
-      
-      // Resetar form
-      resetForm();
-      
-      // Invalidar queries (completo para sincronização global)
       queryClient.invalidateQueries({ queryKey: ['atividades'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['ranking'] });
       queryClient.invalidateQueries({ queryKey: ['rankings'] });
       queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
       queryClient.invalidateQueries({ queryKey: ['supervisores'] });
-      
-      // Mostrar mensagem de sucesso após fechamento
+
+      // ✅ FECHAMENTO GARANTIDO
       setTimeout(() => {
+        setIsDialogOpen(false);
+        resetForm();
         setShowSuccessDialog(true);
-      }, 200);
+      }, 300);
+    },
+    onError: (error) => {
+      toast.error('❌ Erro ao atualizar atividade', {
+        description: error.message || 'Tente novamente',
+        duration: 5000,
+      });
     },
   });
 
@@ -339,25 +406,6 @@ export default function Atividades() {
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      tipo: 'Chamados',
-      analista_id: '',
-      supervisor_id: '',
-      protocolo_gravacao: '',
-      link_gravacao_teams: '',
-      ticket_acompanhado: '',
-      tipo_feedback: '',
-      topicos_monitoria_offline: {},
-      topicos_monitoria_assistida: {},
-      nota: '',
-      comentario: '',
-      status: 'Aberto',
-    });
-    setEditingAtividade(null);
-    setSelectedType('Chamados');
-  };
-
   const limparFiltros = () => {
     setFilterSupervisor('');
     setFilterAnalista('');
@@ -371,17 +419,16 @@ export default function Atividades() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Prevenir múltiplos envios
-    if (createMutation.isPending || updateMutation.isPending) {
-      return;
-    }
+    // ✅ Prevenir múltiplos envios (inclui estado "registrado")
+    if (registrado || createMutation.isPending || updateMutation.isPending) return;
 
     const dataAtual = new Date();
-    const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+    const dataFormatada = `${dataAtual.getFullYear()}-${String(
+      dataAtual.getMonth() + 1
+    ).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
 
     const payload = {
       ...formData,
-      // Sempre usa a data atual de registro para novas atividades
       data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
       nota: parseFloat(formData.nota) || 0,
     };
@@ -394,6 +441,7 @@ export default function Atividades() {
   };
 
   const openEdit = (atividade) => {
+    setRegistrado(false);
     setEditingAtividade(atividade);
     setFormData({
       data: atividade.data,
@@ -415,23 +463,23 @@ export default function Atividades() {
   };
 
   const getSupervisorNome = (id) => {
-    const supervisor = supervisores.find(s => s.id === id);
-    const usuario = usuarios.find(u => u.email === supervisor?.usuario_email);
+    const supervisor = supervisores.find((s) => s.id === id);
+    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
     return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
   };
 
   const getAnalistaNome = (id) => {
-    const analista = analistas.find(a => a.id === id);
-    const usuario = usuarios.find(u => u.email === analista?.usuario_email);
+    const analista = analistas.find((a) => a.id === id);
+    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
     return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
   };
 
   const handleAnalistaChange = (analistaId) => {
-    const analista = analistas.find(a => a.id === analistaId);
+    const analista = analistas.find((a) => a.id === analistaId);
     setFormData({
       ...formData,
       analista_id: analistaId,
-      supervisor_id: analista?.supervisor_id || ''
+      supervisor_id: analista?.supervisor_id || '',
     });
   };
 
@@ -442,8 +490,8 @@ export default function Atividades() {
 
   const getTipoColor = (tipo) => {
     const colors = {
-      'Chamados': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      'Ligações': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      Chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      Ligações: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
       'Monitoria Offline': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
       'Monitoria Assistida': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
       'Feedback Individual': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
@@ -463,20 +511,34 @@ export default function Atividades() {
     return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
-  const atividadesFiltradas = atividades.filter(ativ => {
-    if (filterIdBusca && !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
-    if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase())) return false;
-    if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase())) return false;
-    if (filterTipo && !ativ.tipo.toLowerCase().includes(filterTipo.toLowerCase())) return false;
-    if (filterDataInicio && ativ.data < filterDataInicio) return false;
-    if (filterDataFim && ativ.data > filterDataFim) return false;
-    return true;
-  }).sort((a, b) => {
-    // Ordenar por Analista alfabeticamente
-    const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
-    const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
-    return analistaA.localeCompare(analistaB);
-  });
+  const atividadesFiltradas = atividades
+    .filter((ativ) => {
+      if (
+        filterIdBusca &&
+        !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())
+      )
+        return false;
+      if (
+        filterSupervisor &&
+        !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase())
+      )
+        return false;
+      if (
+        filterAnalista &&
+        !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase())
+      )
+        return false;
+      if (filterTipo && !ativ.tipo.toLowerCase().includes(filterTipo.toLowerCase()))
+        return false;
+      if (filterDataInicio && ativ.data < filterDataInicio) return false;
+      if (filterDataFim && ativ.data > filterDataFim) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
+      const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
+      return analistaA.localeCompare(analistaB);
+    });
 
   // Paginação
   const totalRegistros = atividadesFiltradas.length;
@@ -500,25 +562,34 @@ export default function Atividades() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Atividades</h1>
           <p className="text-gray-400 mt-1">Registre e gerencie as atividades do Suporte N1</p>
         </div>
+
         {canCreate && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            if (open) {
-              setIsDialogOpen(true);
-            } else if (!createMutation.isPending && !updateMutation.isPending) {
-              resetForm();
-              setIsDialogOpen(false);
-            }
-          }}>
+          <Dialog
+            open={isDialogOpen}
+            // ✅ AJUSTE CRÍTICO: onOpenChange simples e confiável
+            onOpenChange={(open) => {
+              if (!open) resetForm();
+              setIsDialogOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                onClick={() => {
+                  setRegistrado(false);
+                  setEditingAtividade(null);
+                }}
+              >
                 <Plus className="w-4 h-4" />
                 Nova Atividade
               </Button>
             </DialogTrigger>
+
             <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
               </DialogHeader>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 {editingAtividade && editingAtividade.codigo_atividade && (
                   <div className="bg-[#ADF802]/10 border border-[#ADF802]/30 rounded-lg p-3">
@@ -527,15 +598,16 @@ export default function Atividades() {
                     </p>
                   </div>
                 )}
-                
+
                 {!editingAtividade && (
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                     <p className="text-sm text-blue-400">
-                      📅 A data será registrada automaticamente como <strong>{format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}</strong>
+                      📅 A data será registrada automaticamente como{' '}
+                      <strong>{format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}</strong>
                     </p>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {editingAtividade && (
                     <div>
@@ -549,6 +621,7 @@ export default function Atividades() {
                       />
                     </div>
                   )}
+
                   <div className={editingAtividade ? '' : 'sm:col-span-2'}>
                     <Label className="flex items-center gap-2">
                       Tipo de Atividade
@@ -578,11 +651,14 @@ export default function Atividades() {
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
                         {analistas.map((an) => (
-                          <SelectItem key={an.id} value={an.id}>{an.nome}</SelectItem>
+                          <SelectItem key={an.id} value={an.id}>
+                            {an.nome}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
                   {formData.supervisor_id && (
                     <div>
                       <Label>Supervisor Responsável</Label>
@@ -601,7 +677,9 @@ export default function Atividades() {
                       placeholder="Ex: #12345"
                       maxLength="10"
                       value={formData.ticket_acompanhado}
-                      onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ticket_acompanhado: e.target.value })
+                      }
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
@@ -613,7 +691,9 @@ export default function Atividades() {
                     <Input
                       type="text"
                       value={formData.protocolo_gravacao}
-                      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, protocolo_gravacao: e.target.value })
+                      }
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
@@ -622,8 +702,12 @@ export default function Atividades() {
                 {selectedType === 'Monitoria Offline' && (
                   <MonitoriaOfflineForm
                     data={formData.topicos_monitoria_offline}
-                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
-                    onProtocoloChange={(protocolo) => setFormData({ ...formData, protocolo_gravacao: protocolo })}
+                    onChange={(topicos) =>
+                      setFormData({ ...formData, topicos_monitoria_offline: topicos })
+                    }
+                    onProtocoloChange={(protocolo) =>
+                      setFormData({ ...formData, protocolo_gravacao: protocolo })
+                    }
                     onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
@@ -631,8 +715,12 @@ export default function Atividades() {
                 {selectedType === 'Monitoria Assistida' && (
                   <MonitoriaAssistidaForm
                     data={formData.topicos_monitoria_assistida}
-                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
-                    onLinkChange={(link) => setFormData({ ...formData, link_gravacao_teams: link })}
+                    onChange={(topicos) =>
+                      setFormData({ ...formData, topicos_monitoria_assistida: topicos })
+                    }
+                    onLinkChange={(link) =>
+                      setFormData({ ...formData, link_gravacao_teams: link })
+                    }
                     onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
@@ -640,7 +728,10 @@ export default function Atividades() {
                 {selectedType === 'Feedback Individual' && (
                   <div>
                     <Label>Tipo de Feedback</Label>
-                    <Select value={formData.tipo_feedback} onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}>
+                    <Select
+                      value={formData.tipo_feedback}
+                      onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}
+                    >
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                         <SelectValue />
                       </SelectTrigger>
@@ -667,9 +758,13 @@ export default function Atividades() {
                         required
                       />
                     </div>
+
                     <div>
                       <Label>Status</Label>
-                      <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(val) => setFormData({ ...formData, status: val })}
+                      >
                         <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                           <SelectValue />
                         </SelectTrigger>
@@ -694,17 +789,40 @@ export default function Atividades() {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-                  <Button type="button" variant="outline" onClick={resetForm} className="border-gray-700" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      resetForm();
+                      setIsDialogOpen(false);
+                    }}
+                    className="border-gray-700"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
                     Cancelar
                   </Button>
-                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={createMutation.isPending || updateMutation.isPending}>
+
+                  {/* ✅ BOTÃO MUDA PARA "REGISTRADO" APÓS CRIAR */}
+                  <Button
+                    type="submit"
+                    disabled={registrado || createMutation.isPending || updateMutation.isPending}
+                    className={
+                      !editingAtividade && registrado
+                        ? 'bg-gray-600 hover:bg-gray-600 text-white cursor-not-allowed'
+                        : 'bg-emerald-600 hover:bg-emerald-700'
+                    }
+                  >
                     {createMutation.isPending || updateMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         {editingAtividade ? 'Atualizando...' : 'Registrando...'}
                       </>
+                    ) : editingAtividade ? (
+                      'Atualizar'
+                    ) : registrado ? (
+                      'Registrado'
                     ) : (
-                      editingAtividade ? 'Atualizar' : 'Registrar'
+                      'Registrar'
                     )}
                   </Button>
                 </div>
@@ -720,8 +838,7 @@ export default function Atividades() {
           <Filter className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-white">Filtros</h2>
         </div>
-        
-        {/* Campo de Busca por ID */}
+
         <div className="mb-4">
           <Label className="text-xs text-gray-400">Buscar por Código (CH, LG, MO, MA, FB)</Label>
           <Input
@@ -732,7 +849,7 @@ export default function Atividades() {
             className="bg-[#1a1a1a] border-gray-700 mt-1 font-mono"
           />
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <Label className="text-xs text-gray-400">Supervisor</Label>
@@ -787,8 +904,13 @@ export default function Atividades() {
             />
           </div>
         </div>
-        
-        {(filterIdBusca || filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
+
+        {(filterIdBusca ||
+          filterSupervisor ||
+          filterAnalista ||
+          filterTipo ||
+          filterDataInicio ||
+          filterDataFim) && (
           <div className="mt-4 flex justify-end">
             <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
               <X className="w-4 h-4" />
@@ -803,16 +925,20 @@ export default function Atividades() {
         {atividadesFiltradas.length > 0 && (
           <div className="bg-[#0d0d0d] border-b border-gray-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-400">
-              Mostrando <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, totalRegistros)}</span> de <span className="text-white font-semibold">{totalRegistros}</span> registros
+              Mostrando <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, totalRegistros)}</span> de{' '}
+              <span className="text-white font-semibold">{totalRegistros}</span> registros
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-gray-400">Registros por página:</Label>
-                <Select value={pageSize.toString()} onValueChange={(val) => {
-                  setPageSize(parseInt(val));
-                  setCurrentPage(1);
-                }}>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(val) => {
+                    setPageSize(parseInt(val));
+                    setCurrentPage(1);
+                  }}
+                >
                   <SelectTrigger className="bg-[#1a1a1a] border-gray-700 w-20">
                     <SelectValue />
                   </SelectTrigger>
@@ -855,25 +981,17 @@ export default function Atividades() {
           <div className="bg-blue-500/10 border-b border-blue-500/30 px-6 py-3 flex items-center justify-between">
             <span className="text-sm text-blue-400">{selectedIds.size} registro(s) selecionado(s)</span>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSelectedIds(new Set())}
-                className="border-gray-700 h-8"
-              >
+              <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="border-gray-700 h-8">
                 Desselecionar Tudo
               </Button>
-              <Button
-                size="sm"
-                onClick={() => setDeleteMultipleDialogOpen(true)}
-                className="bg-red-600 hover:bg-red-700 h-8 gap-2"
-              >
+              <Button size="sm" onClick={() => setDeleteMultipleDialogOpen(true)} className="bg-red-600 hover:bg-red-700 h-8 gap-2">
                 <Trash2 className="w-4 h-4" />
                 Deletar Selecionados
               </Button>
             </div>
           </div>
         )}
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#1a1a1a] border-b border-gray-800">
@@ -883,11 +1001,8 @@ export default function Atividades() {
                     type="checkbox"
                     checked={selectedIds.size === atividadesPaginadas.length && atividadesPaginadas.length > 0}
                     onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(new Set(atividadesPaginadas.map(a => a.id)));
-                      } else {
-                        setSelectedIds(new Set());
-                      }
+                      if (e.target.checked) setSelectedIds(new Set(atividadesPaginadas.map((a) => a.id)));
+                      else setSelectedIds(new Set());
                     }}
                     className="cursor-pointer"
                   />
@@ -913,11 +1028,8 @@ export default function Atividades() {
                       checked={selectedIds.has(atividade.id)}
                       onChange={(e) => {
                         const newSet = new Set(selectedIds);
-                        if (e.target.checked) {
-                          newSet.add(atividade.id);
-                        } else {
-                          newSet.delete(atividade.id);
-                        }
+                        if (e.target.checked) newSet.add(atividade.id);
+                        else newSet.delete(atividade.id);
                         setSelectedIds(newSet);
                       }}
                       className="cursor-pointer"
@@ -928,9 +1040,7 @@ export default function Atividades() {
                       {atividade.codigo_atividade || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
-                    {getLocalDateString(atividade.data)}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{getLocalDateString(atividade.data)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
@@ -939,36 +1049,32 @@ export default function Atividades() {
                       <AtividadeInfoTooltip tipo={atividade.tipo} />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">
-                    {getSupervisorNome(atividade.supervisor_id)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">
-                    {getAnalistaNome(atividade.analista_id)}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</td>
                   <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[150px]">
                     {atividade.registrado_por || atividade.created_by}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>
-                      {atividade.nota}
-                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>{atividade.nota}</span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
-                      {atividade.status}
-                    </span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>{atividade.status}</span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
-                      atividade.aprovacao_status === 'aprovado' 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
+                        atividade.aprovacao_status === 'aprovado'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : atividade.aprovacao_status === 'rejeitado'
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }`}
+                    >
+                      {atividade.aprovacao_status === 'aprovado'
+                        ? '✓ Aprovado'
                         : atividade.aprovacao_status === 'rejeitado'
-                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                        : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                    }`}>
-                      {atividade.aprovacao_status === 'aprovado' ? '✓ Aprovado' : 
-                       atividade.aprovacao_status === 'rejeitado' ? '✗ Rejeitado' : 
-                       '⏳ Pendente'}
+                        ? '✗ Rejeitado'
+                        : '⏳ Pendente'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -1016,7 +1122,9 @@ export default function Atividades() {
           <div className="text-center py-12">
             <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">
-              {atividades.length === 0 ? 'Nenhuma atividade registrada' : 'Nenhuma atividade encontrada com os filtros aplicados'}
+              {atividades.length === 0
+                ? 'Nenhuma atividade registrada'
+                : 'Nenhuma atividade encontrada com os filtros aplicados'}
             </p>
           </div>
         )}
@@ -1073,7 +1181,12 @@ export default function Atividades() {
               {viewingAtividade.link_gravacao_teams && (
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Link Teams</p>
-                  <a href={viewingAtividade.link_gravacao_teams} target="_blank" className="text-blue-400 hover:underline text-sm">
+                  <a
+                    href={viewingAtividade.link_gravacao_teams}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-400 hover:underline text-sm"
+                  >
                     {viewingAtividade.link_gravacao_teams}
                   </a>
                 </div>
@@ -1105,7 +1218,7 @@ export default function Atividades() {
                   <MonitoriaOfflineForm
                     data={{
                       ...viewingAtividade.topicos_monitoria_offline,
-                      protocolo: viewingAtividade.protocolo_gravacao
+                      protocolo: viewingAtividade.protocolo_gravacao,
                     }}
                     onChange={() => {}}
                     readOnly={true}
@@ -1118,7 +1231,7 @@ export default function Atividades() {
                   <MonitoriaAssistidaForm
                     data={{
                       ...viewingAtividade.topicos_monitoria_assistida,
-                      linkGravacao: viewingAtividade.link_gravacao_teams
+                      linkGravacao: viewingAtividade.link_gravacao_teams,
                     }}
                     onChange={() => {}}
                     readOnly={true}
@@ -1147,10 +1260,7 @@ export default function Atividades() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteMutation.mutate(deleteId)}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1179,7 +1289,7 @@ export default function Atividades() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de Sucesso - GARANTIDO */}
+      {/* Dialog de Sucesso */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <AlertDialogContent className="bg-gradient-to-br from-emerald-900/30 to-emerald-950/50 border-2 border-emerald-500/50 backdrop-blur-xl">
           <AlertDialogHeader>
@@ -1210,7 +1320,6 @@ export default function Atividades() {
             <AlertDialogAction
               onClick={() => {
                 setShowSuccessDialog(false);
-                // Refresh otimizado das queries
                 queryClient.invalidateQueries({ queryKey: ['atividades'] });
                 queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
                 queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
