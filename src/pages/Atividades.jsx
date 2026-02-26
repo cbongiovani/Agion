@@ -1157,6 +1157,28 @@ export default function Atividades() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog de Exclusão em Massa */}
+      <AlertDialog open={deleteMultipleDialogOpen} onOpenChange={setDeleteMultipleDialogOpen}>
+        <AlertDialogContent className="bg-[#242424] border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar exclusão em massa</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir {selectedIds.size} atividade(s)? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMultipleMutation.mutate()}
+              disabled={deleteMultipleMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteMultipleMutation.isPending ? 'Deletando...' : 'Deletar Tudo'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Dialog de Sucesso - GARANTIDO */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <AlertDialogContent className="bg-gradient-to-br from-emerald-900/30 to-emerald-950/50 border-2 border-emerald-500/50 backdrop-blur-xl">
