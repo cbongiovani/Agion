@@ -567,78 +567,21 @@ export default function Aprovacao() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-[#0a1628] border-[#1e3a5f] text-white max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Visualizar Registro</DialogTitle>
+            <DialogTitle>{selectedItem?.tipo === 'atividade' ? 'Visualizar Atividade' : 'Visualizar Registro'}</DialogTitle>
           </DialogHeader>
-          {selectedItem?.data && (
+          {selectedItem?.data && selectedItem.tipo === 'atividade' && (
+            <VisualizarAtividade 
+              atividade={selectedItem.data}
+              supervisorNome={getSupervisorNome(selectedItem.data.supervisor_id)}
+              analistaNome={getAnalistaNome(selectedItem.data.analista_id)}
+            />
+          )}
+          {selectedItem?.data && selectedItem.tipo !== 'atividade' && (
             <div className="space-y-4">
               <div className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedItem.tipo === 'atividade' && (
-                    <>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Tipo de Atividade</p>
-                        <p className="text-white font-medium mt-1">{selectedItem.data.tipo || '-'}</p>
-                      </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Data</p>
-                        <p className="text-white font-medium mt-1">{selectedItem.data.data ? new Date(selectedItem.data.data).toLocaleDateString('pt-BR') : '-'}</p>
-                      </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Supervisor Responsável</p>
-                        <p className="text-white font-medium mt-1">{getSupervisorNome(selectedItem.data.supervisor_id)}</p>
-                      </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Analista</p>
-                        <p className="text-white font-medium mt-1">{getAnalistaNome(selectedItem.data.analista_id)}</p>
-                      </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Nota</p>
-                        <p className="text-white font-medium mt-1">{selectedItem.data.nota}/10</p>
-                      </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Status</p>
-                        <p className="text-white font-medium mt-1">{selectedItem.data.status || '-'}</p>
-                      </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
-                        <p className="text-xs text-gray-400 uppercase">Registrado Por</p>
-                        <p className="text-white font-medium mt-1">{selectedItem.data.registrado_por || selectedItem.data.created_by || '-'}</p>
-                      </div>
-                      {selectedItem.data.comentario && (
-                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
-                          <p className="text-xs text-gray-400 uppercase">Comentário</p>
-                          <p className="text-white font-medium mt-1">{selectedItem.data.comentario}</p>
-                        </div>
-                      )}
-                      {selectedItem.data.protocolo_gravacao && (
-                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
-                          <p className="text-xs text-gray-400 uppercase">Protocolo da Gravação</p>
-                          <p className="text-white font-medium mt-1">{selectedItem.data.protocolo_gravacao}</p>
-                        </div>
-                      )}
-                      {selectedItem.data.link_gravacao_teams && (
-                        <div className="col-span-2 border-b border-[#1e3a5f] pb-3">
-                          <p className="text-xs text-gray-400 uppercase">Link da Gravação Teams</p>
-                          <a href={selectedItem.data.link_gravacao_teams} target="_blank" className="text-blue-400 hover:underline break-all">
-                            {selectedItem.data.link_gravacao_teams}
-                          </a>
-                        </div>
-                      )}
-                      {selectedItem.data.ticket_acompanhado && (
-                        <div className="border-b border-[#1e3a5f] pb-3">
-                          <p className="text-xs text-gray-400 uppercase">Ticket</p>
-                          <p className="text-white font-medium mt-1">{selectedItem.data.ticket_acompanhado}</p>
-                        </div>
-                      )}
-                      {selectedItem.data.tipo_feedback && (
-                        <div className="border-b border-[#1e3a5f] pb-3">
-                          <p className="text-xs text-gray-400 uppercase">Tipo de Feedback</p>
-                          <p className="text-white font-medium mt-1">{selectedItem.data.tipo_feedback}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
                   {selectedItem.tipo === 'fechamento' && (
                     <>
                       <div className="border-b border-[#1e3a5f] pb-3">
