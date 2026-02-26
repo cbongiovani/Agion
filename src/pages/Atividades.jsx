@@ -329,7 +329,6 @@ export default function Atividades() {
     },
 
     onError: (error) => {
-      setRegistrado(false);
       toast.error('❌ Erro ao registrar atividade', {
         description: error.message || 'Tente novamente',
         duration: 5000,
