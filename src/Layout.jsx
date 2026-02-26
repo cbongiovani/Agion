@@ -29,6 +29,8 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { MODULES } from '@/components/moduleConstants';
+import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
 import NotificationBell from '@/components/NotificationBell';
 import ClockWidget from '@/components/ClockWidget';
 import QuizzNotificationWidget from '@/components/QuizzNotificationWidget';
@@ -52,12 +54,11 @@ export default function Layout({ children }) {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: permissoesUsuario } = useQuery({
-    queryKey: ['permissoesUsuario', currentUser?.email],
+  const { data: modulePermissions } = useQuery({
+    queryKey: ['modulePermissions', currentUser?.email],
     queryFn: async () => {
       if (!currentUser?.email) return null;
-      const perms = await base44.entities.PermissaoUsuario.filter({ usuario_email: currentUser.email });
-      return perms.length > 0 ? perms[0] : null;
+      return await getUserModulePermissions(currentUser.email, currentUser.role);
     },
     enabled: !!currentUser?.email,
   });
@@ -112,37 +113,30 @@ export default function Layout({ children }) {
   };
 
   const getNavItems = () => {
-    const role = currentUser?.role;
-    
     const baseItems = [
-      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', permKey: 'dashboard', tooltip: 'Visão geral consolidada de métricas e performance do painel de governança' },
-      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', permKey: 'atividades', tooltip: 'Registre e acompanhe atividades de monitorias, chamados e feedback individual' },
-      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', permKey: 'fechamento_semanal', tooltip: 'Consolidação semanal de resultados, backlog e observações de desempenho' },
-      { name: 'Supervisores', icon: Users, path: 'Supervisores', permKey: 'supervisores', tooltip: 'Gestão de equipes supervisoras e suas informações' },
-      { name: 'Analistas', icon: UserCircle, path: 'Analistas', permKey: 'analistas', tooltip: 'Cadastro e acompanhamento de analistas N1' },
-      { name: 'Ranking', icon: Trophy, path: 'Ranking', permKey: 'ranking', tooltip: 'Ranking de performance com gamificação MMORPG - Pontos e Medalhas' },
-      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', permKey: 'quizz_relampago', alwaysVisible: true, tooltip: 'Testes rápidos de conhecimento com questões sobre processos técnicos' },
-      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', permKey: 'avaliacoes', tooltip: 'Avaliações periódicas (AT) estruturadas com 20 questões por período' },
-      { name: 'Certificados', icon: Award, path: 'Certificados', permKey: 'certificados', tooltip: 'Gerenciar certificados e cursos realizados por analistas e supervisores' },
-      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', permKey: 'war_room', tooltip: 'Gerenciamento de incidentes críticos com rastreamento de atividades' },
-      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', permKey: 'manual_supervisor', tooltip: 'Base de conhecimento e orientações para supervisores' },
-      { name: 'Aprovação', icon: CheckCircle2, path: 'Aprovacao', permKey: 'aprovacao', tooltip: 'Aprovação de atividades, avaliações e quizzes' },
-      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', permKey: 'gestao_usuarios', tooltip: 'Convites, permissões e funções personalizadas do painel' },
-      { name: 'Logs do Sistema', icon: ClipboardList, path: 'Logs', permKey: 'logs', tooltip: 'Rastreamento de todas as ações realizadas no painel' },
+      { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', moduleKey: MODULES.DASHBOARD, tooltip: 'Visão geral consolidada de métricas' },
+      { name: 'Atividades', icon: ClipboardList, path: 'Atividades', moduleKey: MODULES.ATIVIDADES, tooltip: 'Registre e acompanhe atividades' },
+      { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', moduleKey: MODULES.FECHAMENTO_SEMANAL, tooltip: 'Consolidação semanal de resultados' },
+      { name: 'Supervisores', icon: Users, path: 'Supervisores', moduleKey: MODULES.SUPERVISORES, tooltip: 'Gestão de equipes' },
+      { name: 'Analistas', icon: UserCircle, path: 'Analistas', moduleKey: MODULES.ANALISTAS, tooltip: 'Cadastro de analistas N1' },
+      { name: 'Ranking', icon: Trophy, path: 'Ranking', moduleKey: MODULES.RANKING, tooltip: 'Performance com gamificação' },
+      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', moduleKey: MODULES.QUIZZ_RELAMPAGO, alwaysVisible: true, tooltip: 'Testes rápidos de conhecimento' },
+      { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', moduleKey: MODULES.AVALIACOES, tooltip: 'Avaliações periódicas' },
+      { name: 'Certificados', icon: Award, path: 'Certificados', moduleKey: MODULES.CERTIFICADOS, tooltip: 'Certificados e cursos' },
+      { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', moduleKey: MODULES.WAR_ROOM, tooltip: 'Gerenciamento de incidentes' },
+      { name: 'Manual do Supervisor', icon: BookOpen, path: 'ManualSupervisor', moduleKey: MODULES.MANUAL_SUPERVISOR, tooltip: 'Base de conhecimento' },
+      { name: 'Aprovação', icon: CheckCircle2, path: 'Aprovacao', moduleKey: MODULES.APROVACAO, tooltip: 'Aprovação de registros' },
+      { name: 'Gestão de Usuários', icon: Settings, path: 'GestaoUsuarios', moduleKey: MODULES.GESTAO_USUARIOS, tooltip: 'Permissões e funções' },
+      { name: 'Logs', icon: ClipboardList, path: 'Logs', moduleKey: MODULES.LOGS_SISTEMA, tooltip: 'Auditoria de ações' },
     ];
     
-    // Admin sempre vê tudo
-    if (role === 'admin') {
+    if (currentUser?.role === 'admin') {
       return baseItems;
     }
     
-    // Para todos os outros usuários (incluindo funções personalizadas), verificar permissões
-    if (permissoesUsuario?.abas_visiveis) {
-      return baseItems.filter(item => item.alwaysVisible || permissoesUsuario.abas_visiveis[item.permKey] === true);
-    }
-    
-    // Se não tem permissões configuradas, mostrar apenas Ranking e Quizz Relâmpago
-    return baseItems.filter(item => item.alwaysVisible || item.permKey === 'ranking');
+    return baseItems.filter((item) =>
+      item.alwaysVisible || isModuleVisible(modulePermissions, item.moduleKey)
+    );
   };
 
   const navItems = getNavItems();
@@ -244,17 +238,15 @@ export default function Layout({ children }) {
                   <Link
                     to={createPageUrl(item.path)}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`
-                      flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none
-                      ${isActive(item.path) 
-                        ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold' 
+                    className={`flex items-center gap-3 px-4 py-3 transition-all duration-200 border-l-4 relative select-none ${
+                      isActive(item.path)
+                        ? 'bg-[#0a0a0a] text-[#ADF802] border-l-[#ADF802] font-semibold'
                         : 'text-gray-400 hover:bg-[#0a0a0a] hover:text-white border-l-transparent active:bg-[#151515]'
-                      }
-                    `}
+                    }`}
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     <span className="font-medium text-sm">{item.name}</span>
-                    {item.path === 'Aprovacao' && aprovacoesPendentes.length > 0 && (
+                    {item.moduleKey === MODULES.APROVACAO && aprovacoesPendentes.length > 0 && (
                       <div className="absolute right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                     )}
                   </Link>
