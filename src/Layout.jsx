@@ -305,7 +305,6 @@ export default function Layout({ children }) {
             <span className="hidden sm:inline">Sair</span>
           </Button>
         </div>
-        </div>
       </footer>
 
       {/* Main Content */}
