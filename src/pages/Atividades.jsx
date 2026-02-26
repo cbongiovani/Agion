@@ -50,8 +50,8 @@ export default function Atividades() {
     enabled: !!currentUser?.email,
   });
 
-  const canCreate = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.criar || false;
-  const canEdit = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.editar || false;
+  const canCreate = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || permissoesUsuario?.permissoes_atividades?.criar || false;
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || permissoesUsuario?.permissoes_atividades?.editar || false;
   const canDelete = currentUser?.role === 'admin' || permissoesUsuario?.permissoes_atividades?.deletar || false;
 
   const [formData, setFormData] = useState({
@@ -70,12 +70,12 @@ export default function Atividades() {
   });
 
   const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role, currentUser?.email],
+    queryKey: ['atividades', currentUser?.role],
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
-      // Admin vê tudo
-      if (currentUser?.role === 'admin') {
+      // Admin e Supervisor veem TUDO (mesma visualização)
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
         return todasAtividades;
       }
       
@@ -84,15 +84,6 @@ export default function Atividades() {
       const idsAprovados = todasAprovacoes
         .filter(a => a.tipo === 'atividade' && a.status === 'aprovado')
         .map(a => a.atividade_id);
-      
-      // Supervisor: vê TODAS as atividades aprovadas de todos os supervisores + suas próprias pendentes
-      if (currentUser?.role === 'supervisor') {
-        return todasAtividades.filter(ativ => 
-          idsAprovados.includes(ativ.id) || 
-          ativ.registrado_por === currentUser.email ||
-          ativ.created_by === currentUser.email
-        );
-      }
       
       // Outros usuários: apenas aprovadas
       return todasAtividades.filter(ativ => idsAprovados.includes(ativ.id));
