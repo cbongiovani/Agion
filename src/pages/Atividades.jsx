@@ -170,7 +170,6 @@ export default function Atividades() {
       return atividadesComAprovacao.filter((ativ) => idsAprovados.includes(ativ.id));
     },
     enabled: !!currentUser,
-    staleTime: 0,
   });
 
   const { data: supervisores = [] } = useQuery({
@@ -343,19 +342,20 @@ export default function Atividades() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['ranking'] });
-      queryClient.invalidateQueries({ queryKey: ['rankings'] });
-      queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
-      queryClient.invalidateQueries({ queryKey: ['supervisores'] });
+      // ✅ FECHAMENTO GARANTIDO - fechar modal ANTES de invalidar queries
+      setIsDialogOpen(false);
+      resetForm();
 
-      // ✅ FECHAMENTO GARANTIDO
+      // Invalidar queries após fechar modal
       setTimeout(() => {
-        setIsDialogOpen(false);
-        resetForm();
+        queryClient.invalidateQueries({ queryKey: ['atividades'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['ranking'] });
+        queryClient.invalidateQueries({ queryKey: ['rankings'] });
+        queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+        queryClient.invalidateQueries({ queryKey: ['supervisores'] });
         setShowSuccessDialog(true);
-      }, 300);
+      }, 200);
     },
     onError: (error) => {
       toast.error('❌ Erro ao atualizar atividade', {
