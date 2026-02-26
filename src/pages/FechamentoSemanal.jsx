@@ -64,12 +64,12 @@ export default function FechamentoSemanal() {
     queryFn: async () => {
       const todosFechamentos = await base44.entities.FechamentoSemanal.list('-created_date');
       
-      // Se for admin, mostra todos
-      if (currentUser?.role === 'admin') {
+      // Admin e Supervisor veem tudo
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
         return todosFechamentos;
       }
       
-      // Para outros usuários, mostra apenas aprovados
+      // Outros usuários veem apenas aprovados
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'fechamento' });
       const aprovados = aprovacoes
         .filter(a => a.status === 'aprovado')

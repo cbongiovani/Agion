@@ -71,12 +71,12 @@ export default function Atividades() {
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
-      // Se for admin, mostra todas
-      if (currentUser?.role === 'admin') {
+      // Admin e Supervisor veem tudo
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
         return todasAtividades;
       }
       
-      // Para outros usuários, mostra apenas aprovadas
+      // Outros usuários veem apenas aprovadas
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'atividade' });
       const aprovadas = aprovacoes
         .filter(a => a.status === 'aprovado')

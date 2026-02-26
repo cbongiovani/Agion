@@ -49,12 +49,12 @@ export default function Avaliacoes() {
     queryFn: async () => {
       const todasAvaliacoes = await base44.entities.Avaliacao.list('-created_date');
       
-      // Se for admin, mostra todas
-      if (currentUser?.role === 'admin') {
+      // Admin e Supervisor veem tudo
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
         return todasAvaliacoes;
       }
       
-      // Para outros usuários, mostra apenas aprovadas
+      // Outros usuários veem apenas aprovadas
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'avaliacao' });
       const aprovadas = aprovacoes
         .filter(a => a.status === 'aprovado')

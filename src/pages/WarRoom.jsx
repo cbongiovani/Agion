@@ -89,12 +89,12 @@ export default function WarRoom() {
     queryFn: async () => {
       const todosIncidentes = await base44.entities.Incidente.list('-data_inicio');
       
-      // Se for admin, mostra todos
-      if (currentUser?.role === 'admin') {
+      // Admin, Supervisor e NOC veem tudo
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') {
         return todosIncidentes;
       }
       
-      // Para outros usuários, mostra apenas aprovados
+      // Outros usuários veem apenas aprovados
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'warroom' });
       const aprovados = aprovacoes
         .filter(a => a.status === 'aprovado')
