@@ -254,14 +254,6 @@ export default function Aprovacao() {
 
   const isLoadingAny = !atividades.length || !fechamentos.length || !incidentes.length;
 
-  if (currentUser?.role !== 'admin') {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-gray-400 text-lg">Acesso apenas para coordenadores</p>
-      </div>
-    );
-  }
-
   if (isLoadingAny) {
     return (
       <div className="space-y-6">
@@ -283,7 +275,7 @@ export default function Aprovacao() {
       </div>
 
       <Tabs defaultValue="atividades" className="space-y-4">
-        <TabsList className="bg-[#0f1f35] border border-[#1e3a5f]">
+        <TabsList className="bg-[#1a1a1a] border border-gray-700">
           <TabsTrigger value="atividades" className="relative">
             Atividades
             {(atividadesPendentes.length + fechamentosPendentes.length + warroomPendentes.length) > 0 && (
@@ -300,7 +292,7 @@ export default function Aprovacao() {
 
         <TabsContent value="atividades" className="space-y-6">
           {/* Atividades */}
-          <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+          <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Atividades Pendentes ({atividadesPendentes.length})
@@ -363,7 +355,7 @@ export default function Aprovacao() {
           </div>
 
           {/* Fechamentos */}
-          <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+          <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Fechamentos Semanais Pendentes ({fechamentosPendentes.length})
@@ -375,9 +367,9 @@ export default function Aprovacao() {
                 {fechamentosPendentes.map((item) => {
                   const fechamento = fechamentos.find(f => f.id === item.atividade_id);
                   return (
-                    <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-white font-medium">Fechamento Semanal</p>
+                    <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
+                       <div className="flex-1">
+                         <p className="text-white font-medium">Fechamento Semanal</p>
                         <p className="text-sm text-gray-400 mt-1">
                           {formatDateBR(fechamento?.semana_inicio)} - {formatDateBR(fechamento?.semana_fim)}
                         </p>
@@ -425,7 +417,7 @@ export default function Aprovacao() {
           </div>
 
           {/* War Room */}
-          <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+          <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Incidentes War Room Pendentes ({warroomPendentes.length})
@@ -437,9 +429,9 @@ export default function Aprovacao() {
                 {warroomPendentes.map((item) => {
                   const incidente = incidentes.find(i => i.id === item.atividade_id);
                   return (
-                    <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-white font-medium">{incidente?.titulo}</p>
+                    <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
+                       <div className="flex-1">
+                         <p className="text-white font-medium">{incidente?.titulo}</p>
                         <p className="text-sm text-gray-400 mt-1">
                           Severidade: {incidente?.severidade}
                         </p>
@@ -488,8 +480,8 @@ export default function Aprovacao() {
         </TabsContent>
 
         <TabsContent value="avaliacoes" className="space-y-6">
-          {/* Avaliações */}
-          <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+           {/* Avaliações */}
+           <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Avaliações Pendentes ({avaliacoesPendentes.length})
@@ -499,7 +491,7 @@ export default function Aprovacao() {
             ) : (
               <div className="space-y-3">
                 {avaliacoesPendentes.map((item) => (
-                  <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
+                  <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-white font-medium">{item.titulo}</p>
                       <p className="text-sm text-gray-400 mt-1">
@@ -537,7 +529,7 @@ export default function Aprovacao() {
           </div>
 
           {/* Questões */}
-          <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+          <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Questões Pendentes ({questoesPendentes.length})
@@ -547,7 +539,7 @@ export default function Aprovacao() {
             ) : (
               <div className="space-y-3">
                 {questoesPendentes.map((item) => (
-                  <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
+                  <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-white font-medium text-sm">{item.enunciado}</p>
                       <p className="text-xs text-gray-400 mt-1">
@@ -585,7 +577,7 @@ export default function Aprovacao() {
           </div>
 
           {/* Quizzes */}
-          <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] p-6">
+          <div className="bg-[#242424] rounded-2xl border border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Quizzes Agendados ({quizzesPendentes.length})
@@ -595,7 +587,7 @@ export default function Aprovacao() {
             ) : (
               <div className="space-y-3">
                 {quizzesPendentes.map((item) => (
-                  <div key={item.id} className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f] flex items-center justify-between">
+                  <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700 flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-white font-medium">{item.titulo}</p>
                       <p className="text-sm text-gray-400 mt-1">
@@ -649,25 +641,25 @@ export default function Aprovacao() {
           )}
           {selectedItem?.data && selectedItem.tipo !== 'atividade' && (
             <div className="space-y-4">
-              <div className="bg-[#0f1f35] rounded-lg p-4 border border-[#1e3a5f]">
+             <div className="bg-[#1a1a1a] rounded-lg p-4 border border-gray-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedItem.tipo === 'fechamento' && (
                     <>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Período</p>
                         <p className="text-white font-medium mt-1">
                           {formatDateBR(selectedItem.data.semana_inicio)} - {formatDateBR(selectedItem.data.semana_fim)}
                         </p>
                       </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Total Ligações Next IP</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.total_ligacoes_next_ip || 0}</p>
                       </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Total Chamados Verdana</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.total_chamados_verdana || 0}</p>
                       </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Total Monitorias</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.total_monitorias || 0}</p>
                       </div>
@@ -681,19 +673,19 @@ export default function Aprovacao() {
                   )}
                   {selectedItem.tipo === 'warroom' && (
                     <>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Título</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.titulo || '-'}</p>
                       </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Severidade</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.severidade || '-'}</p>
                       </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Categoria</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.categoria || '-'}</p>
                       </div>
-                      <div className="border-b border-[#1e3a5f] pb-3">
+                      <div className="border-b border-gray-700 pb-3">
                         <p className="text-xs text-gray-400 uppercase">Status</p>
                         <p className="text-white font-medium mt-1">{selectedItem.data.status || '-'}</p>
                       </div>
@@ -726,7 +718,7 @@ export default function Aprovacao() {
 
       {/* Reject Dialog */}
       <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <AlertDialogContent className="bg-[#0a1628] border-[#1e3a5f]">
+        <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Rejeitar Registro</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
@@ -738,11 +730,11 @@ export default function Aprovacao() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Motivo da rejeição..."
-              className="bg-[#0f1f35] border-[#1e3a5f] text-white"
+              className="bg-[#1a1a1a] border-gray-700 text-white"
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#1e3a5f]">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (rejectReason.trim()) {
