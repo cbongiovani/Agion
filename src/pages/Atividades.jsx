@@ -308,7 +308,6 @@ export default function Atividades() {
 
     // ✅ AJUSTE CRÍTICO: FECHA O MODAL SEM DEPENDER DE onOpenChange “inteligente”
     onSuccess: () => {
-      setRegistrado(true);
       
       // ✅ FECHAMENTO GARANTIDO - fechar modal ANTES de invalidar queries
       setTimeout(() => {
