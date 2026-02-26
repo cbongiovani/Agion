@@ -300,14 +300,15 @@ export default function Atividades() {
 
     // ✅ AJUSTE CRÍTICO: FECHA O MODAL SEM DEPENDER DE onOpenChange “inteligente”
     onSuccess: () => {
+      submitLockRef.current = false; // Liberar lock antes de fechar
       
-      // ✅ FECHAMENTO GARANTIDO - fechar modal ANTES de invalidar queries
+      // Fechar modal
       setTimeout(() => {
         setIsDialogOpen(false);
-        resetForm(); // também limpa registrado
+        resetForm();
       }, 50);
 
-      // Invalidar queries após fechar modal (evita duplicação)
+      // Invalidar queries
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
         queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
@@ -321,6 +322,7 @@ export default function Atividades() {
     },
 
     onError: (error) => {
+      submitLockRef.current = false; // CRÍTICO: Liberar lock em caso de erro
       toast.error('❌ Erro ao registrar atividade', {
         description: error.message || 'Tente novamente',
         duration: 5000,
