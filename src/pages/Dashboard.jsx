@@ -32,6 +32,7 @@ import {
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import PlanoAcaoIAWidget from '@/components/PlanoAcaoIAWidget';
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -326,6 +327,11 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Plano de Ação IA - Apenas para Supervisores */}
+      {(currentUser?.role === 'supervisor' || currentUser?.role === 'admin') && (
+        <PlanoAcaoIAWidget currentUser={currentUser} />
+      )}
     </div>
   );
 }
