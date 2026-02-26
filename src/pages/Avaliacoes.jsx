@@ -13,6 +13,7 @@ import {
   FileText, Upload, Sparkles, Check, X, Plus, Loader2, 
   BookOpen, ClipboardCheck, AlertCircle, Trash2, Eye 
 } from 'lucide-react';
+import { notificarCoordenadores } from '@/components/notificationHelper';
 
 export default function Avaliacoes() {
   const queryClient = useQueryClient();

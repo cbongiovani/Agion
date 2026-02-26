@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import QuizzReiDoSuporteWidget from '@/components/QuizzReiDoSuporteWidget';
 import QuizzCarrosselTop3 from '@/components/QuizzCarrosselTop3';
+import { notificarCoordenadores } from '@/components/notificationHelper';
 
 export default function QuizzRelampago() {
   const queryClient = useQueryClient();

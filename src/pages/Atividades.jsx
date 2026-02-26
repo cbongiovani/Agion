@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, ClipboardList, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, Loader2, Eye, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { formatDateToInput, getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
-import AtividadeLimitModal from '@/components/AtividadeLimitCheck';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
 import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 
@@ -23,8 +21,15 @@ export default function Atividades() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [limitAlert, setLimitAlert] = useState(null);
   const [selectedType, setSelectedType] = useState('Chamados');
+  const [viewingAtividade, setViewingAtividade] = useState(null);
+  
+  // Filtros
+  const [filterSupervisor, setFilterSupervisor] = useState('');
+  const [filterAnalista, setFilterAnalista] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
+  const [filterDataInicio, setFilterDataInicio] = useState('');
+  const [filterDataFim, setFilterDataFim] = useState('');
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -194,6 +199,14 @@ export default function Atividades() {
     setSelectedType('Chamados');
   };
 
+  const limparFiltros = () => {
+    setFilterSupervisor('');
+    setFilterAnalista('');
+    setFilterTipo('');
+    setFilterDataInicio('');
+    setFilterDataFim('');
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -257,12 +270,37 @@ export default function Atividades() {
     setFormData({ ...formData, tipo });
   };
 
-  const getNotaBadgeColor = (nota) => {
-    if (nota >= 9) return 'bg-emerald-500/20 text-emerald-400';
-    if (nota >= 7) return 'bg-blue-500/20 text-blue-400';
-    if (nota >= 5) return 'bg-amber-500/20 text-amber-400';
-    return 'bg-red-500/20 text-red-400';
+  const getTipoColor = (tipo) => {
+    const colors = {
+      'Chamados': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      'Ligações': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      'Monitoria Offline': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      'Monitoria Assistida': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      'Feedback Individual': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    };
+    return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
+
+  const getNotaBadgeColor = (nota) => {
+    if (nota >= 9) return 'bg-emerald-500 text-white';
+    if (nota >= 7) return 'bg-yellow-500 text-black';
+    return 'bg-red-500 text-white';
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'Concluído') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (status === 'Em evolução') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  };
+
+  const atividadesFiltradas = atividades.filter(ativ => {
+    if (filterSupervisor && ativ.supervisor_id !== filterSupervisor) return false;
+    if (filterAnalista && ativ.analista_id !== filterAnalista) return false;
+    if (filterTipo && ativ.tipo !== filterTipo) return false;
+    if (filterDataInicio && ativ.data < filterDataInicio) return false;
+    if (filterDataFim && ativ.data > filterDataFim) return false;
+    return true;
+  });
 
   if (isLoading) {
     return (
@@ -277,7 +315,7 @@ export default function Atividades() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white">Atividades</h1>
-          <p className="text-gray-400 mt-1">Registre monitorias, chamados e feedbacks</p>
+          <p className="text-gray-400 mt-1">Registre e gerencie as atividades do Suporte N1</p>
         </div>
         {canCreate && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -307,7 +345,10 @@ export default function Atividades() {
                     />
                   </div>
                   <div>
-                    <Label>Tipo de Atividade</Label>
+                    <Label className="flex items-center gap-2">
+                      Tipo de Atividade
+                      <AtividadeInfoTooltip tipo={selectedType} />
+                    </Label>
                     <Select value={selectedType} onValueChange={handleTipoChange}>
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                         <SelectValue />
@@ -339,7 +380,7 @@ export default function Atividades() {
                   </div>
                   {formData.supervisor_id && (
                     <div>
-                      <Label>Supervisor</Label>
+                      <Label>Supervisor Responsável</Label>
                       <div className="bg-[#1a1a1a] border border-gray-700 rounded-md p-2 mt-2">
                         <p className="text-white">{getSupervisorNome(formData.supervisor_id)}</p>
                       </div>
@@ -373,16 +414,20 @@ export default function Atividades() {
                   </div>
                 )}
 
+                {selectedType === 'Monitoria Offline' && (
+                  <MonitoriaOfflineForm
+                    data={formData.topicos_monitoria_offline}
+                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
+                    onProtocoloChange={(protocolo) => setFormData({ ...formData, protocolo_gravacao: protocolo })}
+                  />
+                )}
+
                 {selectedType === 'Monitoria Assistida' && (
-                  <div>
-                    <Label>Link da Gravação Teams</Label>
-                    <Input
-                      type="text"
-                      value={formData.link_gravacao_teams}
-                      onChange={(e) => setFormData({ ...formData, link_gravacao_teams: e.target.value })}
-                      className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    />
-                  </div>
+                  <MonitoriaAssistidaForm
+                    data={formData.topicos_monitoria_assistida}
+                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
+                    onLinkChange={(link) => setFormData({ ...formData, link_gravacao_teams: link })}
+                  />
                 )}
 
                 {selectedType === 'Feedback Individual' && (
@@ -398,20 +443,6 @@ export default function Atividades() {
                       </SelectContent>
                     </Select>
                   </div>
-                )}
-
-                {selectedType === 'Monitoria Offline' && (
-                  <MonitoriaOfflineForm
-                    data={formData.topicos_monitoria_offline}
-                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
-                  />
-                )}
-
-                {selectedType === 'Monitoria Assistida' && (
-                  <MonitoriaAssistidaForm
-                    data={formData.topicos_monitoria_assistida}
-                    onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
-                  />
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -467,76 +498,294 @@ export default function Atividades() {
         )}
       </div>
 
-      <div className="space-y-4">
-        {atividades.map((atividade) => (
-          <div key={atividade.id} className="bg-[#242424] rounded-2xl border border-gray-800 p-6 hover:border-emerald-500/30 transition-all">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                  <ClipboardList className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">
-                    {atividade.tipo}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {getLocalDateString(atividade.data)} • {getAnalistaNome(atividade.analista_id)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Supervisor: {getSupervisorNome(atividade.supervisor_id)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className={`px-4 py-2 rounded-lg font-bold ${getNotaBadgeColor(atividade.nota)}`}>
-                  {atividade.nota}/10
-                </div>
-                <span className="text-xs bg-gray-700/50 text-gray-300 px-3 py-1 rounded-full">
-                  {atividade.status}
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                {canEdit && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEdit(atividade)}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteId(atividade.id)}
-                    className="text-gray-400 hover:text-red-400"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {atividade.comentario && (
-              <div className="mt-4 pt-4 border-t border-gray-800">
-                <p className="text-sm text-gray-400">{atividade.comentario}</p>
-              </div>
-            )}
+      {/* Filtros */}
+      <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-white">Filtros</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <Label className="text-xs text-gray-400">Supervisor</Label>
+            <Select value={filterSupervisor} onValueChange={setFilterSupervisor}>
+              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-1">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#242424] border-gray-700">
+                <SelectItem value={null}>Todos</SelectItem>
+                {supervisores.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ))}
+
+          <div>
+            <Label className="text-xs text-gray-400">Analista</Label>
+            <Select value={filterAnalista} onValueChange={setFilterAnalista}>
+              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-1">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#242424] border-gray-700">
+                <SelectItem value={null}>Todos</SelectItem>
+                {analistas.map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs text-gray-400">Tipo</Label>
+            <Select value={filterTipo} onValueChange={setFilterTipo}>
+              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-1">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#242424] border-gray-700">
+                <SelectItem value={null}>Todos</SelectItem>
+                <SelectItem value="Chamados">Chamados</SelectItem>
+                <SelectItem value="Ligações">Ligações</SelectItem>
+                <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
+                <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
+                <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs text-gray-400">Data Início</Label>
+            <Input
+              type="date"
+              value={filterDataInicio}
+              onChange={(e) => setFilterDataInicio(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs text-gray-400">Data Fim</Label>
+            <Input
+              type="date"
+              value={filterDataFim}
+              onChange={(e) => setFilterDataFim(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
+          </div>
+        </div>
+        
+        {(filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
+              <X className="w-4 h-4" />
+              Limpar Filtros
+            </Button>
+          </div>
+        )}
       </div>
 
-      {atividades.length === 0 && (
-        <div className="text-center py-12">
-          <ClipboardList className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">Nenhuma atividade registrada</p>
+      {/* Tabela de Atividades */}
+      <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-[#1a1a1a] border-b border-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Data</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Tipo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Supervisor Resp.</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Analista</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Registrado Por</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Nota</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {atividadesFiltradas.map((atividade) => (
+                <tr key={atividade.id} className="hover:bg-[#1a1a1a] transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
+                    {getLocalDateString(atividade.data)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
+                        {atividade.tipo}
+                      </span>
+                      <AtividadeInfoTooltip tipo={atividade.tipo} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {getSupervisorNome(atividade.supervisor_id)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {getAnalistaNome(atividade.analista_id)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[150px]">
+                    {atividade.registrado_por || atividade.created_by}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>
+                      {atividade.nota}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
+                      {atividade.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setViewingAtividade(atividade)}
+                        className="text-blue-400 hover:text-blue-300 h-8 w-8"
+                        title="Visualizar"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(atividade)}
+                          className="text-gray-400 hover:text-white h-8 w-8"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(atividade.id)}
+                          className="text-gray-400 hover:text-red-400 h-8 w-8"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
 
+        {atividadesFiltradas.length === 0 && (
+          <div className="text-center py-12">
+            <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">
+              {atividades.length === 0 ? 'Nenhuma atividade registrada' : 'Nenhuma atividade encontrada com os filtros aplicados'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Dialog de Visualização */}
+      <Dialog open={!!viewingAtividade} onOpenChange={() => setViewingAtividade(null)}>
+        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Atividade</DialogTitle>
+          </DialogHeader>
+          {viewingAtividade && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Data</p>
+                  <p className="text-white font-medium">{getLocalDateString(viewingAtividade.data)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Tipo</p>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getTipoColor(viewingAtividade.tipo)}`}>
+                    {viewingAtividade.tipo}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Supervisor</p>
+                  <p className="text-white">{getSupervisorNome(viewingAtividade.supervisor_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Analista</p>
+                  <p className="text-white">{getAnalistaNome(viewingAtividade.analista_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Nota</p>
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${getNotaBadgeColor(viewingAtividade.nota)}`}>
+                    {viewingAtividade.nota}/10
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Status</p>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(viewingAtividade.status)}`}>
+                    {viewingAtividade.status}
+                  </span>
+                </div>
+              </div>
+
+              {viewingAtividade.protocolo_gravacao && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Protocolo da Gravação</p>
+                  <p className="text-white">{viewingAtividade.protocolo_gravacao}</p>
+                </div>
+              )}
+
+              {viewingAtividade.link_gravacao_teams && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Link Teams</p>
+                  <a href={viewingAtividade.link_gravacao_teams} target="_blank" className="text-blue-400 hover:underline text-sm">
+                    {viewingAtividade.link_gravacao_teams}
+                  </a>
+                </div>
+              )}
+
+              {viewingAtividade.ticket_acompanhado && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Ticket</p>
+                  <p className="text-white">{viewingAtividade.ticket_acompanhado}</p>
+                </div>
+              )}
+
+              {viewingAtividade.tipo_feedback && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Tipo de Feedback</p>
+                  <p className="text-white">{viewingAtividade.tipo_feedback}</p>
+                </div>
+              )}
+
+              {viewingAtividade.comentario && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Comentário</p>
+                  <p className="text-gray-300 text-sm">{viewingAtividade.comentario}</p>
+                </div>
+              )}
+
+              {viewingAtividade.topicos_monitoria_offline && Object.keys(viewingAtividade.topicos_monitoria_offline).length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Tópicos Avaliados (Monitoria Offline)</p>
+                  <div className="bg-[#1a1a1a] rounded-lg p-3 space-y-1">
+                    {Object.entries(viewingAtividade.topicos_monitoria_offline).map(([key, value]) => (
+                      <div key={key} className="flex justify-between text-sm">
+                        <span className="text-gray-400">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-white font-medium">{value}/5</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-gray-800">
+                <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
@@ -556,8 +805,6 @@ export default function Atividades() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <AtividadeLimitModal isOpen={!!limitAlert} onClose={() => setLimitAlert(null)} alert={limitAlert} />
     </div>
   );
 }
