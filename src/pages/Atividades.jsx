@@ -341,6 +341,7 @@ export default function Atividades() {
     setFilterDataInicio('');
     setFilterDataFim('');
     setFilterIdBusca('');
+    setCurrentPage(1);
   };
 
   const handleSubmit = (e) => {
