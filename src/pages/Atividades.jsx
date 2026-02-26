@@ -419,6 +419,7 @@ export default function Atividades() {
                     data={formData.topicos_monitoria_offline}
                     onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_offline: topicos })}
                     onProtocoloChange={(protocolo) => setFormData({ ...formData, protocolo_gravacao: protocolo })}
+                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
 
@@ -427,6 +428,7 @@ export default function Atividades() {
                     data={formData.topicos_monitoria_assistida}
                     onChange={(topicos) => setFormData({ ...formData, topicos_monitoria_assistida: topicos })}
                     onLinkChange={(link) => setFormData({ ...formData, link_gravacao_teams: link })}
+                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
 
@@ -445,34 +447,36 @@ export default function Atividades() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nota (0-10)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="10"
-                      step="0.5"
-                      value={formData.nota}
-                      onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
-                      className="bg-[#1a1a1a] border-gray-700 mt-2"
-                      required
-                    />
+                {selectedType !== 'Monitoria Offline' && selectedType !== 'Monitoria Assistida' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nota (0-10)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.5"
+                        value={formData.nota}
+                        onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                        className="bg-[#1a1a1a] border-gray-700 mt-2"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
+                        <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#242424] border-gray-700">
+                          <SelectItem value="Aberto">Aberto</SelectItem>
+                          <SelectItem value="Em evolução">Em evolução</SelectItem>
+                          <SelectItem value="Concluído">Concluído</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
-                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#242424] border-gray-700">
-                        <SelectItem value="Aberto">Aberto</SelectItem>
-                        <SelectItem value="Em evolução">Em evolução</SelectItem>
-                        <SelectItem value="Concluído">Concluído</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                )}
 
                 <div>
                   <Label>Comentário</Label>
