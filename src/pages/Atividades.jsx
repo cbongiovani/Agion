@@ -139,15 +139,16 @@ export default function Atividades() {
           codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
           
           // Tentar criar - se código duplicado, vai dar erro e retry
+          const user = await base44.auth.me();
+          
           const result = await base44.entities.Atividade.create({
             ...data,
-            codigo_atividade: codigoAtividade
+            codigo_atividade: codigoAtividade,
+            registrado_por: user.email
           });
           
           // Se chegou aqui, sucesso - sair do loop
           tentativas = maxTentativas;
-          
-          const user = await base44.auth.me();
           
           // Criar registro de aprovação
           await base44.entities.AprovacaoAtividade.create({
