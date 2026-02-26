@@ -151,20 +151,19 @@ export default function PermissionGrid({ user, resources, userOverrides, roles, 
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-gray-500 w-16">Visível:</span>
                     <Select
-                      value={getPermission(resource.key, 'view') ? 'sim' : 'nao'}
-                      onValueChange={(val) =>
-                        handlePermissionChange(resource.key, 'view', val === 'sim')
-                      }
-                      disabled={saving[`${resource.key}_view`]}
-                    >
-                      <SelectTrigger className="bg-[#0a1628] border-[#1e3a5f] h-7 text-xs w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                        <SelectItem value="sim">Sim</SelectItem>
-                        <SelectItem value="nao">Não</SelectItem>
-                      </SelectContent>
-                    </Select>
+                       value={getPermission(resource.key, 'view') ? 'sim' : 'nao'}
+                       onValueChange={(val) =>
+                         handlePermissionChange(resource.key, 'view', val === 'sim')
+                       }
+                     >
+                       <SelectTrigger className="bg-[#0a1628] border-[#1e3a5f] h-7 text-xs w-24">
+                         <SelectValue />
+                       </SelectTrigger>
+                       <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                         <SelectItem value="sim">Sim</SelectItem>
+                         <SelectItem value="nao">Não</SelectItem>
+                       </SelectContent>
+                     </Select>
                     {isOverride(resource.key, 'view') && (
                       <Badge className="bg-orange-500/20 text-orange-300 text-xs">
                         Exceção
@@ -179,20 +178,19 @@ export default function PermissionGrid({ user, resources, userOverrides, roles, 
                       <div key={action} className="flex items-center gap-2 text-xs pl-4">
                         <span className="text-gray-500 w-12 capitalize">{action}:</span>
                         <Select
-                          value={getPermission(resource.key, action) ? 'sim' : 'nao'}
-                          onValueChange={(val) =>
-                            handlePermissionChange(resource.key, action, val === 'sim')
-                          }
-                          disabled={saving[`${resource.key}_${action}`]}
-                        >
-                          <SelectTrigger className="bg-[#0a1628] border-[#1e3a5f] h-7 text-xs w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
-                            <SelectItem value="sim">Sim</SelectItem>
-                            <SelectItem value="nao">Não</SelectItem>
-                          </SelectContent>
-                        </Select>
+                           value={getPermission(resource.key, action) ? 'sim' : 'nao'}
+                           onValueChange={(val) =>
+                             handlePermissionChange(resource.key, action, val === 'sim')
+                           }
+                         >
+                           <SelectTrigger className="bg-[#0a1628] border-[#1e3a5f] h-7 text-xs w-24">
+                             <SelectValue />
+                           </SelectTrigger>
+                           <SelectContent className="bg-[#0a1628] border-[#1e3a5f]">
+                             <SelectItem value="sim">Sim</SelectItem>
+                             <SelectItem value="nao">Não</SelectItem>
+                           </SelectContent>
+                         </Select>
                         {isOverride(resource.key, action) && (
                           <Badge className="bg-orange-500/20 text-orange-300 text-xs">
                             Exceção
@@ -206,6 +204,28 @@ export default function PermissionGrid({ user, resources, userOverrides, roles, 
           </div>
         ))}
       </div>
-    </div>
-  );
-}
+
+      {/* Botões de Ação */}
+      <div className="flex gap-3 pt-4 border-t border-[#1e3a5f] mt-4">
+        <button
+          onClick={() => onClose?.()}
+          className="flex-1 px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium transition-colors"
+        >
+          Fechar
+        </button>
+        <button
+          onClick={handleApply}
+          disabled={applying || Object.keys(pendingChanges).length === 0}
+          className={`flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            applying || Object.keys(pendingChanges).length === 0
+              ? 'bg-gray-500 cursor-not-allowed'
+              : 'bg-emerald-600 hover:bg-emerald-700'
+          }`}
+        >
+          {applying && <Loader2 className="w-4 h-4 animate-spin" />}
+          Aplicar {Object.keys(pendingChanges).length > 0 && `(${Object.keys(pendingChanges).length})`}
+        </button>
+      </div>
+      </div>
+      );
+      }
