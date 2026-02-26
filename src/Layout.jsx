@@ -22,7 +22,8 @@ import {
   Award,
   CheckCircle2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  TrendingUp
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -115,6 +116,7 @@ export default function Layout({ children }) {
   const getNavItems = () => {
     const baseItems = [
       { name: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard', moduleKey: MODULES.DASHBOARD, tooltip: 'Visão geral consolidada de métricas' },
+      { name: 'KPI & OKR', icon: TrendingUp, path: 'DashboardOKR', moduleKey: MODULES.DASHBOARD, adminOnly: true, tooltip: 'Análise de OKRs e planos com IA' },
       { name: 'Atividades', icon: ClipboardList, path: 'Atividades', moduleKey: MODULES.ATIVIDADES, tooltip: 'Registre e acompanhe atividades' },
       { name: 'Fechamento Semanal', icon: Calendar, path: 'FechamentoSemanal', moduleKey: MODULES.FECHAMENTO_SEMANAL, tooltip: 'Consolidação semanal de resultados' },
       { name: 'Supervisores', icon: Users, path: 'Supervisores', moduleKey: MODULES.SUPERVISORES, tooltip: 'Gestão de equipes' },
@@ -135,7 +137,7 @@ export default function Layout({ children }) {
     }
     
     return baseItems.filter((item) =>
-      item.alwaysVisible || isModuleVisible(modulePermissions, item.moduleKey)
+      item.alwaysVisible || (item.adminOnly && currentUser?.role === 'admin') || isModuleVisible(modulePermissions, item.moduleKey)
     );
   };
 
