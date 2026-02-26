@@ -64,18 +64,28 @@ export default function FechamentoSemanal() {
     queryFn: async () => {
       const todosFechamentos = await base44.entities.FechamentoSemanal.list('-created_date');
       
+      // Buscar aprovações
+      const aprovacoes = await base44.entities.AprovacaoAtividade.list('-created_date', 500);
+      const aprovacoesPorId = {};
+      aprovacoes.forEach(aprov => {
+        if (aprov.tipo === 'fechamento') {
+          aprovacoesPorId[aprov.atividade_id] = aprov;
+        }
+      });
+      
+      // Anexar status de aprovação
+      const fechamentosComAprovacao = todosFechamentos.map(fech => ({
+        ...fech,
+        aprovacao_status: aprovacoesPorId[fech.id]?.status || 'pendente'
+      }));
+      
       // Admin e Supervisor veem tudo
       if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
-        return todosFechamentos;
+        return fechamentosComAprovacao;
       }
       
       // Outros usuários veem apenas aprovados
-      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'fechamento' });
-      const aprovados = aprovacoes
-        .filter(a => a.status === 'aprovado')
-        .map(a => a.atividade_id);
-      
-      return todosFechamentos.filter(fech => aprovados.includes(fech.id));
+      return fechamentosComAprovacao.filter(fech => fech.aprovacao_status === 'aprovado');
     },
     enabled: !!currentUser,
   });
