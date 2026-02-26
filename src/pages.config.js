@@ -47,46 +47,46 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Analistas from './pages/Analistas';
+import MeuPerfil from './pages/MeuPerfil';
 import Aprovacao from './pages/Aprovacao';
-import Atividades from './pages/Atividades';
+import Ranking from './pages/Ranking';
+import ManualSupervisor from './pages/ManualSupervisor';
+import RelatorioSemanal from './pages/RelatorioSemanal';
+import Dashboard from './pages/Dashboard';
 import Avaliacoes from './pages/Avaliacoes';
 import Certificados from './pages/Certificados';
-import Dashboard from './pages/Dashboard';
-import FechamentoSemanal from './pages/FechamentoSemanal';
-import GestaoUsuarios from './pages/GestaoUsuarios';
-import Home from './pages/Home';
-import Logs from './pages/Logs';
-import ManualSupervisor from './pages/ManualSupervisor';
-import MeuPerfil from './pages/MeuPerfil';
-import PerfilAnalista from './pages/PerfilAnalista';
-import QuizzRelampago from './pages/QuizzRelampago';
-import Ranking from './pages/Ranking';
-import RelatorioSemanal from './pages/RelatorioSemanal';
-import Supervisores from './pages/Supervisores';
 import WarRoom from './pages/WarRoom';
+import QuizzRelampago from './pages/QuizzRelampago';
+import Home from './pages/Home';
+import Supervisores from './pages/Supervisores';
+import FechamentoSemanal from './pages/FechamentoSemanal';
+import Analistas from './pages/Analistas';
+import PerfilAnalista from './pages/PerfilAnalista';
+import Logs from './pages/Logs';
+import GestaoUsuarios from './pages/GestaoUsuarios';
+import Atividades from './pages/Atividades';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Analistas": Analistas,
+    "MeuPerfil": MeuPerfil,
     "Aprovacao": Aprovacao,
-    "Atividades": Atividades,
+    "Ranking": Ranking,
+    "ManualSupervisor": ManualSupervisor,
+    "RelatorioSemanal": RelatorioSemanal,
+    "Dashboard": Dashboard,
     "Avaliacoes": Avaliacoes,
     "Certificados": Certificados,
-    "Dashboard": Dashboard,
-    "FechamentoSemanal": FechamentoSemanal,
-    "GestaoUsuarios": GestaoUsuarios,
-    "Home": Home,
-    "Logs": Logs,
-    "ManualSupervisor": ManualSupervisor,
-    "MeuPerfil": MeuPerfil,
-    "PerfilAnalista": PerfilAnalista,
-    "QuizzRelampago": QuizzRelampago,
-    "Ranking": Ranking,
-    "RelatorioSemanal": RelatorioSemanal,
-    "Supervisores": Supervisores,
     "WarRoom": WarRoom,
+    "QuizzRelampago": QuizzRelampago,
+    "Home": Home,
+    "Supervisores": Supervisores,
+    "FechamentoSemanal": FechamentoSemanal,
+    "Analistas": Analistas,
+    "PerfilAnalista": PerfilAnalista,
+    "Logs": Logs,
+    "GestaoUsuarios": GestaoUsuarios,
+    "Atividades": Atividades,
 }
 
 export const pagesConfig = {

@@ -70,7 +70,7 @@ export default function Atividades() {
   });
 
   const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades'],
+    queryKey: ['atividades', currentUser?.role, currentUser?.email],
     queryFn: async () => {
       const todasAtividades = await base44.entities.Atividade.list('-created_date');
       
@@ -80,15 +80,25 @@ export default function Atividades() {
         .filter(a => a.status === 'aprovado')
         .map(a => a.atividade_id);
       
-      // APENAS Admin vê todas (incluindo pendentes)
+      // Admin vê tudo
       if (currentUser?.role === 'admin') {
         return todasAtividades;
       }
       
-      // Todos os outros (incluindo supervisores) veem APENAS aprovadas
+      // Supervisor vê: aprovadas + suas próprias pendentes
+      if (currentUser?.role === 'supervisor') {
+        return todasAtividades.filter(ativ => 
+          atividadesAprovadas.includes(ativ.id) || 
+          ativ.registrado_por === currentUser.email
+        );
+      }
+      
+      // Outros usuários veem APENAS aprovadas
       return todasAtividades.filter(ativ => atividadesAprovadas.includes(ativ.id));
     },
     enabled: !!currentUser,
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   const { data: supervisores = [] } = useQuery({
