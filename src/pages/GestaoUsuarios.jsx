@@ -423,14 +423,12 @@ export default function GestaoUsuarios() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white">Gestão de Usuários</h1>
-            <p className="text-gray-400 mt-1">Gerencie acesso e permissões do sistema</p>
-          </div>
-        
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-800">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Gestão de Usuários</h1>
+          <p className="text-gray-400 mt-1">Gerencie acesso e permissões do sistema</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
           {currentUser?.role === 'admin' && (
             <Dialog open={isFuncoesDialogOpen} onOpenChange={setIsFuncoesDialogOpen}>
               <DialogTrigger asChild>
@@ -725,7 +723,6 @@ export default function GestaoUsuarios() {
           </DialogContent>
         </Dialog>
         </div>
-        </div>
       </div>
 
       <div className="bg-[#0a1628] rounded-2xl border border-[#1e3a5f] overflow-hidden">
@@ -781,23 +778,24 @@ export default function GestaoUsuarios() {
                 <tr key={user.id} className="border-b border-[#1e3a5f]/50 hover:bg-[#1e3a5f]/30">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#e74c3c]/20 flex items-center justify-center">
-                        <span className="text-[#e74c3c] font-bold">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-sm">
                           {letraInicial}
                         </span>
                       </div>
-                      <span className="text-white font-medium">{nomeExibicao}</span>
+                      <div className="flex flex-col">
+                        <span className="text-white font-medium">{nomeExibicao}</span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-400">
+                  <td className="px-6 py-4 text-gray-400 text-sm">
                     <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
+                      <Mail className="w-4 h-4 text-gray-500" />
                       {user.email}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadge(user.role)}`}>
-                      <Shield className="w-3 h-3" />
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getRoleBadge(user.role)}`}>
                       {getRoleLabel(user.role)}
                     </span>
                   </td>
@@ -805,13 +803,13 @@ export default function GestaoUsuarios() {
                     {new Date(user.created_date).toLocaleDateString('pt-BR')}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-2">
                       {currentUser?.role === 'admin' && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => openPermissionsDialog(user)}
-                          className="text-gray-400 hover:text-[#ADF802]"
+                          className="text-gray-400 hover:text-[#ADF802] h-8 w-8 p-0"
                           title="Gerenciar Permissões"
                         >
                           <Lock className="w-4 h-4" />
@@ -819,17 +817,17 @@ export default function GestaoUsuarios() {
                       )}
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => openEdit(user)}
-                        className="text-gray-400 hover:text-white"
+                        className="text-gray-400 hover:text-white h-8 w-8 p-0"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => openDeleteDialog(user)}
-                        className="text-gray-400 hover:text-red-400"
+                        className="text-gray-400 hover:text-red-400 h-8 w-8 p-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
