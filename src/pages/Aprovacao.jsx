@@ -1,7 +1,14 @@
 // src/pages/Aprovacao.jsx
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+  Eye,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { base44 } from '@/api/base44Client';
@@ -10,12 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,18 +49,47 @@ function extractUsefulError(err) {
   return {
     status,
     message: msg,
-    details: typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
+    details:
+      typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
   };
+}
+
+function fmtDate(v) {
+  if (!v) return '-';
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v);
+    return d.toLocaleString('pt-BR');
+  } catch {
+    return String(v);
+  }
+}
+
+function Field({ label, value }) {
+  return (
+    <div>
+      <div className="text-gray-400">{label}</div>
+      <div className="text-gray-100 font-medium break-words">{value ?? '-'}</div>
+    </div>
+  );
 }
 
 export default function Aprovacao() {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState(null); // atividade selecionada (obj)
+  const [selected, setSelected] = useState(null); // para rejeição
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectMotivo, setRejectMotivo] = useState('');
   const [confirmApproveId, setConfirmApproveId] = useState(null);
+
+  // ✅ NOVO: visualizar atividade
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewAtividade, setViewAtividade] = useState(null);
+  const openView = (atividade) => {
+    setViewAtividade(atividade);
+    setViewOpen(true);
+  };
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -79,25 +110,24 @@ export default function Aprovacao() {
     staleTime: 5 * 1000,
   });
 
-  // 2) Buscar todas as atividades e filtrar pelas pendentes (CORRIGIDO string/number)
+  // 2) Buscar atividades e filtrar pelas pendentes (normalizando IDs)
   const { data: atividadesPendentes = [], isLoading: loadingAtiv } = useQuery({
     queryKey: ['atividadesPendentes', aprovacoesPendentes.length],
     queryFn: async () => {
       const ids = aprovacoesPendentes.map((a) => idStr(a.atividade_id)).filter(Boolean);
-      const set = new Set(ids); // SET DE STRING
+      const set = new Set(ids);
 
-      // Busca um volume razoável (ajuste se seu ambiente tiver mais de 800)
+      // Ajuste o limite se necessário
       const raw = await base44.entities.Atividade.list('-created_date', 800);
       const arr = Array.isArray(raw) ? raw : [];
 
-      // Mantém apenas as que têm aprovação pendente
       return arr.filter((at) => set.has(idStr(at.id)));
     },
     enabled: !!currentUser && aprovacoesPendentes.length > 0,
     staleTime: 5 * 1000,
   });
 
-  // Map pra buscar a aprovação pendente de uma atividade rapidamente (CORRIGIDO)
+  // Mapa para achar a aprovação pendente por atividade_id rapidamente
   const aprovacaoPorAtividade = useMemo(() => {
     const m = new Map();
     for (const a of aprovacoesPendentes) {
@@ -116,13 +146,14 @@ export default function Aprovacao() {
       const cod = String(a.codigo_atividade || '').toLowerCase();
       const id = String(a.id || '').toLowerCase();
       const tipo = String(a.tipo || '').toLowerCase();
-      return cod.includes(q) || id.includes(q) || tipo.includes(q);
+      const criado = String(a.registrado_por || a.created_by || '').toLowerCase();
+      return cod.includes(q) || id.includes(q) || tipo.includes(q) || criado.includes(q);
     });
   }, [atividadesPendentes, search]);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-    queryClient.invalidateQueries({ queryKey: ['aprovacoesAtividadeMap'] });
+    queryClient.invalidateQueries({ queryKey: ['atividadesPendentes'] });
     queryClient.invalidateQueries({ queryKey: ['atividades'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
@@ -149,7 +180,9 @@ export default function Aprovacao() {
     onError: (err) => {
       const e = extractUsefulError(err);
       toast.error('❌ Erro ao aprovar', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${e.details ? `\n${e.details}` : ''}`,
+        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${
+          e.details ? `\n${e.details}` : ''
+        }`,
       });
     },
   });
@@ -178,7 +211,9 @@ export default function Aprovacao() {
     onError: (err) => {
       const e = extractUsefulError(err);
       toast.error('❌ Erro ao rejeitar', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${e.details ? `\n${e.details}` : ''}`,
+        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${
+          e.details ? `\n${e.details}` : ''
+        }`,
       });
     },
   });
@@ -225,14 +260,15 @@ export default function Aprovacao() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="bg-[#1a1a1a] border-gray-700 mt-2"
-          placeholder="CH00001 / ID / Tipo..."
+          placeholder="CH00001 / ID / Tipo / e-mail..."
         />
       </div>
 
       <div className="bg-[#121212] border border-gray-800 rounded overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div className="text-sm text-gray-300">
-            Pendentes: <span className="text-gray-100 font-semibold">{filtered.length}</span>
+            Pendentes:{' '}
+            <span className="text-gray-100 font-semibold">{filtered.length}</span>
           </div>
         </div>
 
@@ -268,9 +304,21 @@ export default function Aprovacao() {
                       </td>
                       <td className="p-3 text-gray-200">{a.tipo || '-'}</td>
                       <td className="p-3 text-gray-200">{aprov?.status || 'pendente'}</td>
-                      <td className="p-3 text-gray-300">{a.registrado_por || a.created_by || '-'}</td>
+                      <td className="p-3 text-gray-300">
+                        {a.registrado_por || a.created_by || '-'}
+                      </td>
                       <td className="p-3">
                         <div className="flex items-center justify-end gap-2">
+                          {/* ✅ NOVO: Ver detalhes */}
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700 gap-2"
+                            onClick={() => openView(a)}
+                          >
+                            <Eye className="w-4 h-4" />
+                            Ver
+                          </Button>
+
                           <Button
                             variant="secondary"
                             className="bg-[#1a1a1a] border border-gray-700 gap-2"
@@ -300,12 +348,15 @@ export default function Aprovacao() {
       </div>
 
       {/* Confirm Approve */}
-      <AlertDialog open={!!confirmApproveId} onOpenChange={(open) => !open && setConfirmApproveId(null)}>
+      <AlertDialog
+        open={!!confirmApproveId}
+        onOpenChange={(open) => !open && setConfirmApproveId(null)}
+      >
         <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
           <AlertDialogHeader>
             <AlertDialogTitle>Aprovar atividade?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Essa ação libera a atividade para visualização geral.
+              Essa ação libera a atividade.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -376,6 +427,67 @@ export default function Aprovacao() {
               ) : (
                 'Rejeitar'
               )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ NOVO: View modal */}
+      <Dialog
+        open={viewOpen}
+        onOpenChange={(open) => {
+          setViewOpen(open);
+          if (!open) setViewAtividade(null);
+        }}
+      >
+        <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Visualizar atividade</DialogTitle>
+          </DialogHeader>
+
+          {!viewAtividade ? (
+            <div className="text-gray-400">Nenhuma atividade selecionada.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <Field
+                label="Código"
+                value={viewAtividade.codigo_atividade || viewAtividade.id}
+              />
+              <Field label="Tipo" value={viewAtividade.tipo || '-'} />
+
+              <Field label="Supervisor" value={viewAtividade.supervisor_nome || '-'} />
+              <Field label="Analista" value={viewAtividade.analista_nome || '-'} />
+
+              <Field label="Ticket" value={viewAtividade.ticket || '-'} />
+              <Field label="Status" value={viewAtividade.status || '-'} />
+
+              <Field label="Nota (0-10)" value={viewAtividade.nota ?? '-'} />
+              <Field label="Data" value={fmtDate(viewAtividade.data)} />
+
+              <div className="md:col-span-2">
+                <div className="text-gray-400">Comentário</div>
+                <div className="text-gray-100 whitespace-pre-wrap bg-[#1a1a1a] border border-gray-700 rounded p-3 mt-2">
+                  {viewAtividade.comentario || '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 text-gray-500 text-xs">
+                Criada por: {viewAtividade.registrado_por || viewAtividade.created_by || '-'}
+                {' · '}
+                ID: {idStr(viewAtividade.id) || '-'}
+                {' · '}
+                Request ID: {viewAtividade.request_id || '-'}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="secondary"
+              className="bg-[#1a1a1a] border border-gray-700"
+              onClick={() => setViewOpen(false)}
+            >
+              Fechar
             </Button>
           </div>
         </DialogContent>
