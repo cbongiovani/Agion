@@ -834,12 +834,15 @@ export default function Atividades() {
 
           <div>
             <Label>Supervisor</Label>
-            <Select value={filterSupervisor} onValueChange={setFilterSupervisor}>
+            <Select
+  value={filterSupervisor || ALL}
+  onValueChange={(v) => setFilterSupervisor(v === ALL ? '' : v)}
+>
               <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value={ALL}>Todos</SelectItem>
                 {supervisores.map((s) => (
                   <SelectItem key={s.id} value={idStr(s.id)}>
                     {getSupervisorNome(s.id)}
