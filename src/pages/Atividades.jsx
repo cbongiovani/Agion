@@ -720,10 +720,15 @@ export default function Atividades() {
     });
 
     if (editingAtividade) {
-      updateMutation.mutate({ id: editingAtividade.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
+  updateMutation.mutate({ id: editingAtividade.id, data: payload });
+} else {
+  const request_id = makeRequestId();
+  const payloadComRequest = { ...payload, request_id };
+
+  console.log('PAYLOAD CREATE (com request_id):', payloadComRequest);
+
+  createMutation.mutate(payloadComRequest);
+}
   };
 
   return (
