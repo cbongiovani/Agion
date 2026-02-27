@@ -112,6 +112,8 @@ export default function Aprovacao() {
   // ✅ NOVO: visualizar atividade
   const [viewOpen, setViewOpen] = useState(false);
   const [viewAtividade, setViewAtividade] = useState(null);
+  const [viewSupervisorNome, setViewSupervisorNome] = useState('');
+  const [viewAnalistaNome, setViewAnalistaNome] = useState('');
   const openView = async (atividade) => {
   try {
     const full = await base44.entities.Atividade.get(atividade.id);
