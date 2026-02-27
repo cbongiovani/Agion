@@ -117,10 +117,37 @@ export default function Aprovacao() {
   const openView = async (atividade) => {
   try {
     const full = await base44.entities.Atividade.get(atividade.id);
+
+    const supId = full?.supervisor_id || full?.supervisor || '';
+    const anaId = full?.analista_id || full?.analista || '';
+
+    let supNome = '';
+    let anaNome = '';
+
+    try {
+      if (supId) {
+        const s = await base44.entities.Supervisor.get(supId);
+        supNome = s?.nome || s?.nome_supervisor || '';
+      }
+    } catch {}
+
+    try {
+      if (anaId) {
+        const a = await base44.entities.Analista.get(anaId);
+        anaNome = a?.nome || '';
+      }
+    } catch {}
+
+    setViewSupervisorNome(supNome);
+    setViewAnalistaNome(anaNome);
+
     setViewAtividade(full || atividade);
   } catch (e) {
+    setViewSupervisorNome('');
+    setViewAnalistaNome('');
     setViewAtividade(atividade);
   }
+
   setViewOpen(true);
 };
 
