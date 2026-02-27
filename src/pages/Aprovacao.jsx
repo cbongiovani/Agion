@@ -112,10 +112,15 @@ export default function Aprovacao() {
   // ✅ NOVO: visualizar atividade
   const [viewOpen, setViewOpen] = useState(false);
   const [viewAtividade, setViewAtividade] = useState(null);
-  const openView = (atividade) => {
+  const openView = async (atividade) => {
+  try {
+    const full = await base44.entities.Atividade.get(atividade.id);
+    setViewAtividade(full || atividade);
+  } catch (e) {
     setViewAtividade(atividade);
-    setViewOpen(true);
-  };
+  }
+  setViewOpen(true);
+};
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
