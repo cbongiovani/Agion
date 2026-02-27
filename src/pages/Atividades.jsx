@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -50,13 +50,151 @@ import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
 import { MODULES } from '@/components/moduleConstants';
 
+// =========================
+// CONSTANTES / NORMALIZAÇÃO
+// =========================
+const TIPO_OPTIONS = [
+  { value: 'chamados', label: 'Chamados', prefix: 'CH' },
+  { value: 'ligacoes', label: 'Ligações', prefix: 'LG' },
+  { value: 'monitoria_offline', label: 'Monitoria Offline', prefix: 'MO' },
+  { value: 'monitoria_assistida', label: 'Monitoria Assistida', prefix: 'MA' },
+  { value: 'feedback', label: 'Feedback Individual', prefix: 'FB' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'aberto', label: 'Aberto' },
+  { value: 'em_evolucao', label: 'Em evolução' },
+  { value: 'concluido', label: 'Concluído' },
+];
+
+const PREFIXOS = TIPO_OPTIONS.reduce((acc, t) => {
+  acc[t.value] = t.prefix;
+  return acc;
+}, {});
+
+const tipoLabel = (tipo) => (TIPO_OPTIONS.find((t) => t.value === tipo)?.label || tipo);
+const statusLabel = (st) => (STATUS_OPTIONS.find((s) => s.value === st)?.label || st);
+
+const normalizeTipo = (v) => {
+  if (!v) return 'chamados';
+  // já está no enum
+  if (TIPO_OPTIONS.some((t) => t.value === v)) return v;
+
+  const map = {
+    Chamados: 'chamados',
+    'Ligações': 'ligacoes',
+    Ligacoes: 'ligacoes',
+    'Monitoria Offline': 'monitoria_offline',
+    'Monitoria Assistida': 'monitoria_assistida',
+    'Feedback Individual': 'feedback',
+  };
+  return map[v] || 'chamados';
+};
+
+const normalizeStatus = (v) => {
+  if (!v) return 'aberto';
+  if (STATUS_OPTIONS.some((s) => s.value === v)) return v;
+
+  const map = {
+    Aberto: 'aberto',
+    'Em evolução': 'em_evolucao',
+    Concluído: 'concluido',
+    Concluido: 'concluido',
+  };
+  return map[v] || 'aberto';
+};
+
+// remove undefined / null / "" e objetos vazios
+const cleanPayload = (obj) => {
+  const isPlainObject = (x) =>
+    x && typeof x === 'object' && !Array.isArray(x) && !(x instanceof Date);
+
+  const walk = (value) => {
+    if (Array.isArray(value)) {
+      const arr = value.map(walk).filter((v) => v !== undefined);
+      return arr.length ? arr : undefined;
+    }
+
+    if (isPlainObject(value)) {
+      const out = {};
+      for (const [k, v] of Object.entries(value)) {
+        const vv = walk(v);
+        if (vv === undefined) continue;
+        out[k] = vv;
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return undefined;
+    return value;
+  };
+
+  const cleaned = walk(obj);
+  return cleaned || {};
+};
+
+const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => {
+  const dataAtual = new Date();
+  const dataFormatada = `${dataAtual.getFullYear()}-${String(
+    dataAtual.getMonth() + 1
+  ).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+
+  const tipo = normalizeTipo(selectedType || formData.tipo);
+
+  const base = {
+    tipo,
+    data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
+    analista_id: formData.analista_id || undefined,
+    supervisor_id: formData.supervisor_id || undefined,
+    nota: Number.isFinite(Number(formData.nota)) ? Number(formData.nota) : 0,
+    status: normalizeStatus(formData.status) || undefined,
+    comentario: formData.comentario || undefined,
+  };
+
+  if (tipo === 'chamados') {
+    base.ticket_acompanhado = formData.ticket_acompanhado || undefined;
+  }
+
+  if (tipo === 'ligacoes') {
+    base.protocolo_gravacao = formData.protocolo_gravacao || undefined;
+  }
+
+  if (tipo === 'monitoria_offline') {
+    base.protocolo_gravacao = formData.protocolo_gravacao || undefined;
+    base.topicos_monitoria_offline =
+      formData.topicos_monitoria_offline &&
+      Object.keys(formData.topicos_monitoria_offline).length > 0
+        ? formData.topicos_monitoria_offline
+        : undefined;
+    base.status = 'concluido';
+  }
+
+  if (tipo === 'monitoria_assistida') {
+    base.link_gravacao_teams = formData.link_gravacao_teams || undefined;
+    base.topicos_monitoria_assistida =
+      formData.topicos_monitoria_assistida &&
+      Object.keys(formData.topicos_monitoria_assistida).length > 0
+        ? formData.topicos_monitoria_assistida
+        : undefined;
+    base.status = 'concluido';
+  }
+
+  if (tipo === 'feedback') {
+    base.tipo_feedback = formData.tipo_feedback || undefined;
+  }
+
+  return cleanPayload(base);
+};
+
 export default function Atividades() {
   const queryClient = useQueryClient();
   const submitLockRef = useRef(false);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [selectedType, setSelectedType] = useState('Chamados');
+  const [selectedType, setSelectedType] = useState('chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -69,6 +207,7 @@ export default function Atividades() {
   const [filterIdBusca, setFilterIdBusca] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
 
@@ -101,7 +240,8 @@ export default function Atividades() {
     modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
   const [formData, setFormData] = useState({
-    tipo: 'Chamados',
+    data: '',
+    tipo: 'chamados',
     analista_id: '',
     supervisor_id: '',
     protocolo_gravacao: '',
@@ -115,100 +255,7 @@ export default function Atividades() {
     status: 'aberto',
   });
 
-  // =========================
-// NORMALIZAÇÃO / CONSTANTES
-// =========================
-const TIPO_OPTIONS = [
-  { value: 'chamados', label: 'Chamados', prefix: 'CH' },
-  { value: 'ligacoes', label: 'Ligações', prefix: 'LG' },
-  { value: 'monitoria_offline', label: 'Monitoria Offline', prefix: 'MO' },
-  { value: 'monitoria_assistida', label: 'Monitoria Assistida', prefix: 'MA' },
-  { value: 'feedback', label: 'Feedback Individual', prefix: 'FB' },
-];
-
-const STATUS_OPTIONS = [
-  { value: 'aberto', label: 'Aberto' },
-  { value: 'em_evolucao', label: 'Em evolução' },
-  { value: 'concluido', label: 'Concluído' },
-];
-
-const normalizeTipo = (v) => {
-  if (!v) return 'chamados';
-  const map = {
-    'Chamados': 'chamados',
-    'Ligações': 'ligacoes',
-    'Ligacoes': 'ligacoes',
-    'Monitoria Offline': 'monitoria_offline',
-    'Monitoria Assistida': 'monitoria_assistida',
-    'Feedback Individual': 'feedback',
-  };
-  return map[v] || v;
-};
-
-const normalizeStatus = (v) => {
-  if (!v) return 'aberto';
-  const map = {
-    'Aberto': 'aberto',
-    'Em evolução': 'em_evolucao',
-    'Concluído': 'concluido',
-  };
-  return map[v] || v;
-};
-
-const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => {
-  const dataAtual = new Date();
-  const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
-
-  // tipo SEMPRE no enum do banco
-  const tipo = normalizeTipo(selectedType || formData.tipo);
-
-  // status: mantém o seu valor atual; se quiser normalizar depois, eu ajusto com você
-  const base = {
-    tipo,
-    data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
-    analista_id: formData.analista_id || undefined,
-    supervisor_id: formData.supervisor_id || undefined,
-    nota: Number.isFinite(Number(formData.nota)) ? Number(formData.nota) : 0,
-    status: formData.status || undefined,
-    comentario: formData.comentario || undefined,
-  };
-
-  // Inclui SOMENTE o que faz sentido por tipo (evita 422 por validação)
-  if (tipo === 'chamados') {
-    base.ticket_acompanhado = formData.ticket_acompanhado || undefined;
-  }
-
-  if (tipo === 'ligacoes') {
-    base.protocolo_gravacao = formData.protocolo_gravacao || undefined;
-  }
-
-  if (tipo === 'monitoria_offline') {
-    base.protocolo_gravacao = formData.protocolo_gravacao || undefined;
-    base.topicos_monitoria_offline =
-      formData.topicos_monitoria_offline && Object.keys(formData.topicos_monitoria_offline).length > 0
-        ? formData.topicos_monitoria_offline
-        : undefined;
-  }
-
-  if (tipo === 'monitoria_assistida') {
-    base.link_gravacao_teams = formData.link_gravacao_teams || undefined;
-    base.topicos_monitoria_assistida =
-      formData.topicos_monitoria_assistida && Object.keys(formData.topicos_monitoria_assistida).length > 0
-        ? formData.topicos_monitoria_assistida
-        : undefined;
-  }
-
-  if (tipo === 'feedback') {
-    base.tipo_feedback = formData.tipo_feedback || undefined;
-  }
-
-  // Limpa undefined (Base44 costuma gostar mais assim)
-  Object.keys(base).forEach((k) => base[k] === undefined && delete base[k]);
-
-  return base;
-};
-
-  const { data: atividades = [], isLoading } = useQuery({
+  const { data: atividades = [] } = useQuery({
     queryKey: ['atividades', currentUser?.role],
     staleTime: 2000,
     queryFn: async () => {
@@ -230,6 +277,8 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
 
       const atividadesComAprovacao = atividadesUnicas.map((ativ) => ({
         ...ativ,
+        tipo: normalizeTipo(ativ.tipo),
+        status: normalizeStatus(ativ.status),
         aprovacao_status: aprovacaoPorId[ativ.id]?.status || 'pendente',
         aprovacao_data: aprovacaoPorId[ativ.id]?.data_aprovacao,
         aprovacao_motivo_rejeicao: aprovacaoPorId[ativ.id]?.motivo_rejeicao,
@@ -265,13 +314,23 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     queryFn: () => base44.entities.Analista.list(),
   });
 
+  // Evita 403 derrubando console/tela: se não tiver permissão, devolve []
   const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
+    queryKey: ['usuarios', currentUser?.email],
+    queryFn: async () => {
+      try {
+        return await base44.entities.User.list();
+      } catch (e) {
+        console.warn('Sem permissão para listar Users (ok):', e?.message || e);
+        return [];
+      }
+    },
+    enabled: !!currentUser, // se der 403, cai no catch e retorna []
   });
 
   const resetForm = () => {
     setFormData({
+      data: '',
       tipo: 'chamados',
       analista_id: '',
       supervisor_id: '',
@@ -290,32 +349,180 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     submitLockRef.current = false;
   };
 
+  const getSupervisorNome = (id) => {
+    const supervisor = supervisores.find((s) => s.id === id);
+    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
+    return (
+      usuario?.nome_customizado ||
+      usuario?.full_name ||
+      supervisor?.nome ||
+      supervisor?.usuario_email ||
+      '-'
+    );
+  };
+
+  const getAnalistaNome = (id) => {
+    const analista = analistas.find((a) => a.id === id);
+    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
+    return (
+      usuario?.nome_customizado ||
+      usuario?.full_name ||
+      analista?.nome ||
+      analista?.usuario_email ||
+      '-'
+    );
+  };
+
+  const handleAnalistaChange = (analistaId) => {
+    const analista = analistas.find((a) => a.id === analistaId);
+    setFormData((prev) => ({
+      ...prev,
+      analista_id: analistaId,
+      supervisor_id: analista?.supervisor_id || '',
+    }));
+  };
+
+  const handleTipoChange = (tipoEnum) => {
+    const t = normalizeTipo(tipoEnum);
+    setSelectedType(t);
+    // zera campos específicos ao trocar tipo (evita lixo de outros tipos)
+    setFormData((prev) => ({
+      ...prev,
+      tipo: t,
+      protocolo_gravacao: '',
+      link_gravacao_teams: '',
+      ticket_acompanhado: '',
+      tipo_feedback: '',
+      topicos_monitoria_offline: {},
+      topicos_monitoria_assistida: {},
+      nota: '',
+      status: 'aberto',
+    }));
+  };
+
+  const getTipoColor = (tipo) => {
+    const colors = {
+      chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      ligacoes: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      monitoria_offline: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      monitoria_assistida: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      feedback: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    };
+    return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  };
+
+  const getNotaBadgeColor = (nota) => {
+    const n = Number(nota) || 0;
+    if (n >= 9) return 'bg-emerald-500 text-white';
+    if (n >= 7) return 'bg-yellow-500 text-black';
+    return 'bg-red-500 text-white';
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'concluido')
+      return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (status === 'em_evolucao')
+      return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  };
+
+  const { data: atividadesSafe = [] } = useQuery({
+    queryKey: ['atividadesSafe', atividades],
+    queryFn: async () => atividades,
+    enabled: true,
+  });
+
+  const atividadesFiltradas = useMemo(() => {
+    return (atividadesSafe || [])
+      .filter((ativ) => {
+        if (
+          filterIdBusca &&
+          !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())
+        )
+          return false;
+
+        if (
+          filterSupervisor &&
+          !getSupervisorNome(ativ.supervisor_id)
+            .toLowerCase()
+            .includes(filterSupervisor.toLowerCase())
+        )
+          return false;
+
+        if (
+          filterAnalista &&
+          !getAnalistaNome(ativ.analista_id)
+            .toLowerCase()
+            .includes(filterAnalista.toLowerCase())
+        )
+          return false;
+
+        if (filterTipo) {
+          const label = tipoLabel(normalizeTipo(ativ.tipo)).toLowerCase();
+          const raw = (ativ.tipo || '').toLowerCase();
+          const needle = filterTipo.toLowerCase();
+          if (!label.includes(needle) && !raw.includes(needle)) return false;
+        }
+
+        if (filterDataInicio && ativ.data < filterDataInicio) return false;
+        if (filterDataFim && ativ.data > filterDataFim) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
+        const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
+        return analistaA.localeCompare(analistaB);
+      });
+  }, [
+    atividadesSafe,
+    filterIdBusca,
+    filterSupervisor,
+    filterAnalista,
+    filterTipo,
+    filterDataInicio,
+    filterDataFim,
+    supervisores,
+    analistas,
+    usuarios,
+  ]);
+
+  const totalRegistros = atividadesFiltradas.length;
+  const totalPaginas = Math.ceil(totalRegistros / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
+
+  const limparFiltros = () => {
+    setFilterSupervisor('');
+    setFilterAnalista('');
+    setFilterTipo('');
+    setFilterDataInicio('');
+    setFilterDataFim('');
+    setFilterIdBusca('');
+    setCurrentPage(1);
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
-     const prefixos = {
-  chamados: 'CH',
-  ligacoes: 'LG',
-  monitoria_offline: 'MO',
-  monitoria_assistida: 'MA',
-  feedback: 'FB',
-};
+      const tipo = normalizeTipo(data.tipo);
 
-      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
+      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo });
       const codigosExistentes = atividadesMesmoTipo
         .map((a) => a.codigo_atividade)
-        .filter((c) => c && c.startsWith(prefixos[data.tipo]));
+        .filter((c) => c && c.startsWith(PREFIXOS[tipo]));
 
       let proximoNumero = 1;
       if (codigosExistentes.length > 0) {
-        const numeros = codigosExistentes.map((c) => parseInt(c.slice(2)));
+        const numeros = codigosExistentes.map((c) => parseInt(c.slice(2), 10));
         proximoNumero = Math.max(...numeros) + 1;
       }
 
-      const codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
+      const codigoAtividade = `${PREFIXOS[tipo]}${String(proximoNumero).padStart(5, '0')}`;
       const user = await base44.auth.me();
 
       const result = await base44.entities.Atividade.create({
         ...data,
+        tipo,
         codigo_atividade: codigoAtividade,
         registrado_por: user.email,
       });
@@ -332,7 +539,7 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
           usuario_nome: user.full_name,
           acao: 'Criou',
           entidade: 'Atividade',
-          detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
+          detalhes: `Registrou atividade ${codigoAtividade} do tipo ${tipo}`,
         });
       } catch (e) {
         console.warn('Erro ao criar log:', e);
@@ -342,7 +549,7 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
         await notificarCoordenadores(
           'nova_atividade',
           'Nova Atividade Registrada',
-          `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
+          `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${tipo} - Aguardando aprovação`,
           'Aprovacao'
         );
       } catch (e) {
@@ -373,7 +580,7 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     onError: (error) => {
       submitLockRef.current = false;
       toast.error('❌ Erro ao registrar atividade', {
-        description: error.message || 'Tente novamente',
+        description: error?.message || 'Tente novamente',
         duration: 5000,
       });
     },
@@ -409,7 +616,7 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     },
     onError: (error) => {
       toast.error('❌ Erro ao atualizar atividade', {
-        description: error.message || 'Tente novamente',
+        description: error?.message || 'Tente novamente',
         duration: 5000,
       });
     },
@@ -419,13 +626,17 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     mutationFn: async (id) => {
       const user = await base44.auth.me();
       await base44.entities.Atividade.delete(id);
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Excluiu',
-        entidade: 'Atividade',
-        detalhes: `Excluiu atividade`,
-      });
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Excluiu',
+          entidade: 'Atividade',
+          detalhes: `Excluiu atividade`,
+        });
+      } catch (e) {
+        console.warn('Erro ao criar log:', e);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
@@ -442,13 +653,17 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
       for (const id of selectedIds) {
         await base44.entities.Atividade.delete(id);
       }
-      await base44.entities.Log.create({
-        usuario_email: user.email,
-        usuario_nome: user.full_name,
-        acao: 'Excluiu',
-        entidade: 'Atividade',
-        detalhes: `Excluiu ${selectedIds.size} atividades em massa`,
-      });
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Excluiu',
+          entidade: 'Atividade',
+          detalhes: `Excluiu ${selectedIds.size} atividades em massa`,
+        });
+      } catch (e) {
+        console.warn('Erro ao criar log:', e);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
@@ -460,51 +675,14 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     },
   });
 
-  const limparFiltros = () => {
-    setFilterSupervisor('');
-    setFilterAnalista('');
-    setFilterTipo('');
-    setFilterDataInicio('');
-    setFilterDataFim('');
-    setFilterIdBusca('');
-    setCurrentPage(1);
-  };
-
-  const handleSubmit = (e) => {
-  e.preventDefault();
-
-  console.log('selectedType =>', selectedType);
-  console.log('formData.tipo =>', formData.tipo);
-  console.log('formData.protocolo_gravacao =>', formData.protocolo_gravacao);
-  console.log('formData.ticket_acompanhado =>', formData.ticket_acompanhado);
-
-  if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
-  submitLockRef.current = true;
-
-  const rawPayload = buildAtividadePayload({
-  formData,
-  selectedType,
-  editingAtividade,
-});
-
-const payload = cleanPayload(rawPayload);
-
-console.log('Payload enviado para Base44 (raw):', rawPayload);
-console.log('Payload enviado para Base44 (clean):', payload);
-
-if (editingAtividade) {
-  updateMutation.mutate({ id: editingAtividade.id, data: payload });
-} else {
-  createMutation.mutate(payload);
-}
-};
-
   const openEdit = (atividade) => {
     submitLockRef.current = false;
+    const tipo = normalizeTipo(atividade.tipo);
     setEditingAtividade(atividade);
+
     setFormData({
       data: atividade.data,
-      tipo: atividade.tipo,
+      tipo,
       analista_id: atividade.analista_id || '',
       supervisor_id: atividade.supervisor_id || '',
       protocolo_gravacao: atividade.protocolo_gravacao || '',
@@ -513,86 +691,33 @@ if (editingAtividade) {
       tipo_feedback: atividade.tipo_feedback || '',
       topicos_monitoria_offline: atividade.topicos_monitoria_offline || {},
       topicos_monitoria_assistida: atividade.topicos_monitoria_assistida || {},
-      nota: atividade.nota?.toString() || '',
+      nota: atividade.nota?.toString?.() || '',
       comentario: atividade.comentario || '',
       status: normalizeStatus(atividade.status) || 'aberto',
     });
-    setSelectedType(atividade.tipo);
+
+    setSelectedType(tipo);
     setIsDialogOpen(true);
   };
 
-  const getSupervisorNome = (id) => {
-    const supervisor = supervisores.find((s) => s.id === id);
-    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
-    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
-  };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
+    submitLockRef.current = true;
 
-  const getAnalistaNome = (id) => {
-    const analista = analistas.find((a) => a.id === id);
-    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
-    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
-  };
-
-  const handleAnalistaChange = (analistaId) => {
-    const analista = analistas.find((a) => a.id === analistaId);
-    setFormData({
-      ...formData,
-      analista_id: analistaId,
-      supervisor_id: analista?.supervisor_id || '',
-    });
-  };
-
-  const handleTipoChange = (tipo) => {
-    setSelectedType(tipo);
-    setFormData({ ...formData, tipo });
-  };
-
-  const getTipoColor = (tipo) => {
-    const colors = {
-  chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  ligacoes: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  monitoria_offline: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  monitoria_assistida: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  feedback: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-};
-    return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-  };
-
-  const getNotaBadgeColor = (nota) => {
-    if (nota >= 9) return 'bg-emerald-500 text-white';
-    if (nota >= 7) return 'bg-yellow-500 text-black';
-    return 'bg-red-500 text-white';
-  };
-
-  const getStatusColor = (status) => {
-    if (status === 'Concluído') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-    if (status === 'Em evolução') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-    return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-  };
-
-  const atividadesFiltradas = atividades
-    .filter((ativ) => {
-      if (filterIdBusca && !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())) return false;
-      if (filterSupervisor && !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase())) return false;
-      if (filterAnalista && !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase())) return false;
-      if (filterTipo && !ativ.tipo.toLowerCase().includes(filterTipo.toLowerCase())) return false;
-      if (filterDataInicio && ativ.data < filterDataInicio) return false;
-      if (filterDataFim && ativ.data > filterDataFim) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
-      const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
-      return analistaA.localeCompare(analistaB);
+    const payload = buildAtividadePayload({
+      formData,
+      selectedType,
+      editingAtividade,
     });
 
-  const totalRegistros = atividadesFiltradas.length;
-  const totalPaginas = Math.ceil(totalRegistros / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
+    if (editingAtividade) {
+      updateMutation.mutate({ id: editingAtividade.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
 
-  
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -619,6 +744,8 @@ if (editingAtividade) {
                 onClick={() => {
                   submitLockRef.current = false;
                   setEditingAtividade(null);
+                  setSelectedType('chamados');
+                  setFormData((prev) => ({ ...prev, tipo: 'chamados' }));
                 }}
               >
                 <Plus className="w-4 h-4" />
@@ -668,17 +795,18 @@ if (editingAtividade) {
                       Tipo de Atividade
                       <AtividadeInfoTooltip tipo={selectedType} modalOpen={isDialogOpen} />
                     </Label>
+
                     <Select value={selectedType} onValueChange={handleTipoChange}>
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
-                        <SelectItem value="Chamados">Chamados</SelectItem>
-                        <SelectItem value="Ligações">Ligações</SelectItem>
-                        <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
-                        <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
-                        <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>  
-                        </SelectContent>
+                        {TIPO_OPTIONS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -717,26 +845,30 @@ if (editingAtividade) {
                     <Input
                       type="text"
                       placeholder="Ex: #12345"
-                      maxLength="10"
+                      maxLength={10}
                       value={formData.ticket_acompanhado}
-                      onChange={(e) => setFormData({ ...formData, ticket_acompanhado: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ticket_acompanhado: e.target.value })
+                      }
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
                     />
                   </div>
                 )}
 
                 {selectedType === 'ligacoes' && (
-  <div>
-    <Label>Protocolo da Gravação</Label>
-    <Input
-      type="text"
-      value={formData.protocolo_gravacao}
-      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
-      className="bg-[#1a1a1a] border-gray-700 mt-2"
-      required
-    />
-  </div>
-)}
+                  <div>
+                    <Label>Protocolo da Gravação</Label>
+                    <Input
+                      type="text"
+                      value={formData.protocolo_gravacao}
+                      onChange={(e) =>
+                        setFormData({ ...formData, protocolo_gravacao: e.target.value })
+                      }
+                      className="bg-[#1a1a1a] border-gray-700 mt-2"
+                      required
+                    />
+                  </div>
+                )}
 
                 {selectedType === 'monitoria_offline' && (
                   <MonitoriaOfflineForm
@@ -747,7 +879,9 @@ if (editingAtividade) {
                     onProtocoloChange={(protocolo) =>
                       setFormData({ ...formData, protocolo_gravacao: protocolo })
                     }
-                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
+                    onNotaChange={(nota) =>
+                      setFormData({ ...formData, nota, status: 'concluido' })
+                    }
                   />
                 )}
 
@@ -760,7 +894,9 @@ if (editingAtividade) {
                     onLinkChange={(link) =>
                       setFormData({ ...formData, link_gravacao_teams: link })
                     }
-                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
+                    onNotaChange={(nota) =>
+                      setFormData({ ...formData, nota, status: 'concluido' })
+                    }
                   />
                 )}
 
@@ -772,7 +908,7 @@ if (editingAtividade) {
                       onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}
                     >
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
                         <SelectItem value="Positivo">Positivo</SelectItem>
@@ -799,22 +935,22 @@ if (editingAtividade) {
                     </div>
                     <div>
                       <Label>Status</Label>
-<Select
-  value={formData.status}
-  onValueChange={(val) => setFormData({ ...formData, status: val })}
->
-  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-    <SelectValue />
-  </SelectTrigger>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(val) => setFormData({ ...formData, status: val })}
+                      >
+                        <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
 
-  <SelectContent className="bg-[#242424] border-gray-700">
-    {STATUS_OPTIONS.map((s) => (
-      <SelectItem key={s.value} value={s.value}>
-        {s.label}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                        <SelectContent className="bg-[#242424] border-gray-700">
+                          {STATUS_OPTIONS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
@@ -844,7 +980,9 @@ if (editingAtividade) {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={submitLockRef.current || createMutation.isPending || updateMutation.isPending}
+                    disabled={
+                      submitLockRef.current || createMutation.isPending || updateMutation.isPending
+                    }
                     className="bg-emerald-600 hover:bg-emerald-700"
                   >
                     {createMutation.isPending || updateMutation.isPending ? (
@@ -934,7 +1072,12 @@ if (editingAtividade) {
           </div>
         </div>
 
-        {(filterIdBusca || filterSupervisor || filterAnalista || filterTipo || filterDataInicio || filterDataFim) && (
+        {(filterIdBusca ||
+          filterSupervisor ||
+          filterAnalista ||
+          filterTipo ||
+          filterDataInicio ||
+          filterDataFim) && (
           <div className="mt-4 flex justify-end">
             <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
               <X className="w-4 h-4" />
@@ -957,7 +1100,10 @@ if (editingAtividade) {
                 <Label className="text-xs text-gray-400">Por página:</Label>
                 <Select
                   value={pageSize.toString()}
-                  onValueChange={(val) => { setPageSize(parseInt(val)); setCurrentPage(1); }}
+                  onValueChange={(val) => {
+                    setPageSize(parseInt(val, 10));
+                    setCurrentPage(1);
+                  }}
                 >
                   <SelectTrigger className="bg-[#1a1a1a] border-gray-700 w-20">
                     <SelectValue />
@@ -970,9 +1116,27 @@ if (editingAtividade) {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="border-gray-700 h-8">←</Button>
-                <span className="text-sm text-gray-400 min-w-[80px] text-center">Página {currentPage} de {totalPaginas}</span>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(totalPaginas, currentPage + 1))} disabled={currentPage === totalPaginas} className="border-gray-700 h-8">→</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="border-gray-700 h-8"
+                >
+                  ←
+                </Button>
+                <span className="text-sm text-gray-400 min-w-[80px] text-center">
+                  Página {currentPage} de {totalPaginas || 1}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPaginas || 1, currentPage + 1))}
+                  disabled={currentPage === (totalPaginas || 1)}
+                  className="border-gray-700 h-8"
+                >
+                  →
+                </Button>
               </div>
             </div>
           </div>
@@ -982,8 +1146,19 @@ if (editingAtividade) {
           <div className="bg-blue-500/10 border-b border-blue-500/30 px-6 py-3 flex items-center justify-between">
             <span className="text-sm text-blue-400">{selectedIds.size} registro(s) selecionado(s)</span>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="border-gray-700 h-8">Desselecionar Tudo</Button>
-              <Button size="sm" onClick={() => setDeleteMultipleDialogOpen(true)} className="bg-red-600 hover:bg-red-700 h-8 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedIds(new Set())}
+                className="border-gray-700 h-8"
+              >
+                Desselecionar Tudo
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setDeleteMultipleDialogOpen(true)}
+                className="bg-red-600 hover:bg-red-700 h-8 gap-2"
+              >
                 <Trash2 className="w-4 h-4" /> Deletar Selecionados
               </Button>
             </div>
@@ -997,7 +1172,10 @@ if (editingAtividade) {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 w-10">
                   <input
                     type="checkbox"
-                    checked={selectedIds.size === atividadesPaginadas.length && atividadesPaginadas.length > 0}
+                    checked={
+                      selectedIds.size === atividadesPaginadas.length &&
+                      atividadesPaginadas.length > 0
+                    }
                     onChange={(e) => {
                       if (e.target.checked) setSelectedIds(new Set(atividadesPaginadas.map((a) => a.id)));
                       else setSelectedIds(new Set());
@@ -1038,11 +1216,17 @@ if (editingAtividade) {
                       {atividade.codigo_atividade || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{getLocalDateString(atividade.data)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
+                    {getLocalDateString(atividade.data)}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
-                        {atividade.tipo}
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(
+                          atividade.tipo
+                        )}`}
+                      >
+                        {tipoLabel(atividade.tipo)}
                       </span>
                       <AtividadeInfoTooltip tipo={atividade.tipo} />
                     </div>
@@ -1053,34 +1237,62 @@ if (editingAtividade) {
                     {atividade.registrado_por || atividade.created_by}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>{atividade.nota}</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>
+                      {atividade.nota}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>{atividade.status}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>
+                      {statusLabel(atividade.status)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
-                      atividade.aprovacao_status === 'aprovado'
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
+                        atividade.aprovacao_status === 'aprovado'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : atividade.aprovacao_status === 'rejeitado'
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }`}
+                    >
+                      {atividade.aprovacao_status === 'aprovado'
+                        ? '✓ Aprovado'
                         : atividade.aprovacao_status === 'rejeitado'
-                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                        : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                    }`}>
-                      {atividade.aprovacao_status === 'aprovado' ? '✓ Aprovado' : atividade.aprovacao_status === 'rejeitado' ? '✗ Rejeitado' : '⏳ Pendente'}
+                        ? '✗ Rejeitado'
+                        : '⏳ Pendente'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setViewingAtividade(atividade)} className="text-blue-400 hover:text-blue-300 h-8 w-8" title="Visualizar">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setViewingAtividade(atividade)}
+                        className="text-blue-400 hover:text-blue-300 h-8 w-8"
+                        title="Visualizar"
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                       {canEdit && (
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(atividade)} className="text-gray-400 hover:text-white h-8 w-8" title="Editar">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(atividade)}
+                          className="text-gray-400 hover:text-white h-8 w-8"
+                          title="Editar"
+                        >
                           <Pencil className="w-4 h-4" />
                         </Button>
                       )}
                       {canDelete && (
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(atividade.id)} className="text-gray-400 hover:text-red-400 h-8 w-8" title="Excluir">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(atividade.id)}
+                          className="text-gray-400 hover:text-red-400 h-8 w-8"
+                          title="Excluir"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
@@ -1096,7 +1308,9 @@ if (editingAtividade) {
           <div className="text-center py-12">
             <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">
-              {atividades.length === 0 ? 'Nenhuma atividade registrada' : 'Nenhuma atividade encontrada com os filtros aplicados'}
+              {atividades.length === 0
+                ? 'Nenhuma atividade registrada'
+                : 'Nenhuma atividade encontrada com os filtros aplicados'}
             </p>
           </div>
         )}
@@ -1108,6 +1322,7 @@ if (editingAtividade) {
           <DialogHeader>
             <DialogTitle>Detalhes da Atividade</DialogTitle>
           </DialogHeader>
+
           {viewingAtividade && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1117,7 +1332,9 @@ if (editingAtividade) {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Tipo</p>
-                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getTipoColor(viewingAtividade.tipo)}`}>{viewingAtividade.tipo}</span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getTipoColor(viewingAtividade.tipo)}`}>
+                    {tipoLabel(viewingAtividade.tipo)}
+                  </span>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Supervisor</p>
@@ -1129,11 +1346,15 @@ if (editingAtividade) {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Nota</p>
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${getNotaBadgeColor(viewingAtividade.nota)}`}>{viewingAtividade.nota}/10</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${getNotaBadgeColor(viewingAtividade.nota)}`}>
+                    {viewingAtividade.nota}/10
+                  </span>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Status</p>
-                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(viewingAtividade.status)}`}>{viewingAtividade.status}</span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(viewingAtividade.status)}`}>
+                    {statusLabel(viewingAtividade.status)}
+                  </span>
                 </div>
               </div>
 
@@ -1147,7 +1368,12 @@ if (editingAtividade) {
               {viewingAtividade.link_gravacao_teams && (
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Link Teams</p>
-                  <a href={viewingAtividade.link_gravacao_teams} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline text-sm">
+                  <a
+                    href={viewingAtividade.link_gravacao_teams}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-400 hover:underline text-sm"
+                  >
                     {viewingAtividade.link_gravacao_teams}
                   </a>
                 </div>
@@ -1174,24 +1400,34 @@ if (editingAtividade) {
                 </div>
               )}
 
-              {viewingAtividade.tipo === 'monitoria_offline' && viewingAtividade.topicos_monitoria_offline && (
-                <MonitoriaOfflineForm
-                  data={{ ...viewingAtividade.topicos_monitoria_offline, protocolo: viewingAtividade.protocolo_gravacao }}
-                  onChange={() => {}}
-                  readOnly={true}
-                />
-              )}
+              {viewingAtividade.tipo === 'monitoria_offline' &&
+                viewingAtividade.topicos_monitoria_offline && (
+                  <MonitoriaOfflineForm
+                    data={{
+                      ...viewingAtividade.topicos_monitoria_offline,
+                      protocolo: viewingAtividade.protocolo_gravacao,
+                    }}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                )}
 
-              {viewingAtividade.tipo === 'monitoria_assistida' && viewingAtividade.topicos_monitoria_assistida && (
-                <MonitoriaAssistidaForm
-                  data={{ ...viewingAtividade.topicos_monitoria_assistida, linkGravacao: viewingAtividade.link_gravacao_teams }}
-                  onChange={() => {}}
-                  readOnly={true}
-                />
-              )}
+              {viewingAtividade.tipo === 'monitoria_assistida' &&
+                viewingAtividade.topicos_monitoria_assistida && (
+                  <MonitoriaAssistidaForm
+                    data={{
+                      ...viewingAtividade.topicos_monitoria_assistida,
+                      linkGravacao: viewingAtividade.link_gravacao_teams,
+                    }}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                )}
 
               <div className="flex justify-end pt-4 border-t border-gray-800">
-                <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">Fechar</Button>
+                <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">
+                  Fechar
+                </Button>
               </div>
             </div>
           )}
@@ -1209,7 +1445,9 @@ if (editingAtividade) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1225,7 +1463,11 @@ if (editingAtividade) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMultipleMutation.mutate()} disabled={deleteMultipleMutation.isPending} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={() => deleteMultipleMutation.mutate()}
+              disabled={deleteMultipleMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
               {deleteMultipleMutation.isPending ? 'Deletando...' : 'Deletar Tudo'}
             </AlertDialogAction>
           </AlertDialogFooter>
