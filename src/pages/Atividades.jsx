@@ -1,22 +1,6 @@
-// src/pages/Atividades.jsx
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import {
-  AlertTriangle,
-  Eye,
-  Filter,
-  Loader2,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-} from 'lucide-react';
-import { toast } from 'sonner';
-
+import { useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,106 +29,49 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Filter,
+  Loader2,
+  Eye,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { getLocalDateString, ensureCorrectDate } from '@/components/dateUtils';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 import AtividadeInfoTooltip from '@/components/AtividadeInfoTooltip';
 import MonitoriaOfflineForm from '@/components/MonitoriaOfflineForm';
 import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
-
 import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
 import { MODULES } from '@/components/moduleConstants';
 
-function idStr(v) {
-  if (v === null || v === undefined) return '';
-  return String(v).trim();
-}
-
-function stripEmpty(obj) {
-  const out = {};
-  for (const [k, v] of Object.entries(obj || {})) {
-    if (v === '' || v === null || v === undefined) continue;
-    out[k] = v;
-  }
-  return out;
-}
-
-function extractUsefulError(err) {
-  // Base44/axios-like patterns variam — isso tenta mostrar algo útil sem quebrar.
-  const status = err?.status || err?.response?.status;
-  const msg =
-    err?.message ||
-    err?.response?.data?.message ||
-    err?.response?.data?.error ||
-    'Falha inesperada.';
-  const details =
-    err?.response?.data?.details ||
-    err?.response?.data?.errors ||
-    err?.data?.errors;
-
-  return {
-    status,
-    message: msg,
-    details: typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
-  };
-}
-const ALL = "__all__";
 export default function Atividades() {
   const queryClient = useQueryClient();
-
-  // ===== UI state =====
+  const submitLockRef = useRef(false); // ✅ Lock síncrono anti-double-submit
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
-  const [viewingAtividade, setViewingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedType, setSelectedType] = useState('Chamados');
+  const [viewingAtividade, setViewingAtividade] = useState(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
+  // Filtros
   const [filterSupervisor, setFilterSupervisor] = useState('');
   const [filterAnalista, setFilterAnalista] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterDataInicio, setFilterDataInicio] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
   const [filterIdBusca, setFilterIdBusca] = useState('');
-
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
 
-  const [selectedType, setSelectedType] = useState('Chamados');
-  const [formData, setFormData] = useState({
-    data: '', // só editável em edição
-    tipo: 'Chamados',
-    analista_id: '',
-    supervisor_id: '',
-    protocolo_gravacao: '',
-    link_gravacao_teams: '',
-    ticket_acompanhado: '',
-    tipo_feedback: '',
-    topicos_monitoria_offline: {},
-    topicos_monitoria_assistida: {},
-    nota: '',
-    comentario: '',
-    status: 'Aberto',
-  });
-
-  const resetForm = () => {
-    setFormData({
-      data: '',
-      tipo: 'Chamados',
-      analista_id: '',
-      supervisor_id: '',
-      protocolo_gravacao: '',
-      link_gravacao_teams: '',
-      ticket_acompanhado: '',
-      tipo_feedback: '',
-      topicos_monitoria_offline: {},
-      topicos_monitoria_assistida: {},
-      nota: '',
-      comentario: '',
-      status: 'Aberto',
-    });
-    setSelectedType('Chamados');
-    setEditingAtividade(null);
-  };
-
-  // ===== Queries =====
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -157,7 +84,6 @@ export default function Atividades() {
       return await getUserModulePermissions(currentUser.email, currentUser.role);
     },
     enabled: !!currentUser?.email,
-    staleTime: 60 * 1000,
   });
 
   const canCreate =
@@ -174,110 +100,325 @@ export default function Atividades() {
     currentUser?.role === 'admin' ||
     modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
+  const [formData, setFormData] = useState({
+    tipo: 'Chamados',
+    analista_id: '',
+    supervisor_id: '',
+    protocolo_gravacao: '',
+    link_gravacao_teams: '',
+    ticket_acompanhado: '',
+    tipo_feedback: '',
+    topicos_monitoria_offline: {},
+    topicos_monitoria_assistida: {},
+    nota: '',
+    comentario: '',
+    status: 'Aberto',
+  });
+
+  // Buscar aprovações separadamente para fazer merge
+  const { data: aprovacoes = [] } = useQuery({
+    queryKey: ['aprovacoes'],
+    queryFn: () => base44.entities.AprovacaoAtividade.list(),
+  });
+
+  const { data: atividades = [], isLoading } = useQuery({
+    queryKey: ['atividades', currentUser?.role],
+    staleTime: 2000, // Evita refetches múltiplos em 2 segundos
+    queryFn: async () => {
+      const todasAtividades = await base44.entities.Atividade.list('-created_date');
+      
+      // ✅ DEFESA: Deduplicação por ID
+      const mapUnique = {};
+      todasAtividades.forEach((ativ) => {
+        if (!mapUnique[ativ.id]) {
+          mapUnique[ativ.id] = ativ;
+        }
+      });
+      const atividadesUnicas = Object.values(mapUnique);
+
+      // ✅ Buscar aprovações uma única vez
+      const todasAprovacoes = await base44.entities.AprovacaoAtividade.list();
+      const aprovacaoPorId = {};
+      todasAprovacoes.forEach((aprov) => {
+        // Deduplica por atividade_id: pega a mais recente se houver múltiplas
+        if (aprov.tipo === 'atividade') {
+          if (!aprovacaoPorId[aprov.atividade_id]) {
+            aprovacaoPorId[aprov.atividade_id] = aprov;
+          }
+        }
+      });
+
+      // Anexar status de aprovação em cada atividade
+      const atividadesComAprovacao = atividadesUnicas.map((ativ) => ({
+        ...ativ,
+        aprovacao_status: aprovacaoPorId[ativ.id]?.status || 'pendente',
+        aprovacao_data: aprovacaoPorId[ativ.id]?.data_aprovacao,
+        aprovacao_motivo_rejeicao: aprovacaoPorId[ativ.id]?.motivo_rejeicao,
+      }));
+
+      const idsAprovados = Object.keys(aprovacaoPorId).filter(
+        (id) => aprovacaoPorId[id].status === 'aprovado'
+      );
+
+      // Admin vê TUDO
+      if (currentUser?.role === 'admin') return atividadesComAprovacao;
+
+      // Supervisor vê: aprovados de todos + TODOS seus próprios registros
+      if (currentUser?.role === 'supervisor') {
+        return atividadesComAprovacao.filter(
+          (ativ) =>
+            // ✅ Aprovadas por qualquer pessoa
+            idsAprovados.includes(ativ.id) ||
+            // ✅ Criadas pelo supervisor (por email)
+            ativ.registrado_por === currentUser.email ||
+            ativ.created_by === currentUser.email
+        );
+      }
+
+      // Outros usuários: APENAS aprovadas
+      return atividadesComAprovacao.filter((ativ) => idsAprovados.includes(ativ.id));
+    },
+    enabled: !!currentUser,
+  });
+
   const { data: supervisores = [] } = useQuery({
     queryKey: ['supervisores'],
     queryFn: () => base44.entities.Supervisor.list(),
-    staleTime: 10 * 60 * 1000,
   });
 
   const { data: analistas = [] } = useQuery({
     queryKey: ['analistas'],
     queryFn: () => base44.entities.Analista.list(),
-    staleTime: 10 * 60 * 1000,
   });
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ['usuarios'],
     queryFn: () => base44.entities.User.list(),
-    staleTime: 10 * 60 * 1000,
   });
 
-  // Aprovacoes: pega todas e mantém a mais recente por atividade_id (normalizando pra string)
-  const { data: aprovacaoMap = new Map() } = useQuery({
-    queryKey: ['aprovacoesAtividadeMap'],
-    queryFn: async () => {
-      const all = await base44.entities.AprovacaoAtividade.list('-created_date', 800);
-      const m = new Map();
-      for (const a of all || []) {
-        if (a?.tipo !== 'atividade') continue;
-        const key = idStr(a?.atividade_id);
-        if (!key) continue;
-        if (!m.has(key)) m.set(key, a); // já vem ordenado desc => 1º é o mais recente
+  const resetForm = () => {
+    setFormData({
+      tipo: 'Chamados',
+      analista_id: '',
+      supervisor_id: '',
+      protocolo_gravacao: '',
+      link_gravacao_teams: '',
+      ticket_acompanhado: '',
+      tipo_feedback: '',
+      topicos_monitoria_offline: {},
+      topicos_monitoria_assistida: {},
+      nota: '',
+      comentario: '',
+      status: 'Aberto',
+    });
+    setEditingAtividade(null);
+    setSelectedType('Chamados');
+    submitLockRef.current = false; // ✅ liberar lock
+  };
+
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      const prefixos = {
+        Chamados: 'CH',
+        Ligações: 'LG',
+        'Monitoria Offline': 'MO',
+        'Monitoria Assistida': 'MA',
+        'Feedback Individual': 'FB',
+      };
+      const request_id =
+  crypto && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `req_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+      let codigoAtividade;
+      let tentativas = 0;
+      const maxTentativas = 3;
+
+      while (tentativas < maxTentativas) {
+        try {
+          const atividadesMesmoTipo = await base44.entities.Atividade.filter({
+            tipo: data.tipo,
+          });
+
+          const codigosExistentes = atividadesMesmoTipo
+            .map((a) => a.codigo_atividade)
+            .filter((c) => c && c.startsWith(prefixos[data.tipo]));
+
+          let proximoNumero = 1;
+          if (codigosExistentes.length > 0) {
+            const numeros = codigosExistentes.map((c) => parseInt(c.slice(2)));
+            proximoNumero = Math.max(...numeros) + 1;
+          }
+
+          codigoAtividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(
+            5,
+            '0'
+          )}`;
+
+          const user = await base44.auth.me();
+
+          const result = await base44.entities.Atividade.create({
+  ...data,
+  data: data?.data || new Date().toISOString(),
+  request_id,
+  codigo_atividade: codigoAtividade,
+  registrado_por: user.email,
+});
+
+          // Criar aprovação
+          await base44.entities.AprovacaoAtividade.create({
+            atividade_id: result.id,
+            tipo: 'atividade',
+            status: 'pendente',
+          });
+
+          // Log - isolado para não quebrar fluxo
+          try {
+            await base44.entities.Log.create({
+              usuario_email: user.email,
+              usuario_nome: user.full_name,
+              acao: 'Criou',
+              entidade: 'Atividade',
+              detalhes: `Registrou atividade ${codigoAtividade} do tipo ${data.tipo}`,
+            });
+          } catch (logError) {
+            console.warn('Erro ao criar log:', logError);
+          }
+
+          // Notificação - isolada para não quebrar fluxo
+          try {
+            await notificarCoordenadores(
+              'nova_atividade',
+              'Nova Atividade Registrada',
+              `${user.full_name} registrou uma nova atividade ${codigoAtividade} do tipo ${data.tipo} - Aguardando aprovação`,
+              'Aprovacao'
+            );
+          } catch (notifError) {
+            console.warn('Erro ao notificar:', notifError);
+          }
+
+          return result;
+        } catch (error) {
+          tentativas++;
+          if (tentativas >= maxTentativas) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 100 * tentativas));
+        }
       }
-      return m;
     },
-    enabled: !!currentUser,
-    staleTime: 10 * 1000,
+
+    // ✅ AJUSTE CRÍTICO: FECHA O MODAL SEM DEPENDER DE onOpenChange “inteligente”
+    onSuccess: () => {
+      submitLockRef.current = false; // Liberar lock antes de fechar
+      
+      // Fechar modal
+      setTimeout(() => {
+        setIsDialogOpen(false);
+        resetForm();
+      }, 50);
+
+      // Invalidar queries
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+        queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['ranking'] });
+        queryClient.invalidateQueries({ queryKey: ['rankings'] });
+        queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+        queryClient.invalidateQueries({ queryKey: ['supervisores'] });
+        setShowSuccessDialog(true);
+      }, 400);
+    },
+
+    onError: (error) => {
+      submitLockRef.current = false; // CRÍTICO: Liberar lock em caso de erro
+      toast.error('❌ Erro ao registrar atividade', {
+        description: error.message || 'Tente novamente',
+        duration: 5000,
+      });
+    },
   });
 
-  const { data: atividades = [], isLoading } = useQuery({
-    queryKey: ['atividades', currentUser?.role, currentUser?.email, Array.from(aprovacaoMap.keys()).length],
-    queryFn: async () => {
-      const todas = await base44.entities.Atividade.list('-created_date', 800);
-
-      // dedup por id
-      const unique = new Map();
-      for (const a of todas || []) {
-        if (a?.id && !unique.has(a.id)) unique.set(a.id, a);
-      }
-      const base = Array.from(unique.values());
-
-      // anexa aprovacao (NORMALIZA id pra string)
-      const withApproval = base.map((ativ) => {
-        const aprov = aprovacaoMap.get(idStr(ativ?.id));
-        return {
-          ...ativ,
-          aprovacao_status: aprov?.status || 'pendente',
-          aprovacao_data: aprov?.data_aprovacao,
-          aprovacao_motivo_rejeicao: aprov?.motivo_rejeicao,
-        };
-      });
-
-      // Admin vê tudo
-      if (currentUser?.role === 'admin') return withApproval;
-
-      // Supervisor: aprovadas de todos + as dele (mesmo pendente/rejeitado)
-      if (currentUser?.role === 'supervisor') {
-        return withApproval.filter((ativ) => {
-          const aprov = aprovacaoMap.get(idStr(ativ?.id));
-          const isApproved = aprov?.status === 'aprovado';
-          const isMine =
-            ativ?.registrado_por === currentUser.email ||
-            ativ?.created_by === currentUser.email;
-          return isApproved || isMine;
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      const result = await base44.entities.Atividade.update(id, data);
+      const user = await base44.auth.me();
+      try {
+        await base44.entities.Log.create({
+          usuario_email: user.email,
+          usuario_nome: user.full_name,
+          acao: 'Atualizou',
+          entidade: 'Atividade',
+          detalhes: `Atualizou atividade`,
         });
+      } catch (logError) {
+        console.warn('Falha ao criar log de atualização:', logError);
       }
+      return result;
+    },
+    onSuccess: () => {
+      setIsDialogOpen(false);
+      resetForm();
 
-      // outros: só aprovadas
-      return withApproval.filter((ativ) => {
-        const aprov = aprovacaoMap.get(idStr(ativ?.id));
-        return aprov?.status === 'aprovado';
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['ranking'] });
+        queryClient.invalidateQueries({ queryKey: ['perfilAnalista'] });
+        setShowSuccessDialog(true);
+      }, 200);
+    },
+    onError: (error) => {
+      toast.error('❌ Erro ao atualizar atividade', {
+        description: error.message || 'Tente novamente',
+        duration: 5000,
       });
     },
-    enabled: !!currentUser,
-    staleTime: 5 * 1000,
   });
 
-  // ===== Name helpers =====
-  const getSupervisorNome = (id) => {
-    const sid = idStr(id);
-    const supervisor = supervisores.find((s) => idStr(s.id) === sid);
-    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
-    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const user = await base44.auth.me();
+      await base44.entities.Atividade.delete(id);
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Atividade',
+        detalhes: `Excluiu atividade`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Atividade excluída com sucesso!');
+      setDeleteId(null);
+    },
+  });
 
-  const getAnalistaNome = (id) => {
-    const aid = idStr(id);
-    const analista = analistas.find((a) => idStr(a.id) === aid);
-    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
-    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
-  };
-
-  // ===== UI behavior =====
-  useEffect(() => {
-    if (!isDialogOpen) resetForm();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDialogOpen]);
+  const deleteMultipleMutation = useMutation({
+    mutationFn: async () => {
+      const user = await base44.auth.me();
+      for (const id of selectedIds) {
+        await base44.entities.Atividade.delete(id);
+      }
+      await base44.entities.Log.create({
+        usuario_email: user.email,
+        usuario_nome: user.full_name,
+        acao: 'Excluiu',
+        entidade: 'Atividade',
+        detalhes: `Excluiu ${selectedIds.size} atividades em massa`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades', currentUser?.role] });
+      queryClient.invalidateQueries({ queryKey: ['aprovacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success(`${selectedIds.size} atividades excluídas com sucesso!`);
+      setSelectedIds(new Set());
+      setDeleteMultipleDialogOpen(false);
+    },
+  });
 
   const limparFiltros = () => {
     setFilterSupervisor('');
@@ -289,24 +430,77 @@ export default function Atividades() {
     setCurrentPage(1);
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // ✅ Lock anti-double-submit síncrono
+    if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
+    submitLockRef.current = true;
+
+    const dataAtual = new Date();
+    const dataFormatada = `${dataAtual.getFullYear()}-${String(
+      dataAtual.getMonth() + 1
+    ).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+
+    const payload = {
+      ...formData,
+      data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
+      nota: parseFloat(formData.nota) || 0,
+    };
+
+    if (editingAtividade) {
+      updateMutation.mutate({ id: editingAtividade.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const openEdit = (atividade) => {
+    submitLockRef.current = false;
+    setEditingAtividade(atividade);
+    setFormData({
+      data: atividade.data,
+      tipo: atividade.tipo,
+      analista_id: atividade.analista_id || '',
+      supervisor_id: atividade.supervisor_id || '',
+      protocolo_gravacao: atividade.protocolo_gravacao || '',
+      link_gravacao_teams: atividade.link_gravacao_teams || '',
+      ticket_acompanhado: atividade.ticket_acompanhado || '',
+      tipo_feedback: atividade.tipo_feedback || '',
+      topicos_monitoria_offline: atividade.topicos_monitoria_offline || {},
+      topicos_monitoria_assistida: atividade.topicos_monitoria_assistida || {},
+      nota: atividade.nota?.toString() || '',
+      comentario: atividade.comentario || '',
+      status: atividade.status || 'Aberto',
+    });
+    setSelectedType(atividade.tipo);
+    setIsDialogOpen(true);
+  };
+
+  const getSupervisorNome = (id) => {
+    const supervisor = supervisores.find((s) => s.id === id);
+    const usuario = usuarios.find((u) => u.email === supervisor?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || supervisor?.nome || '-';
+  };
+
+  const getAnalistaNome = (id) => {
+    const analista = analistas.find((a) => a.id === id);
+    const usuario = usuarios.find((u) => u.email === analista?.usuario_email);
+    return usuario?.nome_customizado || usuario?.full_name || analista?.nome || '-';
+  };
+
   const handleAnalistaChange = (analistaId) => {
-    const analista = analistas.find((a) => idStr(a.id) === idStr(analistaId));
-    setFormData((prev) => ({
-      ...prev,
-      analista_id: idStr(analistaId),
-      supervisor_id: analista?.supervisor_id ? idStr(analista.supervisor_id) : '',
-    }));
+    const analista = analistas.find((a) => a.id === analistaId);
+    setFormData({
+      ...formData,
+      analista_id: analistaId,
+      supervisor_id: analista?.supervisor_id || '',
+    });
   };
 
   const handleTipoChange = (tipo) => {
     setSelectedType(tipo);
-    setFormData((prev) => ({
-      ...prev,
-      tipo,
-      // mantém campos gerais; componentes específicos cuidam do resto
-      topicos_monitoria_offline: prev.topicos_monitoria_offline || {},
-      topicos_monitoria_assistida: prev.topicos_monitoria_assistida || {},
-    }));
+    setFormData({ ...formData, tipo });
   };
 
   const getTipoColor = (tipo) => {
@@ -320,320 +514,142 @@ export default function Atividades() {
     return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
+  const getNotaBadgeColor = (nota) => {
+    if (nota >= 9) return 'bg-emerald-500 text-white';
+    if (nota >= 7) return 'bg-yellow-500 text-black';
+    return 'bg-red-500 text-white';
+  };
+
   const getStatusColor = (status) => {
     if (status === 'Concluído') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
     if (status === 'Em evolução') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
     return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
-  // ===== Core fix: garante aprovação (sempre usando ID string) =====
-  const ensureApprovalForActivity = async (atividadeId) => {
-  const id = String(atividadeId);
-
-  const existentes = await base44.entities.AprovacaoAtividade.filter({
-    tipo: 'atividade',
-    atividade_id: id,
-  });
-
-  if (Array.isArray(existentes) && existentes.length > 0) return existentes[0];
-
-  return await base44.entities.AprovacaoAtividade.create({
-    tipo: 'atividade',
-    atividade_id: id,
-    status: 'pendente',
-  });
-};
-
-  // ===== Mutations =====
-  const createMutation = useMutation({
-    mutationFn: async (data) => {
-      const prefixos = {
-        Chamados: 'CH',
-        Ligações: 'LG',
-        'Monitoria Offline': 'MO',
-        'Monitoria Assistida': 'MA',
-        'Feedback Individual': 'FB',
-      };
-
-      const user = await base44.auth.me();
-
-      // gera código por tipo (simples e compatível com seu padrão atual)
-      const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
-      const codigosExistentes = (atividadesMesmoTipo || [])
-        .map((a) => a.codigo_atividade)
-        .filter((c) => c && String(c).startsWith(prefixos[data.tipo]));
-
-      let proximoNumero = 1;
-      if (codigosExistentes.length) {
-        const numeros = codigosExistentes
-          .map((c) => parseInt(String(c).slice(2), 10))
-          .filter((n) => !isNaN(n));
-        proximoNumero = (numeros.length ? Math.max(...numeros) : 0) + 1;
-      }
-
-      const codigo_atividade = `${prefixos[data.tipo]}${String(proximoNumero).padStart(5, '0')}`;
-
-      const created = await base44.entities.Atividade.create({
-        ...data,
-        codigo_atividade,
-        registrado_por: user.email,
-      });
-
-      try {
-  const aprov = await ensureApprovalForActivity(created.id);
-  console.log("APROVACAO CRIADA:", aprov);
-} catch (err) {
-  console.error("ERRO AO CRIAR APROVACAO:", err);
-  throw err;
-}
-
-      // Notifica coordenadores (best effort)
-      try {
-        await notificarCoordenadores(
-          'nova_atividade',
-          'Nova Atividade Registrada',
-          `${user.full_name} registrou a atividade ${codigo_atividade} (${data.tipo}) - aguardando aprovação.`,
-          'Aprovacao'
-        );
-      } catch {}
-
-      return created;
-    },
-    onSuccess: () => {
-      toast.success('✅ Atividade registrada', { description: 'Enviada para aprovação.' });
-
-      setIsDialogOpen(false);
-      resetForm();
-
-      // atualiza lista e aprovações
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoesAtividadeMap'] });
-      queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-    onError: (err) => {
-      const e = extractUsefulError(err);
-      toast.error('❌ Erro ao registrar atividade', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${e.details ? `\n${e.details}` : ''}`,
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      return await base44.entities.Atividade.update(id, data);
-    },
-    onSuccess: () => {
-      toast.success('✅ Atividade atualizada');
-      setIsDialogOpen(false);
-      resetForm();
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-    },
-    onError: (err) => {
-      const e = extractUsefulError(err);
-      toast.error('❌ Erro ao atualizar', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${e.details ? `\n${e.details}` : ''}`,
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      await base44.entities.Atividade.delete(id);
-      // (opcional) poderia tentar deletar aprovação relacionada, se você quiser.
+  const atividadesFiltradas = atividades
+    .filter((ativ) => {
+      if (
+        filterIdBusca &&
+        !ativ.codigo_atividade?.toLowerCase().includes(filterIdBusca.toLowerCase())
+      )
+        return false;
+      if (
+        filterSupervisor &&
+        !getSupervisorNome(ativ.supervisor_id).toLowerCase().includes(filterSupervisor.toLowerCase())
+      )
+        return false;
+      if (
+        filterAnalista &&
+        !getAnalistaNome(ativ.analista_id).toLowerCase().includes(filterAnalista.toLowerCase())
+      )
+        return false;
+      if (filterTipo && !ativ.tipo.toLowerCase().includes(filterTipo.toLowerCase()))
+        return false;
+      if (filterDataInicio && ativ.data < filterDataInicio) return false;
+      if (filterDataFim && ativ.data > filterDataFim) return false;
       return true;
-    },
-    onSuccess: () => {
-      toast.success('🗑️ Atividade removida');
-      setDeleteId(null);
-      queryClient.invalidateQueries({ queryKey: ['atividades'] });
-    },
-    onError: (err) => {
-      const e = extractUsefulError(err);
-      toast.error('❌ Erro ao remover', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${e.details ? `\n${e.details}` : ''}`,
-      });
-    },
-  });
-
-  // ===== Submit =====
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // validações mínimas
-    if (!formData.tipo) {
-      toast.error('Informe o tipo de atividade.');
-      return;
-    }
-    if (!formData.analista_id) {
-      toast.error('Selecione um analista.');
-      return;
-    }
-    if (!formData.supervisor_id) {
-      toast.error('Analista sem supervisor vinculado', {
-        description: 'Vincule o supervisor no cadastro do analista e tente novamente.',
-      });
-      return;
-    }
-
-    // data automática no create; edit usa data do campo
-    const payload = stripEmpty({
-      ...formData,
-      analista_id: idStr(formData.analista_id),
-      supervisor_id: idStr(formData.supervisor_id),
+    })
+    .sort((a, b) => {
+      const analistaA = getAnalistaNome(a.analista_id).toLowerCase();
+      const analistaB = getAnalistaNome(b.analista_id).toLowerCase();
+      return analistaA.localeCompare(analistaB);
     });
 
-    // regra: se for edição e data vazia, não envia
-    if (!editingAtividade) {
-      delete payload.data;
-    } else {
-      // em edição, exige data
-      if (!payload.data) {
-        toast.error('Informe a data (edição).');
-        return;
-      }
-    }
+  // Paginação
+  const totalRegistros = atividadesFiltradas.length;
+  const totalPaginas = Math.ceil(totalRegistros / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
 
-    if (editingAtividade?.id) {
-      await updateMutation.mutateAsync({ id: editingAtividade.id, data: payload });
-    } else {
-      await createMutation.mutateAsync(payload);
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
 
-  // ===== Data processing: filtros + paginação =====
-  const filteredAtividades = useMemo(() => {
-    let list = Array.isArray(atividades) ? [...atividades] : [];
-
-    if (filterSupervisor) list = list.filter((a) => idStr(a.supervisor_id) === idStr(filterSupervisor));
-    if (filterAnalista) list = list.filter((a) => idStr(a.analista_id) === idStr(filterAnalista));
-    if (filterTipo) list = list.filter((a) => (a.tipo || '') === filterTipo);
-
-    if (filterIdBusca) {
-      const q = filterIdBusca.trim().toLowerCase();
-      list = list.filter((a) => String(a.codigo_atividade || '').toLowerCase().includes(q) || String(a.id || '').includes(q));
-    }
-
-    // filtros por data (usa campo data quando existe; senão created_date)
-    if (filterDataInicio || filterDataFim) {
-      const di = filterDataInicio ? new Date(filterDataInicio) : null;
-      const df = filterDataFim ? new Date(filterDataFim) : null;
-
-      list = list.filter((a) => {
-        const raw = a.data || a.created_date;
-        if (!raw) return true;
-
-        const d = new Date(raw);
-        if (Number.isNaN(d.getTime())) return true;
-
-        if (di && d < di) return false;
-        if (df) {
-          const end = new Date(df);
-          end.setHours(23, 59, 59, 999);
-          if (d > end) return false;
-        }
-        return true;
-      });
-    }
-
-    return list;
-  }, [atividades, filterSupervisor, filterAnalista, filterTipo, filterDataInicio, filterDataFim, filterIdBusca]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredAtividades.length / pageSize));
-  const page = Math.min(currentPage, totalPages);
-
-  const paginatedAtividades = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredAtividades.slice(start, start + pageSize);
-  }, [filteredAtividades, page, pageSize]);
-
-  // ===== Actions =====
-  const startEdit = (ativ) => {
-    setEditingAtividade(ativ);
-    setSelectedType(ativ?.tipo || 'Chamados');
-    setFormData({
-      data: ativ?.data ? String(ativ.data).slice(0, 10) : '',
-      tipo: ativ?.tipo || 'Chamados',
-      analista_id: idStr(ativ?.analista_id),
-      supervisor_id: idStr(ativ?.supervisor_id),
-      protocolo_gravacao: ativ?.protocolo_gravacao || '',
-      link_gravacao_teams: ativ?.link_gravacao_teams || '',
-      ticket_acompanhado: ativ?.ticket_acompanhado || '',
-      tipo_feedback: ativ?.tipo_feedback || '',
-      topicos_monitoria_offline: ativ?.topicos_monitoria_offline || {},
-      topicos_monitoria_assistida: ativ?.topicos_monitoria_assistida || {},
-      nota: ativ?.nota ?? '',
-      comentario: ativ?.comentario ?? '',
-      status: ativ?.status || 'Aberto',
-    });
-    setIsDialogOpen(true);
-  };
-
-  const openView = (ativ) => setViewingAtividade(ativ);
-
-  const confirmDelete = (id) => setDeleteId(id);
-
-  // ===== Render =====
   return (
-    <div className="p-6 text-gray-100">
-      <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Atividades</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">Atividades</h1>
           <p className="text-gray-400 mt-1">Registre e gerencie as atividades do Suporte N1</p>
         </div>
 
         {canCreate && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                resetForm();
+                submitLockRef.current = false;
+              }
+              setIsDialogOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                disabled={createMutation.isPending || updateMutation.isPending}
+                onClick={() => {
+                  submitLockRef.current = false;
+                  setEditingAtividade(null);
+                }}
+              >
                 <Plus className="w-4 h-4" />
                 Nova Atividade
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 max-w-2xl">
+            <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="flex items-center justify-between">
-                  <span>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</span>
-                  {editingAtividade?.codigo_atividade ? (
-                    <span className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300">
-                      Código: {editingAtividade.codigo_atividade}
-                    </span>
-                  ) : null}
-                </DialogTitle>
+                <DialogTitle>{editingAtividade ? 'Editar Atividade' : 'Nova Atividade'}</DialogTitle>
               </DialogHeader>
 
-              {!editingAtividade && (
-                <div className="text-sm text-gray-400">
-                  A data será registrada automaticamente como{' '}
-                  <span className="text-gray-200">
-                    {format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}
-                  </span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-                {editingAtividade && (
-                  <div>
-                    <Label>Data</Label>
-                    <Input
-                      type="date"
-                      value={formData.data}
-                      onChange={(e) => setFormData((p) => ({ ...p, data: e.target.value }))}
-                      className="bg-[#1a1a1a] border-gray-700 mt-2"
-                      required
-                    />
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {editingAtividade && editingAtividade.codigo_atividade && (
+                  <div className="bg-[#ADF802]/10 border border-[#ADF802]/30 rounded-lg p-3">
+                    <p className="text-sm text-[#ADF802] font-mono">
+                      🔖 Código: <strong>{editingAtividade.codigo_atividade}</strong>
+                    </p>
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Tipo de Atividade</Label>
+                {!editingAtividade && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-sm text-blue-400">
+                      📅 A data será registrada automaticamente como{' '}
+                      <strong>{format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}</strong>
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editingAtividade && (
+                    <div>
+                      <Label>Data</Label>
+                      <Input
+                        type="date"
+                        value={formData.data}
+                        onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                        className="bg-[#1a1a1a] border-gray-700 mt-2"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className={editingAtividade ? '' : 'sm:col-span-2'}>
+                    <Label className="flex items-center gap-2">
+                      Tipo de Atividade
+                      <AtividadeInfoTooltip tipo={selectedType} modalOpen={isDialogOpen} />
+                    </Label>
                     <Select value={selectedType} onValueChange={handleTipoChange}>
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue placeholder="Selecione..." />
+                        <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#242424] border-gray-700">
                         <SelectItem value="Chamados">Chamados</SelectItem>
                         <SelectItem value="Ligações">Ligações</SelectItem>
                         <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
@@ -642,47 +658,47 @@ export default function Atividades() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Analista</Label>
-                    <Select value={idStr(formData.analista_id)} onValueChange={handleAnalistaChange}>
+                    <Select value={formData.analista_id} onValueChange={handleAnalistaChange}>
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue placeholder="Selecione o analista..." />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#242424] border-gray-700">
                         {analistas.map((an) => (
-                          <SelectItem key={an.id} value={idStr(an.id)}>
+                          <SelectItem key={an.id} value={an.id}>
                             {an.nome}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {formData.supervisor_id && (
+                    <div>
+                      <Label>Supervisor Responsável</Label>
+                      <div className="bg-[#1a1a1a] border border-gray-700 rounded-md p-2 mt-2">
+                        <p className="text-white">{getSupervisorNome(formData.supervisor_id)}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="bg-[#161616] border border-gray-800 rounded p-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-gray-300">Supervisor Responsável</Label>
-                    <AtividadeInfoTooltip />
-                  </div>
-                  <div className="mt-2 text-sm">
-                    {formData.supervisor_id ? (
-                      <span className="text-gray-100">{getSupervisorNome(formData.supervisor_id)}</span>
-                    ) : (
-                      <span className="text-yellow-400">Selecione um analista para preencher</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Campos por tipo */}
                 {selectedType === 'Chamados' && (
                   <div>
                     <Label>Ticket</Label>
                     <Input
+                      type="text"
+                      placeholder="Ex: #12345"
+                      maxLength="10"
                       value={formData.ticket_acompanhado}
-                      onChange={(e) => setFormData((p) => ({ ...p, ticket_acompanhado: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ticket_acompanhado: e.target.value })
+                      }
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
-                      placeholder="Ex.: INC000123"
                     />
                   </div>
                 )}
@@ -691,37 +707,39 @@ export default function Atividades() {
                   <div>
                     <Label>Protocolo da Gravação</Label>
                     <Input
+                      type="text"
                       value={formData.protocolo_gravacao}
-                      onChange={(e) => setFormData((p) => ({ ...p, protocolo_gravacao: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData({ ...formData, protocolo_gravacao: e.target.value })
+                      }
                       className="bg-[#1a1a1a] border-gray-700 mt-2"
-                      placeholder="Ex.: 2026-02-26-XYZ"
                     />
                   </div>
                 )}
 
                 {selectedType === 'Monitoria Offline' && (
                   <MonitoriaOfflineForm
-                    onTopicosChange={(topicos) =>
-                      setFormData((p) => ({ ...p, topicos_monitoria_offline: topicos }))
+                    data={formData.topicos_monitoria_offline}
+                    onChange={(topicos) =>
+                      setFormData({ ...formData, topicos_monitoria_offline: topicos })
                     }
                     onProtocoloChange={(protocolo) =>
-                      setFormData((p) => ({ ...p, protocolo_gravacao: protocolo }))
+                      setFormData({ ...formData, protocolo_gravacao: protocolo })
                     }
-                    onNotaChange={(nota) =>
-                      setFormData((p) => ({ ...p, nota, status: 'Concluído' }))
-                    }
+                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
 
                 {selectedType === 'Monitoria Assistida' && (
                   <MonitoriaAssistidaForm
-                    onTopicosChange={(topicos) =>
-                      setFormData((p) => ({ ...p, topicos_monitoria_assistida: topicos }))
+                    data={formData.topicos_monitoria_assistida}
+                    onChange={(topicos) =>
+                      setFormData({ ...formData, topicos_monitoria_assistida: topicos })
                     }
-                    onLinkChange={(link) => setFormData((p) => ({ ...p, link_gravacao_teams: link }))}
-                    onNotaChange={(nota) =>
-                      setFormData((p) => ({ ...p, nota, status: 'Concluído' }))
+                    onLinkChange={(link) =>
+                      setFormData({ ...formData, link_gravacao_teams: link })
                     }
+                    onNotaChange={(nota) => setFormData({ ...formData, nota, status: 'Concluído' })}
                   />
                 )}
 
@@ -729,13 +747,13 @@ export default function Atividades() {
                   <div>
                     <Label>Tipo de Feedback</Label>
                     <Select
-                      value={formData.tipo_feedback || ''}
-                      onValueChange={(val) => setFormData((p) => ({ ...p, tipo_feedback: val }))}
+                      value={formData.tipo_feedback}
+                      onValueChange={(val) => setFormData({ ...formData, tipo_feedback: val })}
                     >
                       <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                        <SelectValue placeholder="Selecione..." />
+                        <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#242424] border-gray-700">
                         <SelectItem value="Positivo">Positivo</SelectItem>
                         <SelectItem value="Negativo">Negativo</SelectItem>
                       </SelectContent>
@@ -744,15 +762,16 @@ export default function Atividades() {
                 )}
 
                 {selectedType !== 'Monitoria Offline' && selectedType !== 'Monitoria Assistida' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label>Nota (0-10)</Label>
                       <Input
                         type="number"
                         min="0"
                         max="10"
+                        step="0.5"
                         value={formData.nota}
-                        onChange={(e) => setFormData((p) => ({ ...p, nota: e.target.value }))}
+                        onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
                         className="bg-[#1a1a1a] border-gray-700 mt-2"
                         required
                       />
@@ -762,12 +781,12 @@ export default function Atividades() {
                       <Label>Status</Label>
                       <Select
                         value={formData.status}
-                        onValueChange={(val) => setFormData((p) => ({ ...p, status: val }))}
+                        onValueChange={(val) => setFormData({ ...formData, status: val })}
                       >
                         <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                          <SelectValue placeholder="Selecione..." />
+                          <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-[#242424] border-gray-700">
                           <SelectItem value="Aberto">Aberto</SelectItem>
                           <SelectItem value="Em evolução">Em evolução</SelectItem>
                           <SelectItem value="Concluído">Concluído</SelectItem>
@@ -781,27 +800,42 @@ export default function Atividades() {
                   <Label>Comentário</Label>
                   <Textarea
                     value={formData.comentario}
-                    onChange={(e) => setFormData((p) => ({ ...p, comentario: e.target.value }))}
-                    className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    placeholder="Descreva o registro..."
+                    onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
+                    className="bg-[#1a1a1a] border-gray-700 mt-2 h-24"
+                    placeholder="Detalhes adicionais..."
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="bg-[#1a1a1a] border border-gray-700"
-                    onClick={() => setIsDialogOpen(false)}
+                    variant="outline"
+                    onClick={() => {
+                      resetForm();
+                      setIsDialogOpen(false);
+                    }}
+                    className="border-gray-700"
+                    disabled={createMutation.isPending || updateMutation.isPending}
                   >
                     Cancelar
                   </Button>
 
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {(createMutation.isPending || updateMutation.isPending) && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {/* ✅ BOTÃO MUDA PARA "REGISTRADO" APÓS CRIAR */}
+                  <Button
+                    type="submit"
+                    disabled={submitLockRef.current || createMutation.isPending || updateMutation.isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {editingAtividade ? 'Atualizando...' : 'Registrando...'}
+                      </>
+                    ) : editingAtividade ? (
+                      'Atualizar'
+                    ) : (
+                      'Registrar'
                     )}
-                    {editingAtividade ? 'Salvar' : 'Registrar'}
                   </Button>
                 </div>
               </form>
@@ -811,326 +845,500 @@ export default function Atividades() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-[#121212] border border-gray-800 rounded p-4 mb-6">
+      <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-4 h-4 text-gray-300" />
-          <h2 className="font-semibold">Filtros</h2>
-          <div className="flex-1" />
-          <Button
-            variant="secondary"
-            className="bg-[#1a1a1a] border border-gray-700 gap-2"
-            onClick={limparFiltros}
-          >
-            <X className="w-4 h-4" />
-            Limpar
-          </Button>
+          <Filter className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-white">Filtros</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div className="md:col-span-2">
-            <Label>ID / Código</Label>
+        <div className="mb-4">
+          <Label className="text-xs text-gray-400">Buscar por Código (CH, LG, MO, MA, FB)</Label>
+          <Input
+            type="text"
+            placeholder="Ex: CH00001, LG00002, MO00003..."
+            value={filterIdBusca}
+            onChange={(e) => setFilterIdBusca(e.target.value.toUpperCase())}
+            className="bg-[#1a1a1a] border-gray-700 mt-1 font-mono"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <Label className="text-xs text-gray-400">Supervisor</Label>
             <Input
-              value={filterIdBusca}
-              onChange={(e) => setFilterIdBusca(e.target.value)}
-              className="bg-[#1a1a1a] border-gray-700 mt-2"
-              placeholder="CH00001 / 123"
+              type="text"
+              placeholder="Digitar supervisor..."
+              value={filterSupervisor}
+              onChange={(e) => setFilterSupervisor(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
             />
           </div>
 
           <div>
-            <Label>Supervisor</Label>
-            <Select
-  value={filterSupervisor || ALL}
-  onValueChange={(v) => setFilterSupervisor(v === ALL ? '' : v)}
->
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {supervisores.map((s) => (
-                  <SelectItem key={s.id} value={idStr(s.id)}>
-                    {getSupervisorNome(s.id)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs text-gray-400">Analista</Label>
+            <Input
+              type="text"
+              placeholder="Digitar analista..."
+              value={filterAnalista}
+              onChange={(e) => setFilterAnalista(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
           </div>
 
           <div>
-            <Label>Analista</Label>
-            <Select
-  value={filterAnalista || ALL}
-  onValueChange={(v) => setFilterAnalista(v === ALL ? '' : v)}
->
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {analistas.map((a) => (
-                  <SelectItem key={a.id} value={idStr(a.id)}>
-                    {a.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs text-gray-400">Tipo</Label>
+            <Input
+              type="text"
+              placeholder="Digitar tipo..."
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value)}
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
+            />
           </div>
 
           <div>
-            <Label>Tipo</Label>
-            <Select
-  value={filterTipo || ALL}
-  onValueChange={(v) => setFilterTipo(v === ALL ? '' : v)}
->
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                <SelectItem value="Chamados">Chamados</SelectItem>
-                <SelectItem value="Ligações">Ligações</SelectItem>
-                <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
-                <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
-                <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Início</Label>
+            <Label className="text-xs text-gray-400">Data Início</Label>
             <Input
               type="date"
               value={filterDataInicio}
               onChange={(e) => setFilterDataInicio(e.target.value)}
-              className="bg-[#1a1a1a] border-gray-700 mt-2"
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
             />
           </div>
 
           <div>
-            <Label>Fim</Label>
+            <Label className="text-xs text-gray-400">Data Fim</Label>
             <Input
               type="date"
               value={filterDataFim}
               onChange={(e) => setFilterDataFim(e.target.value)}
-              className="bg-[#1a1a1a] border-gray-700 mt-2"
+              className="bg-[#1a1a1a] border-gray-700 mt-1"
             />
           </div>
         </div>
+
+        {(filterIdBusca ||
+          filterSupervisor ||
+          filterAnalista ||
+          filterTipo ||
+          filterDataInicio ||
+          filterDataFim) && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={limparFiltros} variant="outline" size="sm" className="border-gray-700 gap-2">
+              <X className="w-4 h-4" />
+              Limpar Filtros
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Lista */}
-      <div className="bg-[#121212] border border-gray-800 rounded overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <div className="text-sm text-gray-300">
-            Total filtrado: <span className="text-gray-100 font-semibold">{filteredAtividades.length}</span>
-          </div>
+      {/* Tabela de Atividades */}
+      <div className="bg-[#0d0d0d] rounded-2xl border border-gray-800 overflow-hidden">
+        {atividadesFiltradas.length > 0 && (
+          <div className="bg-[#0d0d0d] border-b border-gray-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-400">
+              Mostrando <span className="text-white font-semibold">{startIndex + 1}-{Math.min(endIndex, totalRegistros)}</span> de{' '}
+              <span className="text-white font-semibold">{totalRegistros}</span> registros
+            </div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-300">Por página</div>
-            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-              <SelectTrigger className="bg-[#1a1a1a] border-gray-700 w-[90px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-gray-400">Registros por página:</Label>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(val) => {
+                    setPageSize(parseInt(val));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#242424] border-gray-700">
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {isLoading ? (
-          <div className="p-6 flex items-center gap-2 text-gray-300">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Carregando...
-          </div>
-        ) : paginatedAtividades.length === 0 ? (
-          <div className="p-6 text-gray-400 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Nenhuma atividade encontrada com os filtros atuais.
-          </div>
-        ) : (
-          <div className="w-full overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#0f0f0f] text-gray-300">
-                <tr>
-                  <th className="text-left p-3">Código</th>
-                  <th className="text-left p-3">Tipo</th>
-                  <th className="text-left p-3">Analista</th>
-                  <th className="text-left p-3">Supervisor</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Aprovação</th>
-                  <th className="text-right p-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedAtividades.map((a) => (
-                  <tr key={a.id} className="border-t border-gray-800 hover:bg-[#141414]">
-                    <td className="p-3 text-gray-100 font-medium">
-                      {a.codigo_atividade || a.id}
-                    </td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded border ${getTipoColor(a.tipo)}`}>
-                        {a.tipo || '-'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-gray-200">{getAnalistaNome(a.analista_id)}</td>
-                    <td className="p-3 text-gray-200">{getSupervisorNome(a.supervisor_id)}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded border ${getStatusColor(a.status)}`}>
-                        {a.status || 'Aberto'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-gray-200">
-                      <span className="text-xs">
-                        {a.aprovacao_status || 'pendente'}
-                        {a.aprovacao_status === 'rejeitado' && a.aprovacao_motivo_rejeicao ? (
-                          <span className="block text-red-400 mt-1">
-                            Motivo: {a.aprovacao_motivo_rejeicao}
-                          </span>
-                        ) : null}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="secondary"
-                          className="bg-[#1a1a1a] border border-gray-700"
-                          onClick={() => openView(a)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-
-                        {canEdit && (
-                          <Button
-                            variant="secondary"
-                            className="bg-[#1a1a1a] border border-gray-700"
-                            onClick={() => startEdit(a)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        )}
-
-                        {canDelete && (
-                          <Button
-                            variant="destructive"
-                            className="gap-2"
-                            onClick={() => confirmDelete(a.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="border-gray-700 h-8"
+                >
+                  ←
+                </Button>
+                <span className="text-sm text-gray-400 min-w-[60px] text-center">
+                  Página {currentPage} de {totalPaginas}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPaginas, currentPage + 1))}
+                  disabled={currentPage === totalPaginas}
+                  className="border-gray-700 h-8"
+                >
+                  →
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Paginação */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-800">
-          <div className="text-xs text-gray-400">
-            Página <span className="text-gray-100">{page}</span> de{' '}
-            <span className="text-gray-100">{totalPages}</span>
+        {selectedIds.size > 0 && (
+          <div className="bg-blue-500/10 border-b border-blue-500/30 px-6 py-3 flex items-center justify-between">
+            <span className="text-sm text-blue-400">{selectedIds.size} registro(s) selecionado(s)</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="border-gray-700 h-8">
+                Desselecionar Tudo
+              </Button>
+              <Button size="sm" onClick={() => setDeleteMultipleDialogOpen(true)} className="bg-red-600 hover:bg-red-700 h-8 gap-2">
+                <Trash2 className="w-4 h-4" />
+                Deletar Selecionados
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              className="bg-[#1a1a1a] border border-gray-700"
-              disabled={page <= 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="secondary"
-              className="bg-[#1a1a1a] border border-gray-700"
-              disabled={page >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Próxima
-            </Button>
-          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-[#1a1a1a] border-b border-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === atividadesPaginadas.length && atividadesPaginadas.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedIds(new Set(atividadesPaginadas.map((a) => a.id)));
+                      else setSelectedIds(new Set());
+                    }}
+                    className="cursor-pointer"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Data</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Tipo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Supervisor Resp.</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Analista</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Registrado Por</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Nota</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Aprovação</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {atividadesPaginadas.map((atividade) => (
+                <tr key={atividade.id} className="hover:bg-[#1a1a1a] transition-colors">
+                  <td className="px-4 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(atividade.id)}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedIds);
+                        if (e.target.checked) newSet.add(atividade.id);
+                        else newSet.delete(atividade.id);
+                        setSelectedIds(newSet);
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="px-2 py-1 bg-[#ADF802]/10 text-[#ADF802] text-xs font-mono font-bold rounded border border-[#ADF802]/30">
+                      {atividade.codigo_atividade || 'N/A'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{getLocalDateString(atividade.data)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getTipoColor(atividade.tipo)}`}>
+                        {atividade.tipo}
+                      </span>
+                      <AtividadeInfoTooltip tipo={atividade.tipo} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{getSupervisorNome(atividade.supervisor_id)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300">{getAnalistaNome(atividade.analista_id)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-[150px]">
+                    {atividade.registrado_por || atividade.created_by}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getNotaBadgeColor(atividade.nota)}`}>{atividade.nota}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(atividade.status)}`}>{atividade.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
+                        atividade.aprovacao_status === 'aprovado'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : atividade.aprovacao_status === 'rejeitado'
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }`}
+                    >
+                      {atividade.aprovacao_status === 'aprovado'
+                        ? '✓ Aprovado'
+                        : atividade.aprovacao_status === 'rejeitado'
+                        ? '✗ Rejeitado'
+                        : '⏳ Pendente'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setViewingAtividade(atividade)}
+                        className="text-blue-400 hover:text-blue-300 h-8 w-8"
+                        title="Visualizar"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(atividade)}
+                          className="text-gray-400 hover:text-white h-8 w-8"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(atividade.id)}
+                          className="text-gray-400 hover:text-red-400 h-8 w-8"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {atividadesFiltradas.length === 0 && (
+          <div className="text-center py-12">
+            <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">
+              {atividades.length === 0
+                ? 'Nenhuma atividade registrada'
+                : 'Nenhuma atividade encontrada com os filtros aplicados'}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Visualização */}
-      <Dialog open={!!viewingAtividade} onOpenChange={(open) => !open && setViewingAtividade(null)}>
-        <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 max-w-2xl">
+      {/* Dialog de Visualização */}
+      <Dialog open={!!viewingAtividade} onOpenChange={() => setViewingAtividade(null)}>
+        <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Atividade</DialogTitle>
           </DialogHeader>
-
-          {viewingAtividade ? (
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <div className="text-gray-300">Código</div>
-                <div className="text-gray-100 font-semibold">
-                  {viewingAtividade.codigo_atividade || viewingAtividade.id}
+          {viewingAtividade && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Data</p>
+                  <p className="text-white font-medium">{getLocalDateString(viewingAtividade.data)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Tipo</p>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getTipoColor(viewingAtividade.tipo)}`}>
+                    {viewingAtividade.tipo}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Supervisor</p>
+                  <p className="text-white">{getSupervisorNome(viewingAtividade.supervisor_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Analista</p>
+                  <p className="text-white">{getAnalistaNome(viewingAtividade.analista_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Nota</p>
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${getNotaBadgeColor(viewingAtividade.nota)}`}>
+                    {viewingAtividade.nota}/10
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Status</p>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(viewingAtividade.status)}`}>
+                    {viewingAtividade.status}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="text-gray-300">Tipo</div>
-                <div className="text-gray-100">{viewingAtividade.tipo || '-'}</div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-gray-300">Analista</div>
-                <div className="text-gray-100">{getAnalistaNome(viewingAtividade.analista_id)}</div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-gray-300">Supervisor</div>
-                <div className="text-gray-100">{getSupervisorNome(viewingAtividade.supervisor_id)}</div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-gray-300">Status</div>
-                <div className="text-gray-100">{viewingAtividade.status || '-'}</div>
-              </div>
-
-              <div className="flex items-start justify-between gap-6">
-                <div className="text-gray-300">Comentário</div>
-                <div className="text-gray-100 text-right whitespace-pre-wrap">
-                  {viewingAtividade.comentario || '-'}
+              {viewingAtividade.protocolo_gravacao && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Protocolo da Gravação</p>
+                  <p className="text-white">{viewingAtividade.protocolo_gravacao}</p>
                 </div>
+              )}
+
+              {viewingAtividade.link_gravacao_teams && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Link Teams</p>
+                  <a
+                    href={viewingAtividade.link_gravacao_teams}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-400 hover:underline text-sm"
+                  >
+                    {viewingAtividade.link_gravacao_teams}
+                  </a>
+                </div>
+              )}
+
+              {viewingAtividade.ticket_acompanhado && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Ticket</p>
+                  <p className="text-white">{viewingAtividade.ticket_acompanhado}</p>
+                </div>
+              )}
+
+              {viewingAtividade.tipo_feedback && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Tipo de Feedback</p>
+                  <p className="text-white">{viewingAtividade.tipo_feedback}</p>
+                </div>
+              )}
+
+              {viewingAtividade.comentario && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Comentário</p>
+                  <p className="text-gray-300 text-sm">{viewingAtividade.comentario}</p>
+                </div>
+              )}
+
+              {viewingAtividade.tipo === 'Monitoria Offline' && viewingAtividade.topicos_monitoria_offline && (
+                <div>
+                  <MonitoriaOfflineForm
+                    data={{
+                      ...viewingAtividade.topicos_monitoria_offline,
+                      protocolo: viewingAtividade.protocolo_gravacao,
+                    }}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                </div>
+              )}
+
+              {viewingAtividade.tipo === 'Monitoria Assistida' && viewingAtividade.topicos_monitoria_assistida && (
+                <div>
+                  <MonitoriaAssistidaForm
+                    data={{
+                      ...viewingAtividade.topicos_monitoria_assistida,
+                      linkGravacao: viewingAtividade.link_gravacao_teams,
+                    }}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-gray-800">
+                <Button onClick={() => setViewingAtividade(null)} className="bg-emerald-600 hover:bg-emerald-700">
+                  Fechar
+                </Button>
               </div>
             </div>
-          ) : null}
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
+      {/* Dialog de Exclusão */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover atividade?</AlertDialogTitle>
+            <AlertDialogTitle className="text-white">Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Essa ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta atividade? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#1a1a1a] border border-gray-700">
-              Cancelar
-            </AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Exclusão em Massa */}
+      <AlertDialog open={deleteMultipleDialogOpen} onOpenChange={setDeleteMultipleDialogOpen}>
+        <AlertDialogContent className="bg-[#242424] border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar exclusão em massa</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir {selectedIds.size} atividade(s)? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700">Cancelar</AlertDialogCancel>
             <AlertDialogAction
+              onClick={() => deleteMultipleMutation.mutate()}
+              disabled={deleteMultipleMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Removendo...
-                </span>
-              ) : (
-                'Remover'
-              )}
+              {deleteMultipleMutation.isPending ? 'Deletando...' : 'Deletar Tudo'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Sucesso */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="bg-gradient-to-br from-emerald-900/30 to-emerald-950/50 border-2 border-emerald-500/50 backdrop-blur-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-bold text-emerald-400 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <svg className="w-7 h-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              Atividade Registrada com Sucesso!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-gray-300 space-y-3 pt-4">
+              <p className="flex items-start gap-2">
+                <span className="text-emerald-400 text-xl">📋</span>
+                <span>Seu registro foi <strong className="text-white">enviado para aprovação</strong> do coordenador.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-blue-400 text-xl">🔔</span>
+                <span>Você será <strong className="text-white">notificado</strong> assim que a atividade for avaliada.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-purple-400 text-xl">👤</span>
+                <span>Acompanhe o status no seu <strong className="text-white">Perfil</strong>.</span>
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-6">
+            <AlertDialogAction
+              onClick={() => {
+                setShowSuccessDialog(false);
+                queryClient.invalidateQueries({ queryKey: ['atividades'] });
+                queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+                queryClient.invalidateQueries({ queryKey: ['minhasAtividadesPendentes'] });
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 text-base"
+            >
+              Entendi
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
