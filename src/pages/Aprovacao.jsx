@@ -518,6 +518,7 @@ export default function Aprovacao() {
               <Field
   label="Supervisor"
   value={
+    viewSupervisorNome ||
     viewAtividade?.supervisor_nome ||
     viewAtividade?.supervisor ||
     viewAtividade?.supervisor_id ||
@@ -528,6 +529,7 @@ export default function Aprovacao() {
 <Field
   label="Analista"
   value={
+    viewAnalistaNome ||
     viewAtividade?.analista_nome ||
     viewAtividade?.analista ||
     viewAtividade?.analista_id ||
