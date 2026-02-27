@@ -579,12 +579,12 @@ export default function Atividades() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
-                        <SelectItem value="Chamados">Chamados</SelectItem>
-                        <SelectItem value="Ligações">Ligações</SelectItem>
-                        <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
-                        <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
-                        <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>
-                      </SelectContent>
+  <SelectItem value="chamados">Chamados</SelectItem>
+  <SelectItem value="ligacoes">Ligações</SelectItem>
+  <SelectItem value="monitoria_offline">Monitoria Offline</SelectItem>
+  <SelectItem value="monitoria_assistida">Monitoria Assistida</SelectItem>
+  <SelectItem value="feedback">Feedback Individual</SelectItem>
+</SelectContent>
                     </Select>
                   </div>
                 </div>
