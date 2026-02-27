@@ -60,8 +60,8 @@ export default function QuizzRelampago() {
     queryFn: async () => {
       const todosQuizzes = await base44.entities.QuizzRelampago.list('-created_date', 50);
       
-      // Se for admin ou supervisor, mostra todos
-      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor') {
+      // Se for admin, supervisor ou noc, mostra todos
+      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') {
         return todosQuizzes;
       }
       
