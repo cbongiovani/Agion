@@ -435,6 +435,11 @@ export default function GestaoUsuarios() {
                     ))}
                   </SelectContent>
                 </Select>
+                {userData.role && userData.role !== selectedUser.role && (
+                  <p className="text-xs text-yellow-400 mt-1">
+                    ⚠️ Ao salvar, as permissões de módulos serão redefinidas para o padrão da nova função.
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
