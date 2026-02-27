@@ -115,6 +115,98 @@ export default function Atividades() {
     status: 'Aberto',
   });
 
+  // =========================
+// NORMALIZAÇÃO / CONSTANTES
+// =========================
+const TIPO_OPTIONS = [
+  { value: 'chamados', label: 'Chamados', prefix: 'CH' },
+  { value: 'ligacoes', label: 'Ligações', prefix: 'LG' },
+  { value: 'monitoria_offline', label: 'Monitoria Offline', prefix: 'MO' },
+  { value: 'monitoria_assistida', label: 'Monitoria Assistida', prefix: 'MA' },
+  { value: 'feedback', label: 'Feedback Individual', prefix: 'FB' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'aberto', label: 'Aberto' },
+  { value: 'em_evolucao', label: 'Em evolução' },
+  { value: 'concluido', label: 'Concluído' },
+];
+
+const normalizeTipo = (v) => {
+  if (!v) return 'chamados';
+  const map = {
+    'Chamados': 'chamados',
+    'Ligações': 'ligacoes',
+    'Ligacoes': 'ligacoes',
+    'Monitoria Offline': 'monitoria_offline',
+    'Monitoria Assistida': 'monitoria_assistida',
+    'Feedback Individual': 'feedback',
+  };
+  return map[v] || v;
+};
+
+const normalizeStatus = (v) => {
+  if (!v) return 'aberto';
+  const map = {
+    'Aberto': 'aberto',
+    'Em evolução': 'em_evolucao',
+    'Concluído': 'concluido',
+  };
+  return map[v] || v;
+};
+
+const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => {
+  const dataAtual = new Date();
+  const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+
+  const tipo = normalizeTipo(selectedType || formData.tipo);
+  const status = normalizeStatus(formData.status);
+
+  const base = {
+    tipo,
+    data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
+    analista_id: formData.analista_id || '',
+    supervisor_id: formData.supervisor_id || '',
+    comentario: (formData.comentario || '').trim(),
+    nota: Number.isFinite(parseFloat(formData.nota)) ? parseFloat(formData.nota) : 0,
+    status,
+  };
+
+  Object.keys(base).forEach((k) => {
+    if (base[k] === '' || base[k] === null || base[k] === undefined) delete base[k];
+  });
+
+  if (tipo === 'chamados' && formData.ticket_acompanhado) {
+    base.ticket_acompanhado = String(formData.ticket_acompanhado).trim();
+  }
+
+  if (tipo === 'ligacoes' && formData.protocolo_gravacao) {
+    base.protocolo_gravacao = String(formData.protocolo_gravacao).trim();
+  }
+
+  if (tipo === 'monitoria_offline') {
+    base.topicos_monitoria_offline = formData.topicos_monitoria_offline || {};
+    if (formData.protocolo_gravacao) {
+      base.protocolo_gravacao = String(formData.protocolo_gravacao).trim();
+    }
+    base.status = 'concluido';
+  }
+
+  if (tipo === 'monitoria_assistida') {
+    base.topicos_monitoria_assistida = formData.topicos_monitoria_assistida || {};
+    if (formData.link_gravacao_teams) {
+      base.link_gravacao_teams = String(formData.link_gravacao_teams).trim();
+    }
+    base.status = 'concluido';
+  }
+
+  if (tipo === 'feedback' && formData.tipo_feedback) {
+    base.tipo_feedback = String(formData.tipo_feedback).toLowerCase();
+  }
+
+  return base;
+};
+
   const { data: atividades = [], isLoading } = useQuery({
     queryKey: ['atividades', currentUser?.role],
     staleTime: 2000,
