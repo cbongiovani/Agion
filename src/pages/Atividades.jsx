@@ -481,19 +481,22 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
   if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
   submitLockRef.current = true;
 
-  const payload = buildAtividadePayload({
-    formData,
-    selectedType,
-    editingAtividade,
-  });
+  const rawPayload = buildAtividadePayload({
+  formData,
+  selectedType,
+  editingAtividade,
+});
 
-  console.log('Payload enviado para Base44:', payload);
+const payload = cleanPayload(rawPayload);
 
-  if (editingAtividade) {
-    updateMutation.mutate({ id: editingAtividade.id, data: payload });
-  } else {
-    createMutation.mutate(payload);
-  }
+console.log('Payload enviado para Base44 (raw):', rawPayload);
+console.log('Payload enviado para Base44 (clean):', payload);
+
+if (editingAtividade) {
+  updateMutation.mutate({ id: editingAtividade.id, data: payload });
+} else {
+  createMutation.mutate(payload);
+}
 };
 
   const openEdit = (atividade) => {
