@@ -60,18 +60,16 @@ export default function QuizzRelampago() {
     queryFn: async () => {
       const todosQuizzes = await base44.entities.QuizzRelampago.list('-created_date', 50);
       
-      // Se for admin, supervisor ou noc, mostra todos
+      // Admin, supervisor e noc veem todos
       if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') {
         return todosQuizzes;
       }
       
-      // Para analistas, mostra apenas aprovados
-      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'quizz' });
-      const aprovados = aprovacoes
-        .filter(a => a.status === 'aprovado')
-        .map(a => a.atividade_id);
+      // Analistas veem apenas quizzes aprovados E ativos
+      const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'quizz', status: 'aprovado' });
+      const aprovados = aprovacoes.map(a => a.atividade_id);
       
-      return todosQuizzes.filter(q => aprovados.includes(q.id));
+      return todosQuizzes.filter(q => aprovados.includes(q.id) && q.status === 'Ativo');
     },
     enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
