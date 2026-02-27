@@ -50,6 +50,7 @@ function extractUsefulError(err) {
     details: typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
   };
 }
+const ALL = "__all__";
 
 export default function Aprovacao() {
   const queryClient = useQueryClient();
