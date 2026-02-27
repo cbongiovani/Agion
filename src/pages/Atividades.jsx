@@ -159,56 +159,53 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
   const dataAtual = new Date();
   const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
 
-  // garante que o "tipo" salvo seja o do enum (Chamados/Ligações/...)
-  const tipoFinal = selectedType || formData.tipo;
+  // tipo SEMPRE no enum do banco
+  const tipo = normalizeTipo(selectedType || formData.tipo);
 
-  // payload base com os campos comuns
-  const payload = {
-    ...formData,
-    tipo: tipoFinal,
+  // status: mantém o seu valor atual; se quiser normalizar depois, eu ajusto com você
+  const base = {
+    tipo,
     data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
-    nota: Number(parseFloat(formData.nota || 0)),
-    status: formData.status || 'Aberto',
-    comentario: formData.comentario || '',
+    analista_id: formData.analista_id || undefined,
+    supervisor_id: formData.supervisor_id || undefined,
+    nota: Number.isFinite(Number(formData.nota)) ? Number(formData.nota) : 0,
+    status: formData.status || undefined,
+    comentario: formData.comentario || undefined,
   };
 
-  // Regras por tipo (se quiser ser mais rígido)
-  if (tipoFinal === 'Chamados') {
-    payload.ticket_acompanhado = formData.ticket_acompanhado || '';
-    payload.protocolo_gravacao = '';
-    payload.link_gravacao_teams = '';
+  // Inclui SOMENTE o que faz sentido por tipo (evita 422 por validação)
+  if (tipo === 'chamados') {
+    base.ticket_acompanhado = formData.ticket_acompanhado || undefined;
   }
 
-  if (tipoFinal === 'Ligações') {
-    payload.protocolo_gravacao = formData.protocolo_gravacao || '';
-    payload.ticket_acompanhado = '';
-    payload.link_gravacao_teams = '';
+  if (tipo === 'ligacoes') {
+    base.protocolo_gravacao = formData.protocolo_gravacao || undefined;
   }
 
-  if (tipoFinal === 'Monitoria Offline') {
-    payload.topicos_monitoria_offline = formData.topicos_monitoria_offline || {};
-    payload.protocolo_gravacao = formData.protocolo_gravacao || '';
-    payload.link_gravacao_teams = '';
-    payload.ticket_acompanhado = '';
-    payload.status = 'Concluído';
+  if (tipo === 'monitoria_offline') {
+    base.protocolo_gravacao = formData.protocolo_gravacao || undefined;
+    base.topicos_monitoria_offline =
+      formData.topicos_monitoria_offline && Object.keys(formData.topicos_monitoria_offline).length > 0
+        ? formData.topicos_monitoria_offline
+        : undefined;
   }
 
-  if (tipoFinal === 'Monitoria Assistida') {
-    payload.topicos_monitoria_assistida = formData.topicos_monitoria_assistida || {};
-    payload.link_gravacao_teams = formData.link_gravacao_teams || '';
-    payload.protocolo_gravacao = '';
-    payload.ticket_acompanhado = '';
-    payload.status = 'Concluído';
+  if (tipo === 'monitoria_assistida') {
+    base.link_gravacao_teams = formData.link_gravacao_teams || undefined;
+    base.topicos_monitoria_assistida =
+      formData.topicos_monitoria_assistida && Object.keys(formData.topicos_monitoria_assistida).length > 0
+        ? formData.topicos_monitoria_assistida
+        : undefined;
   }
 
-  if (tipoFinal === 'Feedback Individual') {
-    payload.tipo_feedback = formData.tipo_feedback || '';
-    payload.protocolo_gravacao = '';
-    payload.link_gravacao_teams = '';
-    payload.ticket_acompanhado = '';
+  if (tipo === 'feedback') {
+    base.tipo_feedback = formData.tipo_feedback || undefined;
   }
 
-  return payload;
+  // Limpa undefined (Base44 costuma gostar mais assim)
+  Object.keys(base).forEach((k) => base[k] === undefined && delete base[k]);
+
+  return base;
 };
 
   const { data: atividades = [], isLoading } = useQuery({
