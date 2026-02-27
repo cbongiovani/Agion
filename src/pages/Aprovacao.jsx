@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 
 import {
@@ -37,11 +38,8 @@ function idStr(v) {
 function fmtDateOnlyBR(v) {
   if (!v) return '-';
   const s = String(v);
-  // se vier ISO, pega só yyyy-mm-dd
   const iso = s.includes('T') ? s.split('T')[0] : s;
-  // dd/mm/yyyy já ok
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(iso)) return iso;
-  // yyyy-mm-dd -> dd/mm/yyyy
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
     const [y, m, d] = iso.split('-');
     return `${d}/${m}/${y}`;
@@ -95,13 +93,13 @@ export default function Aprovacao() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectMotivo, setRejectMotivo] = useState('');
 
-  // view modal (reaproveita para ambos)
+  // view modal
   const [viewOpen, setViewOpen] = useState(false);
   const [viewTipo, setViewTipo] = useState(null); // 'atividade' | 'fechamento'
-  const [viewRegistro, setViewRegistro] = useState(null); // objeto da entidade alvo (Atividade ou FechamentoSemanal)
-  const [viewAprovacao, setViewAprovacao] = useState(null); // objeto AprovacaoAtividade
+  const [viewRegistro, setViewRegistro] = useState(null); // Atividade | FechamentoSemanal
+  const [viewAprovacao, setViewAprovacao] = useState(null); // AprovacaoAtividade
 
-  // nomes resolvidos (atividade)
+  // nomes resolvidos (reaproveitar pros dois)
   const [viewSupervisorNome, setViewSupervisorNome] = useState('');
   const [viewAnalistaNome, setViewAnalistaNome] = useState('');
 
@@ -117,9 +115,7 @@ export default function Aprovacao() {
   } = useQuery({
     queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
-      const list = await base44.entities.AprovacaoAtividade.filter({
-        status: 'pendente',
-      });
+      const list = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
       return Array.isArray(list) ? list : [];
     },
     enabled: !!currentUser,
@@ -136,26 +132,17 @@ export default function Aprovacao() {
     [aprovacoesPendentes]
   );
 
-  // ===== 2) carregar listas base para "ver" (IDs) =====
-  // Atividades
-  const {
-    data: atividades = [],
-    isLoading: loadingAtividades,
-  } = useQuery({
+  // ===== 2) carregar listas base para "ver" =====
+  const { data: atividades = [], isLoading: loadingAtividades } = useQuery({
     queryKey: ['atividades_for_aprovacao', aprovacoesAtividade.length],
     queryFn: async () => {
-      // lista grande (ajuste se precisar)
       const raw = await base44.entities.Atividade.list('-created_date', 800);
       return Array.isArray(raw) ? raw : [];
     },
     enabled: !!currentUser,
   });
 
-  // Fechamentos
-  const {
-    data: fechamentos = [],
-    isLoading: loadingFechamentos,
-  } = useQuery({
+  const { data: fechamentos = [], isLoading: loadingFechamentos } = useQuery({
     queryKey: ['fechamentos_for_aprovacao', aprovacoesFechamento.length],
     queryFn: async () => {
       const raw = await base44.entities.FechamentoSemanal.list('-created_date', 400);
@@ -164,11 +151,63 @@ export default function Aprovacao() {
     enabled: !!currentUser,
   });
 
+  // ===== 2.1) LISTAS DE NOMES (para tabela + fallback rápido) =====
+  const { data: supervisores = [] } = useQuery({
+    queryKey: ['supervisores_list'],
+    queryFn: async () => {
+      const raw = await base44.entities.Supervisor.list('-created_date', 300);
+      return Array.isArray(raw) ? raw : [];
+    },
+    enabled: !!currentUser,
+  });
+
+  const { data: analistas = [] } = useQuery({
+    queryKey: ['analistas_list'],
+    queryFn: async () => {
+      const raw = await base44.entities.Analista.list('-created_date', 900);
+      return Array.isArray(raw) ? raw : [];
+    },
+    enabled: !!currentUser,
+  });
+
+  const supervisorMap = useMemo(() => {
+    const m = {};
+    for (const s of supervisores) {
+      const id = idStr(s?.id);
+      if (!id) continue;
+      m[id] = s?.nome || s?.nome_supervisor || '';
+    }
+    return m;
+  }, [supervisores]);
+
+  const analistaMap = useMemo(() => {
+    const m = {};
+    for (const a of analistas) {
+      const id = idStr(a?.id);
+      if (!id) continue;
+      m[id] = a?.nome || '';
+    }
+    return m;
+  }, [analistas]);
+
+  function resolveSupervisorNameFromRecord(rec) {
+    const supId = idStr(rec?.supervisor_id || rec?.supervisor);
+    const direct = rec?.supervisor_nome;
+    const mapped = supId ? supervisorMap[supId] : '';
+    return direct || mapped || (supId ? supId : '-');
+  }
+
+  function resolveAnalistaNameFromRecord(rec) {
+    const anaId = idStr(rec?.analista_id || rec?.analista);
+    const direct = rec?.analista_nome;
+    const mapped = anaId ? analistaMap[anaId] : '';
+    return direct || mapped || (anaId ? anaId : '-');
+  }
+
   // ===== 3) construir linhas exibidas (com busca) =====
   const searchNorm = search.trim().toLowerCase();
 
   const rowsAtividades = useMemo(() => {
-    // map: aprovacao -> atividade
     const ids = new Set(aprovacoesAtividade.map((a) => idStr(a?.atividade_id)).filter(Boolean));
     const pend = atividades.filter((t) => ids.has(idStr(t?.id)));
 
@@ -212,6 +251,9 @@ export default function Aprovacao() {
         f?.destaques,
         f?.pontos_criticos,
         f?.plano_acao,
+        // também deixa buscável pelos nomes resolvidos via map:
+        supervisorMap[idStr(f?.supervisor_id || f?.supervisor)],
+        analistaMap[idStr(f?.analista_id || f?.analista)],
       ]
         .filter(Boolean)
         .join(' ')
@@ -219,14 +261,12 @@ export default function Aprovacao() {
 
       return blob.includes(searchNorm);
     });
-  }, [aprovacoesFechamento, fechamentos, searchNorm]);
+  }, [aprovacoesFechamento, fechamentos, searchNorm, supervisorMap, analistaMap]);
 
   // ===== 4) mutations aprovar/rejeitar =====
   const aprovarMutation = useMutation({
     mutationFn: async ({ aprovacaoId }) => {
-      return await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
-        status: 'aprovado',
-      });
+      return await base44.entities.AprovacaoAtividade.update(aprovacaoId, { status: 'aprovado' });
     },
     onSuccess: async () => {
       toast.success('✅ Aprovado');
@@ -270,6 +310,37 @@ export default function Aprovacao() {
     );
   };
 
+  const resolveNamesByIds = async (supIdRaw, anaIdRaw) => {
+    const supId = idStr(supIdRaw);
+    const anaId = idStr(anaIdRaw);
+
+    // reset
+    setViewSupervisorNome('');
+    setViewAnalistaNome('');
+
+    // tenta map primeiro (rápido)
+    let supNome = supId ? supervisorMap[supId] : '';
+    let anaNome = anaId ? analistaMap[anaId] : '';
+
+    // se não achou no map, faz get (padrão do seu openViewAtividade)
+    if (supId && !supNome) {
+      try {
+        const s = await base44.entities.Supervisor.get(supId);
+        supNome = s?.nome || s?.nome_supervisor || '';
+      } catch {}
+    }
+
+    if (anaId && !anaNome) {
+      try {
+        const a = await base44.entities.Analista.get(anaId);
+        anaNome = a?.nome || '';
+      } catch {}
+    }
+
+    setViewSupervisorNome(supNome || '');
+    setViewAnalistaNome(anaNome || '');
+  };
+
   const openViewAtividade = async (atividade) => {
     const aprov = findAprovacaoByTarget('atividade', atividade?.id);
     setViewTipo('atividade');
@@ -281,25 +352,7 @@ export default function Aprovacao() {
       const supId = full?.supervisor_id || full?.supervisor || '';
       const anaId = full?.analista_id || full?.analista || '';
 
-      let supNome = '';
-      let anaNome = '';
-
-      try {
-        if (supId) {
-          const s = await base44.entities.Supervisor.get(supId);
-          supNome = s?.nome || s?.nome_supervisor || '';
-        }
-      } catch {}
-
-      try {
-        if (anaId) {
-          const a = await base44.entities.Analista.get(anaId);
-          anaNome = a?.nome || '';
-        }
-      } catch {}
-
-      setViewSupervisorNome(supNome);
-      setViewAnalistaNome(anaNome);
+      await resolveNamesByIds(supId, anaId);
 
       setViewRegistro(full || atividade);
     } catch {
@@ -311,6 +364,7 @@ export default function Aprovacao() {
     setViewOpen(true);
   };
 
+  // ✅ AQUI está a correção principal do FECHAMENTO:
   const openViewFechamento = async (fechamento) => {
     const aprov = findAprovacaoByTarget('fechamento', fechamento?.id);
     setViewTipo('fechamento');
@@ -318,8 +372,19 @@ export default function Aprovacao() {
 
     try {
       const full = await base44.entities.FechamentoSemanal.get(fechamento.id);
+
+      const supId = full?.supervisor_id || full?.supervisor || '';
+      const anaId = full?.analista_id || full?.analista || '';
+
+      await resolveNamesByIds(supId, anaId);
+
       setViewRegistro(full || fechamento);
     } catch {
+      // fallback: tenta resolver com o que tem no list
+      const supId = fechamento?.supervisor_id || fechamento?.supervisor || '';
+      const anaId = fechamento?.analista_id || fechamento?.analista || '';
+      await resolveNamesByIds(supId, anaId);
+
       setViewRegistro(fechamento);
     }
 
@@ -331,7 +396,9 @@ export default function Aprovacao() {
     rejeitarMutation.mutate({ aprovacaoId: selected.id, motivo: rejectMotivo });
   };
 
-  const canDecide = (currentUser?.role === 'admin') || (currentUser?.role === 'coordenacao') || true;
+  // ✅ deixa “travado por role” de verdade
+  const canDecide =
+    currentUser?.role === 'admin' || currentUser?.role === 'coordenacao';
 
   return (
     <div className="p-6 space-y-6">
@@ -440,6 +507,12 @@ export default function Aprovacao() {
                   })}
                 </tbody>
               </table>
+
+              {!canDecide ? (
+                <div className="text-xs text-yellow-500 mt-3">
+                  ⚠ Você está como {currentUser?.role || 'visitante'} e não pode aprovar/rejeitar.
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -470,6 +543,7 @@ export default function Aprovacao() {
                   <tr className="border-b border-gray-800">
                     <th className="text-left py-2 pr-2">Semana</th>
                     <th className="text-left py-2 pr-2">Supervisor</th>
+                    <th className="text-left py-2 pr-2">Analista</th>
                     <th className="text-left py-2 pr-2">Status</th>
                     <th className="text-left py-2 pr-2">Criado por</th>
                     <th className="text-right py-2">Ações</th>
@@ -483,12 +557,14 @@ export default function Aprovacao() {
                         ? `${fmtDateOnlyBR(f?.semana_inicio)} → ${fmtDateOnlyBR(f?.semana_fim)}`
                         : '-';
 
+                    const supervisorNomeTabela = resolveSupervisorNameFromRecord(f);
+                    const analistaNomeTabela = resolveAnalistaNameFromRecord(f);
+
                     return (
                       <tr key={f.id} className="border-b border-gray-800/60">
                         <td className="py-2 pr-2 font-medium">{semana}</td>
-                        <td className="py-2 pr-2">
-                          {f?.supervisor_nome || f?.supervisor || f?.supervisor_id || '-'}
-                        </td>
+                        <td className="py-2 pr-2">{supervisorNomeTabela}</td>
+                        <td className="py-2 pr-2">{analistaNomeTabela}</td>
                         <td className="py-2 pr-2">{aprov?.status || 'pendente'}</td>
                         <td className="py-2 pr-2">
                           {f?.registrado_por || f?.created_by || '-'}
@@ -528,6 +604,12 @@ export default function Aprovacao() {
                   })}
                 </tbody>
               </table>
+
+              {!canDecide ? (
+                <div className="text-xs text-yellow-500 mt-3">
+                  ⚠ Você está como {currentUser?.role || 'visitante'} e não pode aprovar/rejeitar.
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -549,7 +631,14 @@ export default function Aprovacao() {
       >
         <DialogContent className="bg-[#121212] border border-gray-800 text-gray-100 max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Visualizar {viewTipo === 'fechamento' ? 'fechamento semanal' : 'atividade'}</DialogTitle>
+            <DialogTitle>
+              Visualizar {viewTipo === 'fechamento' ? 'fechamento semanal' : 'atividade'}
+            </DialogTitle>
+
+            {/* ✅ remove warning: Missing Description / aria-describedby */}
+            <DialogDescription className="sr-only">
+              Detalhes do registro para aprovação.
+            </DialogDescription>
           </DialogHeader>
 
           {!viewRegistro ? (
@@ -559,8 +648,21 @@ export default function Aprovacao() {
               <Field label="Semana início" value={fmtDateOnlyBR(viewRegistro?.semana_inicio)} />
               <Field label="Semana fim" value={fmtDateOnlyBR(viewRegistro?.semana_fim)} />
 
-              <Field label="Supervisor" value={viewRegistro?.supervisor_nome || viewRegistro?.supervisor || viewRegistro?.supervisor_id || '-'} />
-              <Field label="Analista" value={viewRegistro?.analista_nome || viewRegistro?.analista || viewRegistro?.analista_id || '-'} />
+              {/* ✅ NOME RESOLVIDO */}
+              <Field
+                label="Supervisor"
+                value={
+                  viewSupervisorNome ||
+                  resolveSupervisorNameFromRecord(viewRegistro)
+                }
+              />
+              <Field
+                label="Analista"
+                value={
+                  viewAnalistaNome ||
+                  resolveAnalistaNameFromRecord(viewRegistro)
+                }
+              />
 
               <Field label="Ligações Next IP" value={viewRegistro?.ligacoes_next_ip ?? viewRegistro?.ligacoes ?? '-'} />
               <Field label="Chamados Verdana" value={viewRegistro?.chamados_verdana ?? viewRegistro?.chamados ?? '-'} />
@@ -608,10 +710,7 @@ export default function Aprovacao() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <Field
-                label="Código"
-                value={viewRegistro?.codigo_atividade || viewRegistro?.id}
-              />
+              <Field label="Código" value={viewRegistro?.codigo_atividade || viewRegistro?.id} />
               <Field label="Tipo" value={viewRegistro?.tipo || '-'} />
 
               <Field
