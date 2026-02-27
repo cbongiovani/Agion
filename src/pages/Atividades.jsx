@@ -328,22 +328,21 @@ export default function Atividades() {
 
   // ===== Core fix: garante aprovação (sempre usando ID string) =====
   const ensureApprovalForActivity = async (atividadeId) => {
-    const atividade_id = idStr(atividadeId);
-    if (!atividade_id) throw new Error('Atividade criada sem ID válido.');
+  const id = String(atividadeId);
 
-    const existentes = await base44.entities.AprovacaoAtividade.filter({
-      tipo: 'atividade',
-      atividade_id, // string normalizada
-    });
+  const existentes = await base44.entities.AprovacaoAtividade.filter({
+    tipo: 'atividade',
+    atividade_id: id,
+  });
 
-    if (Array.isArray(existentes) && existentes.length > 0) return existentes[0];
+  if (Array.isArray(existentes) && existentes.length > 0) return existentes[0];
 
-    return await base44.entities.AprovacaoAtividade.create({
-      tipo: 'atividade',
-      atividade_id,
-      status: 'pendente',
-    });
-  };
+  return await base44.entities.AprovacaoAtividade.create({
+    tipo: 'atividade',
+    atividade_id: id,
+    status: 'pendente',
+  });
+};
 
   // ===== Mutations =====
   const createMutation = useMutation({
