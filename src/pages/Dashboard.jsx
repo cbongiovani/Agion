@@ -156,31 +156,7 @@ export default function DashboardOKR() {
 
   // ✅ restrição (ajuste conforme sua regra)
   const canView = currentUser?.role === 'admin' || currentUser?.role === 'coordenacao';
-  if (!currentUser) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
-    );
-  }
-
-  if (!canView) {
-    return (
-      <div className="text-center py-12">
-        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-gray-400">Acesso restrito a Coordenadores</p>
-      </div>
-    );
-  }
-
   const loading = loadingOKR || loadingFech || loadingSup || loadingAtv;
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
-    );
-  }
 
   // ========= Normalização / filtros =========
   const searchNorm = search.trim().toLowerCase();
