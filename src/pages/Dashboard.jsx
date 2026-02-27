@@ -324,6 +324,23 @@ export default function DashboardOKR() {
 
   const topSupervisor = supervisorCards[0];
 
+  if (!currentUser || loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <p className="text-gray-400">Acesso restrito a Coordenadores</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
