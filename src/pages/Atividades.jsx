@@ -725,16 +725,17 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
                 )}
 
                 {selectedType === 'ligacoes' && (
-                  <div>
-                    <Label>Protocolo da Gravação</Label>
-                    <Input
-                      type="text"
-                      value={formData.protocolo_gravacao}
-                      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
-                      className="bg-[#1a1a1a] border-gray-700 mt-2"
-                    />
-                  </div>
-                )}
+  <div>
+    <Label>Protocolo da Gravação</Label>
+    <Input
+      type="text"
+      value={formData.protocolo_gravacao}
+      onChange={(e) => setFormData({ ...formData, protocolo_gravacao: e.target.value })}
+      className="bg-[#1a1a1a] border-gray-700 mt-2"
+      required
+    />
+  </div>
+)}
 
                 {selectedType === 'monitoria_offline' && (
                   <MonitoriaOfflineForm
