@@ -883,20 +883,21 @@ export default function Atividades() {
                   </div>
                 )}
 
-                {selectedType === 'monitoria_offline' && (
-                  <MonitoriaOfflineForm
-                    data={formData.topicos_monitoria_offline}
-                    onChange={(topicos) =>
-                      setFormData({ ...formData, topicos_monitoria_offline: topicos })
-                    }
-                    onProtocoloChange={(protocolo) =>
-                      setFormData({ ...formData, protocolo_gravacao: protocolo })
-                    }
-                    onNotaChange={(nota) =>
-                      setFormData({ ...formData, nota, status: 'concluido' })
-                    }
-                  />
-                )}
+                {selectedType === 'Monitoria Offline' && (
+                 <MonitoriaOfflineForm
+                  readOnly={false}
+                  data={formData.topicos_monitoria_offline}
+                  onChange={(topicos) =>
+                  setFormData((prev) => ({ ...prev, topicos_monitoria_offline: topicos }))
+                   }
+                  onProtocoloChange={(protocolo) =>
+                 setFormData((prev) => ({ ...prev, protocolo_gravacao: protocolo }))
+      }
+    onNotaChange={(nota) =>
+      setFormData((prev) => ({ ...prev, nota, status: 'Concluído' }))
+    }
+  />
+)}
 
                 {selectedType === 'monitoria_assistida' && (
                   <MonitoriaAssistidaForm
