@@ -62,11 +62,11 @@ const makeRequestId = () => {
 // CONSTANTES / NORMALIZAÇÃO
 // =========================
 const TIPO_OPTIONS = [
-  { value: 'chamados', label: 'Chamados', prefix: 'CH' },
-  { value: 'ligacoes', label: 'Ligações', prefix: 'LG' },
-  { value: 'monitoria_offline', label: 'Monitoria Offline', prefix: 'MO' },
-  { value: 'monitoria_assistida', label: 'Monitoria Assistida', prefix: 'MA' },
-  { value: 'feedback', label: 'Feedback Individual', prefix: 'FB' },
+  { value: 'Chamados', label: 'Chamados', prefix: 'CH' },
+  { value: 'Ligações', label: 'Ligações', prefix: 'LG' },
+  { value: 'Monitoria Offline', label: 'Monitoria Offline', prefix: 'MO' },
+  { value: 'Monitoria Assistida', label: 'Monitoria Assistida', prefix: 'MA' },
+  { value: 'Feedback Individual', label: 'Feedback Individual', prefix: 'FB' },
 ];
 
 const STATUS_OPTIONS = [
