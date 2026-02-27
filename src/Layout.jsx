@@ -251,7 +251,7 @@ export default function Layout({ children }) {
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     <span className="font-medium text-sm">{item.name}</span>
-                    {item.moduleKey === MODULES.APROVACAO && aprovacoesPendentes.length > 0 && (
+                    {item.moduleKey === MODULES.APROVACAO && totalPendentesAprovacao > 0 && (
                       <div className="absolute right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                     )}
                   </Link>
