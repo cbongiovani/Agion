@@ -434,7 +434,7 @@ export default function Aprovacao() {
         <div className="flex items-center justify-between">
           <div className="text-white font-semibold">Aprovar atividades</div>
           <div className="text-gray-400 text-sm">
-            Pendentes: {aprovacoesAtividade.length}
+            Pendentes: {rowsAtividades.length}
           </div>
         </div>
 
@@ -523,7 +523,7 @@ export default function Aprovacao() {
         <div className="flex items-center justify-between">
           <div className="text-white font-semibold">Aprovar fechamentos semanais</div>
           <div className="text-gray-400 text-sm">
-            Pendentes: {aprovacoesFechamento.length}
+            Pendentes: {rowsFechamentos.length}
           </div>
         </div>
 
