@@ -488,7 +488,7 @@ export default function Aprovacao() {
               <Field label="Status" value={viewAtividade.status || '-'} />
 
               <Field label="Nota (0-10)" value={viewAtividade.nota ?? '-'} />
-              <Field label="Data" value={fmtDate(viewAtividade.data)} />
+              <Field label="Data" value={fmtDateOnlyBR(viewAtividade.data)} />
 
               <div className="md:col-span-2">
                 <div className="text-gray-400">Comentário</div>
