@@ -229,7 +229,7 @@ export default function QuizzRelampago() {
     },
   });
 
-  const isCoordOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
+  const isCoordOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc';
   const isCoord = currentUser?.role === 'admin';
 
   const handleCreateQuizz = () => {
