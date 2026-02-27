@@ -65,6 +65,32 @@ function fmtDate(v) {
   }
 }
 
+// ✅ ADD (junto dos helpers)
+function fmtDateOnlyBR(v) {
+  if (!v) return '';
+  const s = String(v);
+  // ISO -> pega só a parte da data pra não “voltar dia” por timezone
+  const isoDate = s.includes('T') ? s.split('T')[0] : s;
+  // se já vier dd/mm/aaaa, mantém
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(isoDate)) return isoDate;
+  // yyyy-mm-dd -> dd/mm/yyyy
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    const [y, m, d] = isoDate.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  // fallback
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = d.getFullYear();
+    return `${dd}/${mm}/${yy}`;
+  } catch {
+    return s;
+  }
+}
+
 function Field({ label, value }) {
   return (
     <div>
