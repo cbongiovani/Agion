@@ -112,7 +112,7 @@ export default function Atividades() {
     topicos_monitoria_assistida: {},
     nota: '',
     comentario: '',
-    status: 'Aberto',
+    status: 'aberto',
   });
 
   // =========================
@@ -283,7 +283,7 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
       topicos_monitoria_assistida: {},
       nota: '',
       comentario: '',
-      status: 'Aberto',
+      status: 'aberto',
     });
     setEditingAtividade(null);
     setSelectedType('chamados');
@@ -515,7 +515,7 @@ if (editingAtividade) {
       topicos_monitoria_assistida: atividade.topicos_monitoria_assistida || {},
       nota: atividade.nota?.toString() || '',
       comentario: atividade.comentario || '',
-      status: atividade.status || 'Aberto',
+      status: normalizeStatus(atividade.status) || 'aberto',
     });
     setSelectedType(atividade.tipo);
     setIsDialogOpen(true);
