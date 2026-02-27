@@ -56,7 +56,7 @@ export default function Atividades() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [selectedType, setSelectedType] = useState('Chamados');
+  const [selectedType, setSelectedType] = useState('chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -101,7 +101,7 @@ export default function Atividades() {
     modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
   const [formData, setFormData] = useState({
-    tipo: 'Chamados',
+    tipo: 'chamados',
     analista_id: '',
     supervisor_id: '',
     protocolo_gravacao: '',
@@ -179,7 +179,7 @@ export default function Atividades() {
 
   const resetForm = () => {
     setFormData({
-      tipo: 'Chamados',
+      tipo: 'chamados',
       analista_id: '',
       supervisor_id: '',
       protocolo_gravacao: '',
@@ -193,19 +193,19 @@ export default function Atividades() {
       status: 'Aberto',
     });
     setEditingAtividade(null);
-    setSelectedType('Chamados');
+    setSelectedType('chamados');
     submitLockRef.current = false;
   };
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const prefixos = {
-        Chamados: 'CH',
-        Ligações: 'LG',
-        'Monitoria Offline': 'MO',
-        'Monitoria Assistida': 'MA',
-        'Feedback Individual': 'FB',
-      };
+     const prefixos = {
+  chamados: 'CH',
+  ligacoes: 'LG',
+  monitoria_offline: 'MO',
+  monitoria_assistida: 'MA',
+  feedback: 'FB',
+};
 
       const atividadesMesmoTipo = await base44.entities.Atividade.filter({ tipo: data.tipo });
       const codigosExistentes = atividadesMesmoTipo
