@@ -470,25 +470,26 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
-    submitLockRef.current = true;
+  e.preventDefault();
 
-    const dataAtual = new Date();
-    const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
+  if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
+  submitLockRef.current = true;
 
-    const payload = {
-      ...formData,
-      data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
-      nota: parseFloat(formData.nota) || 0,
-    };
+  const payload = buildAtividadePayload({
+    formData,
+    selectedType,
+    editingAtividade,
+  });
 
-    if (editingAtividade) {
-      updateMutation.mutate({ id: editingAtividade.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
-  };
+  // 🔎 DEBUG opcional (pode remover depois)
+  console.log('Payload enviado para Base44:', payload);
+
+  if (editingAtividade) {
+    updateMutation.mutate({ id: editingAtividade.id, data: payload });
+  } else {
+    createMutation.mutate(payload);
+  }
+};
 
   const openEdit = (atividade) => {
     submitLockRef.current = false;
