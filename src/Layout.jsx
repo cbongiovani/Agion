@@ -125,7 +125,7 @@ export default function Layout({ children }) {
       { name: 'Supervisores', icon: Users, path: 'Supervisores', moduleKey: MODULES.SUPERVISORES, tooltip: 'Gestão de equipes' },
       { name: 'Analistas', icon: UserCircle, path: 'Analistas', moduleKey: MODULES.ANALISTAS, tooltip: 'Cadastro de analistas N1' },
       { name: 'Ranking', icon: Trophy, path: 'Ranking', moduleKey: MODULES.RANKING, tooltip: 'Performance com gamificação' },
-      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', moduleKey: MODULES.QUIZZ_RELAMPAGO, alwaysVisible: true, tooltip: 'Testes rápidos de conhecimento' },
+      { name: 'Quizz Relâmpago', icon: Zap, path: 'QuizzRelampago', moduleKey: MODULES.QUIZZ_RELAMPAGO, tooltip: 'Testes rápidos de conhecimento' },
       { name: 'Avaliações', icon: ClipboardList, path: 'Avaliacoes', moduleKey: MODULES.AVALIACOES, tooltip: 'Avaliações periódicas' },
       { name: 'Certificados', icon: Award, path: 'Certificados', moduleKey: MODULES.CERTIFICADOS, tooltip: 'Certificados e cursos' },
       { name: 'War Room', icon: AlertTriangle, path: 'WarRoom', moduleKey: MODULES.WAR_ROOM, tooltip: 'Gerenciamento de incidentes' },
