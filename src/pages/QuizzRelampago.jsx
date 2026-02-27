@@ -784,13 +784,13 @@ Formato esperado:
                   <span>Criado por: {quizz.criador_nome}</span>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  {!isCoordOrSuper && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
+                  {(isAnalyst) && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
                     <Button onClick={() => iniciarParticipacao(quizz)} className="flex-1 bg-yellow-600 hover:bg-yellow-700">
                       <Play className="w-4 h-4 mr-2" />
                       Participar
                     </Button>
                   )}
-                  {!isCoordOrSuper && jaParticipou(quizz.id) && (
+                  {(isAnalyst) && jaParticipou(quizz.id) && (
                     <Button disabled className="flex-1 bg-gray-600 cursor-not-allowed">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Realizado
