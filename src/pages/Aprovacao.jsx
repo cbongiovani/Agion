@@ -115,39 +115,6 @@ export default function Aprovacao() {
   const openView = (atividade) => {
     setViewAtividade(atividade);
     setViewOpen(true);
-    // ===== Carregar listas para resolver ID -> Nome =====
-const { data: supervisores = [] } = useQuery({
-  queryKey: ['supervisores'],
-  queryFn: async () => {
-    const list = await base44.entities.Supervisor.list('-created_date', 300);
-    return Array.isArray(list) ? list : [];
-  },
-  enabled: true,
-});
-
-const { data: analistas = [] } = useQuery({
-  queryKey: ['analistas'],
-  queryFn: async () => {
-    const list = await base44.entities.Analista.list('-created_date', 500);
-    return Array.isArray(list) ? list : [];
-  },
-  enabled: true,
-});
-
-// ===== Helpers de nome =====
-const getSupervisorNome = (v) => {
-  if (!v) return '-';
-  const key = String(v);
-  const found = supervisores.find((s) => String(s.id) === key);
-  return found?.nome || found?.nome_supervisor || key;
-};
-
-const getAnalistaNome = (v) => {
-  if (!v) return '-';
-  const key = String(v);
-  const found = analistas.find((a) => String(a.id) === key);
-  return found?.nome || key;
-};
   };
 
   const { data: currentUser } = useQuery({
