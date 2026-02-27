@@ -85,18 +85,13 @@ export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloC
                   <button
                     key={valor}
                     type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!readOnly) handleTopicoChange(topico.key, valor);
-                    }}
+                    onClick={() => !readOnly && handleTopicoChange(topico.key, valor)}
                     disabled={readOnly}
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
                     className={`
-                      w-9 h-9 rounded-md border-2 transition-all text-sm font-bold select-none
+                      w-9 h-9 rounded-md border-2 transition-all text-sm font-bold
                       flex items-center justify-center
                       ${topicosValues[topico.key] === valor
-                        ? 'bg-[#ADF802] border-[#ADF802] text-black shadow-lg scale-110'
+                        ? 'bg-[#ADF802] border-[#ADF802] text-black shadow-lg'
                         : 'bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-[#ADF802]/60 hover:text-white hover:bg-[#242424]'
                       }
                       ${readOnly ? 'cursor-default opacity-70' : 'cursor-pointer'}
