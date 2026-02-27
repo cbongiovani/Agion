@@ -75,11 +75,15 @@ export default function Layout({ children }) {
     queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ status: 'pendente' });
-      return aprovacoes;
+      return Array.isArray(aprovacoes) ? aprovacoes : [];
     },
     enabled: currentUser?.role === 'admin',
     refetchInterval: 30000,
   });
+
+  const totalPendentesAprovacao = aprovacoesPendentes.filter(
+    (a) => a?.tipo === 'atividade' || a?.tipo === 'fechamento'
+  ).length;
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
