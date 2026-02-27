@@ -592,14 +592,7 @@ if (editingAtividade) {
   const endIndex = startIndex + pageSize;
   const atividadesPaginadas = atividadesFiltradas.slice(startIndex, endIndex);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
-    );
-  }
-
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
