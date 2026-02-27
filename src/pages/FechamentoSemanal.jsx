@@ -126,12 +126,17 @@ export default function FechamentoSemanal() {
       });
       
       const supervisor = supervisores.find(s => s.id === data.supervisor_id);
-      await notificarCoordenadores(
-        'novo_fechamento',
-        'Novo Fechamento Semanal',
-        `${user.full_name} registrou fechamento semanal para ${supervisor?.nome || 'supervisor'} - Aguardando aprovação`,
-        'Aprovacao'
-      );
+      // Notifica coordenadores (best effort - não pode quebrar o fluxo)
+try {
+  await notificarCoordenadores(
+    'novo_fechamento',
+    'Novo Fechamento Semanal',
+    `${user.full_name} registrou fechamento semanal para ${supervisor?.nome || 'supervisor'} - Aguardando aprovação`,
+    'Aprovacao'
+  );
+} catch (e) {
+  console.warn('Erro ao notificar coordenadores:', e);
+}
       
       return result;
     },
