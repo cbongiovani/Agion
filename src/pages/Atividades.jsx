@@ -159,52 +159,56 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
   const dataAtual = new Date();
   const dataFormatada = `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`;
 
-  const tipo = normalizeTipo(selectedType || formData.tipo);
-  const status = normalizeStatus(formData.status);
+  // garante que o "tipo" salvo seja o do enum (Chamados/Ligações/...)
+  const tipoFinal = selectedType || formData.tipo;
 
-  const base = {
-    tipo,
+  // payload base com os campos comuns
+  const payload = {
+    ...formData,
+    tipo: tipoFinal,
     data: editingAtividade ? ensureCorrectDate(formData.data) : dataFormatada,
-    analista_id: formData.analista_id || '',
-    supervisor_id: formData.supervisor_id || '',
-    comentario: (formData.comentario || '').trim(),
-    nota: Number.isFinite(parseFloat(formData.nota)) ? parseFloat(formData.nota) : 0,
-    status,
+    nota: Number(parseFloat(formData.nota || 0)),
+    status: formData.status || 'Aberto',
+    comentario: formData.comentario || '',
   };
 
-  Object.keys(base).forEach((k) => {
-    if (base[k] === '' || base[k] === null || base[k] === undefined) delete base[k];
-  });
-
-  if (tipo === 'chamados' && formData.ticket_acompanhado) {
-    base.ticket_acompanhado = String(formData.ticket_acompanhado).trim();
+  // Regras por tipo (se quiser ser mais rígido)
+  if (tipoFinal === 'Chamados') {
+    payload.ticket_acompanhado = formData.ticket_acompanhado || '';
+    payload.protocolo_gravacao = '';
+    payload.link_gravacao_teams = '';
   }
 
-  if (tipo === 'ligacoes' && formData.protocolo_gravacao) {
-    base.protocolo_gravacao = String(formData.protocolo_gravacao).trim();
+  if (tipoFinal === 'Ligações') {
+    payload.protocolo_gravacao = formData.protocolo_gravacao || '';
+    payload.ticket_acompanhado = '';
+    payload.link_gravacao_teams = '';
   }
 
-  if (tipo === 'monitoria_offline') {
-    base.topicos_monitoria_offline = formData.topicos_monitoria_offline || {};
-    if (formData.protocolo_gravacao) {
-      base.protocolo_gravacao = String(formData.protocolo_gravacao).trim();
-    }
-    base.status = 'concluido';
+  if (tipoFinal === 'Monitoria Offline') {
+    payload.topicos_monitoria_offline = formData.topicos_monitoria_offline || {};
+    payload.protocolo_gravacao = formData.protocolo_gravacao || '';
+    payload.link_gravacao_teams = '';
+    payload.ticket_acompanhado = '';
+    payload.status = 'Concluído';
   }
 
-  if (tipo === 'monitoria_assistida') {
-    base.topicos_monitoria_assistida = formData.topicos_monitoria_assistida || {};
-    if (formData.link_gravacao_teams) {
-      base.link_gravacao_teams = String(formData.link_gravacao_teams).trim();
-    }
-    base.status = 'concluido';
+  if (tipoFinal === 'Monitoria Assistida') {
+    payload.topicos_monitoria_assistida = formData.topicos_monitoria_assistida || {};
+    payload.link_gravacao_teams = formData.link_gravacao_teams || '';
+    payload.protocolo_gravacao = '';
+    payload.ticket_acompanhado = '';
+    payload.status = 'Concluído';
   }
 
-  if (tipo === 'feedback' && formData.tipo_feedback) {
-    base.tipo_feedback = String(formData.tipo_feedback).toLowerCase();
+  if (tipoFinal === 'Feedback Individual') {
+    payload.tipo_feedback = formData.tipo_feedback || '';
+    payload.protocolo_gravacao = '';
+    payload.link_gravacao_teams = '';
+    payload.ticket_acompanhado = '';
   }
 
-  return base;
+  return payload;
 };
 
   const { data: atividades = [], isLoading } = useQuery({
