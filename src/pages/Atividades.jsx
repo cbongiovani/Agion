@@ -617,7 +617,7 @@ export default function Atividades() {
                 </div>
 
                 {/* Campo específico por tipo */}
-                {selectedType === 'Chamados' && (
+                {selectedType === 'chamados' && (
                   <div>
                     <Label>Ticket</Label>
                     <Input
@@ -631,7 +631,7 @@ export default function Atividades() {
                   </div>
                 )}
 
-                {selectedType === 'Ligações' && (
+                {selectedType === 'Ligacoes' && (
                   <div>
                     <Label>Protocolo da Gravação</Label>
                     <Input
@@ -643,7 +643,7 @@ export default function Atividades() {
                   </div>
                 )}
 
-                {selectedType === 'Monitoria Offline' && (
+                {selectedType === 'monitoria_offline' && (
                   <MonitoriaOfflineForm
                     data={formData.topicos_monitoria_offline}
                     onChange={(topicos) =>
@@ -656,7 +656,7 @@ export default function Atividades() {
                   />
                 )}
 
-                {selectedType === 'Monitoria Assistida' && (
+                {selectedType === 'monitoria_assistida' && (
                   <MonitoriaAssistidaForm
                     data={formData.topicos_monitoria_assistida}
                     onChange={(topicos) =>
@@ -669,7 +669,7 @@ export default function Atividades() {
                   />
                 )}
 
-                {selectedType === 'Feedback Individual' && (
+                {selectedType === 'feedback' && (
                   <div>
                     <Label>Tipo de Feedback</Label>
                     <Select
