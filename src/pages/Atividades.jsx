@@ -1076,7 +1076,7 @@ export default function Atividades() {
                 </div>
               )}
 
-              {viewingAtividade.tipo === 'Monitoria Offline' && viewingAtividade.topicos_monitoria_offline && (
+              {viewingAtividade.tipo === 'monitoria_offline' && viewingAtividade.topicos_monitoria_offline && (
                 <MonitoriaOfflineForm
                   data={{ ...viewingAtividade.topicos_monitoria_offline, protocolo: viewingAtividade.protocolo_gravacao }}
                   onChange={() => {}}
@@ -1084,7 +1084,7 @@ export default function Atividades() {
                 />
               )}
 
-              {viewingAtividade.tipo === 'Monitoria Assistida' && viewingAtividade.topicos_monitoria_assistida && (
+              {viewingAtividade.tipo === 'monitoria_assistida' && viewingAtividade.topicos_monitoria_assistida && (
                 <MonitoriaAssistidaForm
                   data={{ ...viewingAtividade.topicos_monitoria_assistida, linkGravacao: viewingAtividade.link_gravacao_teams }}
                   onChange={() => {}}
