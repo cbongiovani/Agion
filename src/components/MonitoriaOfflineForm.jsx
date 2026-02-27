@@ -80,20 +80,26 @@ export default function MonitoriaOfflineForm({ data = {}, onChange, onProtocoloC
               }`}
             >
               <Label className="text-xs text-gray-300 flex-1">{topico.label}</Label>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {[1, 2, 3, 4, 5].map((valor) => (
                   <button
                     key={valor}
                     type="button"
-                    onClick={() => handleTopicoChange(topico.key, valor)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!readOnly) handleTopicoChange(topico.key, valor);
+                    }}
                     disabled={readOnly}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                     className={`
-                      w-8 h-8 rounded border transition-all text-xs font-semibold
+                      w-9 h-9 rounded-md border-2 transition-all text-sm font-bold select-none
+                      flex items-center justify-center
                       ${topicosValues[topico.key] === valor
-                        ? 'bg-[#ADF802] border-[#ADF802] text-black'
-                        : 'bg-[#242424] border-gray-600 text-gray-400 hover:border-gray-500'
+                        ? 'bg-[#ADF802] border-[#ADF802] text-black shadow-lg scale-110'
+                        : 'bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-[#ADF802]/60 hover:text-white hover:bg-[#242424]'
                       }
-                      ${readOnly ? 'cursor-default opacity-80' : ''}
+                      ${readOnly ? 'cursor-default opacity-70' : 'cursor-pointer'}
                     `}
                   >
                     {valor}
