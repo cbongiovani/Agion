@@ -56,7 +56,7 @@ export default function Atividades() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAtividade, setEditingAtividade] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [selectedType, setSelectedType] = useState('chamados');
+  const [selectedType, setSelectedType] = useState('Chamados');
   const [viewingAtividade, setViewingAtividade] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -101,7 +101,7 @@ export default function Atividades() {
     modulePermissions?.modules?.[MODULES.ATIVIDADES]?.edit === true;
 
   const [formData, setFormData] = useState({
-    tipo: 'chamados',
+    tipo: 'Chamados',
     analista_id: '',
     supervisor_id: '',
     protocolo_gravacao: '',
@@ -676,12 +676,12 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#242424] border-gray-700">
-  <SelectItem value="chamados">Chamados</SelectItem>
-  <SelectItem value="ligacoes">Ligações</SelectItem>
-  <SelectItem value="monitoria_offline">Monitoria Offline</SelectItem>
-  <SelectItem value="monitoria_assistida">Monitoria Assistida</SelectItem>
-  <SelectItem value="feedback">Feedback Individual</SelectItem>
-</SelectContent>
+                        <SelectItem value="Chamados">Chamados</SelectItem>
+                        <SelectItem value="Ligações">Ligações</SelectItem>
+                        <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
+                        <SelectItem value="Monitoria Assistida">Monitoria Assistida</SelectItem>
+                        <SelectItem value="Feedback Individual">Feedback Individual</SelectItem>  
+                        </SelectContent>
                     </Select>
                   </div>
                 </div>
