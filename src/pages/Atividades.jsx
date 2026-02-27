@@ -27,38 +27,8 @@ import { toast } from "sonner";
 import { Plus, Loader2, RefreshCw } from "lucide-react";
 
 /** =========================
- * CONFIG: tópicos e perguntas
+ * HELPERS
  * ========================= */
-const OFFLINE_TOPICOS = [
-  { id: "t1", label: "Saudação Padrão de Atendimento" },
-  { id: "t2", label: "Validação da loja e colaborador em linha" },
-  { id: "t3", label: "Domínio/conhecimento do problema" },
-  { id: "t4", label: "Comunicação direta e objetiva" },
-  { id: "t5", label: "Domínio na condução da ligação" },
-  { id: "t6", label: "Tratou a loja com respeito" },
-  { id: "t7", label: "Teve equilíbrio emocional" },
-  // se você tiver mais, adicione aqui:
-  // { id:"t8", label:"..." }
-];
-
-const ASSISTIDA_PERGUNTAS = [
-  // exemplo — substitua pelo seu banco se quiser
-  { id: "q1", label: "Atendimento se apresentou corretamente?" },
-  { id: "q2", label: "Confirmou loja/caixa/usuário?" },
-  { id: "q3", label: "Troubleshooting adequado?" },
-  { id: "q4", label: "Encerramento correto (recap + próximos passos)?" },
-  // ...
-];
-
-// opções do select (ex.: Certo/Errado/NA)
-const OPCOES_ASSISTIDA = [
-  { value: "correto", label: "Correto" },
-  { value: "parcial", label: "Parcial" },
-  { value: "incorreto", label: "Incorreto" },
-  { value: "na", label: "N/A" },
-];
-
-/** helpers */
 function idStr(v) {
   if (v === null || v === undefined) return "";
   return String(v).trim();
@@ -82,15 +52,49 @@ function fmtDateOnlyBR(v) {
   }
 }
 
-function sumNotas(obj) {
-  return Object.values(obj || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+/** =========================
+ * COMPONENTS
+ * ========================= */
+function Field({ label, children }) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-gray-300">{label}</Label>
+      {children}
+    </div>
+  );
 }
 
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
+// ✅ placar 1–5 com clique garantido
+function Rating5({ value, onChange, disabled }) {
+  const v = Number(value) || 0;
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const active = v === n;
+        return (
+          <button
+            key={n}
+            type="button" // ✅ CRÍTICO (não vira submit)
+            disabled={disabled}
+            onClick={() => onChange(n)}
+            className={[
+              "h-8 w-8 rounded-md border text-xs font-semibold transition",
+              active
+                ? "bg-green-700/70 border-green-500 text-white"
+                : "bg-[#121212] border-gray-700 text-gray-200",
+              disabled
+                ? "opacity-60 cursor-not-allowed"
+                : "cursor-pointer hover:border-gray-500",
+            ].join(" ")}
+          >
+            {n}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
-/** badge */
 function Pill({ children }) {
   return (
     <span className="px-2 py-1 rounded-md text-xs border border-gray-700 bg-[#1a1a1a] text-gray-200">
@@ -100,43 +104,86 @@ function Pill({ children }) {
 }
 
 /** =========================
+ * CONFIG (ajuste se quiser)
+ * ========================= */
+const TIPOS = [
+  { value: "chamado", label: "Chamado" },
+  { value: "ligacao", label: "Ligação" },
+  { value: "monitoria_offline", label: "Monitoria Offline" },
+  { value: "monitoria_assistida", label: "Monitoria Assistida" },
+  { value: "feedback", label: "Feedback" },
+];
+
+// Offline (tópicos do placar 1–5)
+const OFFLINE_TOPICOS = [
+  { id: "t1", label: "Saudação Padrão de Atendimento" },
+  { id: "t2", label: "Validação da loja e colaborador em linha" },
+  { id: "t3", label: "Domínio/conhecimento do problema" },
+  { id: "t4", label: "Comunicação direta e objetiva" },
+  { id: "t5", label: "Domínio na condução da ligação" },
+  { id: "t6", label: "Tratou a loja com respeito" },
+  { id: "t7", label: "Teve equilíbrio emocional" },
+];
+
+// Assistida (perguntas com Select + nota geral 1–5)
+const ASSISTIDA_PERGUNTAS = [
+  { id: "q1", label: "Apresentação e abordagem inicial" },
+  { id: "q2", label: "Validação de loja/usuário/caixa" },
+  { id: "q3", label: "Diagnóstico e condução técnica" },
+  { id: "q4", label: "Comunicação clara e objetiva" },
+  { id: "q5", label: "Encerramento correto (recap + próximos passos)" },
+];
+
+const ASSISTIDA_OPCOES = [
+  { value: "correto", label: "Correto" },
+  { value: "parcial", label: "Parcial" },
+  { value: "incorreto", label: "Incorreto" },
+  { value: "na", label: "N/A" },
+];
+
+function sumNotas(notasObj) {
+  return Object.values(notasObj || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+}
+
+/** =========================
  * PAGE
  * ========================= */
-export default function AtividadesPage() {
+export default function Atividades() {
   const queryClient = useQueryClient();
 
-  // filtros
   const [search, setSearch] = useState("");
 
-  // modal "Nova Atividade"
+  // modal criar
   const [openNew, setOpenNew] = useState(false);
 
-  // form state
-  const [tipoAtividade, setTipoAtividade] = useState("monitoria_offline"); // monitoria_offline | monitoria_assistida | (outros)
+  // form
+  const [tipo, setTipo] = useState("chamado");
   const [analistaId, setAnalistaId] = useState("");
-  const [supervisorNome, setSupervisorNome] = useState(""); // exibido
-  const [supervisorId, setSupervisorId] = useState(""); // salvo
-  const [protocoloGravacao, setProtocoloGravacao] = useState("");
+  const [supervisorId, setSupervisorId] = useState("");
+  const [protocolo, setProtocolo] = useState("");
 
-  // offline: notas 1-5 por tópico
-  const [notasOffline, setNotasOffline] = useState({}); // { t1: 5, t2: 4 ... }
+  // campos por tipo
+  const [ticket, setTicket] = useState(""); // chamado/ligacao
+  const [duracao, setDuracao] = useState(""); // ligacao
+  const [comentario, setComentario] = useState(""); // todos
 
-  // assistida: perguntas (select) + placar 1-5 geral
-  const [respostasAssistida, setRespostasAssistida] = useState({}); // { q1:"correto", ... }
+  // monitoria offline
+  const [notasOffline, setNotasOffline] = useState({}); // {t1:1..5}
+
+  // monitoria assistida
+  const [respostasAssistida, setRespostasAssistida] = useState({}); // {q1: "correto"...}
   const [notaAssistida, setNotaAssistida] = useState(0); // 1..5
-
-  const [comentario, setComentario] = useState("");
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: () => base44.auth.me(),
   });
 
-  // ✅ regra de permissão correta: supervisor pode classificar
+  // ✅ supervisor consegue classificar (corrige “sem interação” por disabled)
   const canRate =
-    currentUser?.role === "supervisor" ||
+    currentUser?.role === "admin" ||
     currentUser?.role === "coordenacao" ||
-    currentUser?.role === "admin";
+    currentUser?.role === "supervisor";
 
   // listas base
   const { data: analistas = [], isLoading: loadingAnalistas } = useQuery({
@@ -169,11 +216,11 @@ export default function AtividadesPage() {
     return m;
   }, [supervisores]);
 
-  // atividades list (exemplo)
+  // listagem de atividades
   const { data: atividades = [], isLoading: loadingAtividades } = useQuery({
     queryKey: ["atividades_list"],
     queryFn: async () => {
-      const raw = await base44.entities.Atividade.list("-created_date", 500);
+      const raw = await base44.entities.Atividade.list("-created_date", 600);
       return Array.isArray(raw) ? raw : [];
     },
     enabled: !!currentUser,
@@ -188,11 +235,11 @@ export default function AtividadesPage() {
         t?.id,
         t?.codigo_atividade,
         t?.tipo,
-        t?.created_by,
-        t?.registrado_por,
         t?.ticket,
+        t?.protocolo_gravacao,
         t?.comentario,
-        t?.status,
+        t?.registrado_por,
+        t?.created_by,
       ]
         .filter(Boolean)
         .join(" ")
@@ -202,70 +249,65 @@ export default function AtividadesPage() {
     });
   }, [atividades, search]);
 
-  /** ao escolher analista, definir supervisor automaticamente se você tiver essa relação */
-  function handleSelectAnalista(id) {
-    setAnalistaId(id);
-    const a = analistaMap[idStr(id)];
-    // ajuste conforme seu schema real:
-    const supId = idStr(a?.supervisor_id || a?.supervisor || "");
-    if (supId && supervisorMap[supId]) {
-      setSupervisorId(supId);
-      setSupervisorNome(
-        supervisorMap[supId]?.nome || supervisorMap[supId]?.nome_supervisor || ""
-      );
-    } else {
-      // fallback: se não tem relação, deixa em branco
-      setSupervisorId("");
-      setSupervisorNome("");
-    }
-  }
-
   function resetForm() {
-    setTipoAtividade("monitoria_offline");
+    setTipo("chamado");
     setAnalistaId("");
     setSupervisorId("");
-    setSupervisorNome("");
-    setProtocoloGravacao("");
+    setProtocolo("");
+    setTicket("");
+    setDuracao("");
+    setComentario("");
     setNotasOffline({});
     setRespostasAssistida({});
     setNotaAssistida(0);
-    setComentario("");
+  }
+
+  // auto-supervisor (se o analista tiver supervisor_id)
+  function handleAnalistaChange(id) {
+    setAnalistaId(id);
+    const a = analistaMap[idStr(id)];
+    const sup = idStr(a?.supervisor_id || a?.supervisor || "");
+    if (sup) setSupervisorId(sup);
   }
 
   const criarMutation = useMutation({
     mutationFn: async () => {
-      // validação mínima
+      if (!tipo) throw new Error("Selecione o tipo.");
       if (!analistaId) throw new Error("Selecione o analista.");
-      if (tipoAtividade === "monitoria_offline") {
-        // garante que todos os tópicos têm nota (opcional)
-        // aqui não obrigo 100%, mas você pode obrigar:
-        // for (const t of OFFLINE_TOPICOS) if (!notasOffline[t.id]) throw new Error(`Defina nota para: ${t.label}`);
-      }
-      if (tipoAtividade === "monitoria_assistida") {
-        // exemplo: pode exigir nota geral
-        // if (!notaAssistida) throw new Error("Defina nota geral (1 a 5).");
+
+      // validações específicas
+      if ((tipo === "chamado" || tipo === "ligacao") && !ticket?.trim()) {
+        throw new Error("Informe o ticket/protocolo do chamado/ligação.");
       }
 
-      // payload padronizado
+      if (tipo === "monitoria_offline" && !canRate) {
+        throw new Error("Seu perfil não pode classificar monitoria offline.");
+      }
+
+      if (tipo === "monitoria_assistida" && !canRate) {
+        throw new Error("Seu perfil não pode classificar monitoria assistida.");
+      }
+
+      // payload base
       const payload = {
-        tipo: tipoAtividade,
+        tipo,
         analista_id: analistaId,
+        analista_nome: analistaMap[idStr(analistaId)]?.nome || null,
         supervisor_id: supervisorId || null,
-        supervisor_nome: supervisorNome || null,
-        protocolo_gravacao: protocoloGravacao || null,
+        supervisor_nome: supervisorMap[idStr(supervisorId)]?.nome || null,
+
+        ticket: ticket || null,
+        duracao: duracao || null,
+
+        protocolo_gravacao: protocolo || null,
         comentario: comentario || null,
 
-        // offline:
-        notas_offline: tipoAtividade === "monitoria_offline" ? notasOffline : null,
-        nota_total_offline:
-          tipoAtividade === "monitoria_offline"
-            ? sumNotas(notasOffline)
-            : null,
+        // monitorias
+        notas_offline: tipo === "monitoria_offline" ? notasOffline : null,
+        nota_total_offline: tipo === "monitoria_offline" ? sumNotas(notasOffline) : null,
 
-        // assistida:
-        respostas_assistida:
-          tipoAtividade === "monitoria_assistida" ? respostasAssistida : null,
-        nota_assistida: tipoAtividade === "monitoria_assistida" ? notaAssistida : null,
+        respostas_assistida: tipo === "monitoria_assistida" ? respostasAssistida : null,
+        nota_assistida: tipo === "monitoria_assistida" ? (notaAssistida || null) : null,
       };
 
       return await base44.entities.Atividade.create(payload);
@@ -281,58 +323,17 @@ export default function AtividadesPage() {
     },
   });
 
-  /** =========================
-   * UI pieces
-   * ========================= */
-  function Nota5({ value, onChange, disabled }) {
-    // ✅ SEMPRE clicável quando não disabled, sem pointer-events-none em wrappers
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((n) => {
-          const active = Number(value) === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(n)}
-              className={[
-                "h-8 w-8 rounded-md border text-xs font-semibold transition",
-                active
-                  ? "bg-green-700/70 border-green-500 text-white"
-                  : "bg-[#121212] border-gray-700 text-gray-200",
-                disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:border-gray-500",
-              ].join(" ")}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
+  const supervisorLabel = useMemo(() => {
+    const s = supervisorMap[idStr(supervisorId)];
+    return s?.nome || s?.nome_supervisor || (supervisorId ? supervisorId : "—");
+  }, [supervisorId, supervisorMap]);
 
-  function CompactBlock({ title, children, right }) {
-    return (
-      <div className="rounded-lg border border-gray-800 bg-[#0f0f0f]">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
-          <div className="text-sm font-semibold text-white">{title}</div>
-          {right}
-        </div>
-        <div className="p-3">{children}</div>
-      </div>
-    );
-  }
-
-  /** =========================
-   * Render
-   * ========================= */
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-white">Atividades</h1>
-          <p className="text-gray-400">Registre e gerencie atividades do suporte</p>
+          <p className="text-gray-400">Registre e gerencie as atividades do Suporte</p>
         </div>
 
         <div className="flex gap-2">
@@ -345,28 +346,25 @@ export default function AtividadesPage() {
             Atualizar
           </Button>
 
-          <Button
-            className="bg-green-600 hover:bg-green-700"
-            onClick={() => setOpenNew(true)}
-          >
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => setOpenNew(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nova Atividade
           </Button>
         </div>
       </div>
 
-      {/* filtros */}
+      {/* Buscar */}
       <div className="bg-[#121212] border border-gray-800 rounded p-4 space-y-2">
         <Label>Buscar</Label>
         <Input
           className="bg-[#1a1a1a] border-gray-700"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por código, ID, tipo, e-mail, ticket..."
+          placeholder="Buscar por código, tipo, ticket, protocolo..."
         />
       </div>
 
-      {/* tabela */}
+      {/* Lista */}
       <div className="bg-[#121212] border border-gray-800 rounded p-4">
         {(loadingAtividades || loadingAnalistas || loadingSupervisores) ? (
           <div className="text-gray-400 flex items-center gap-2">
@@ -383,14 +381,14 @@ export default function AtividadesPage() {
                   <th className="text-left py-2 pr-2">Tipo</th>
                   <th className="text-left py-2 pr-2">Analista</th>
                   <th className="text-left py-2 pr-2">Supervisor</th>
+                  <th className="text-left py-2 pr-2">Ticket/Protocolo</th>
                   <th className="text-left py-2 pr-2">Criado por</th>
                 </tr>
               </thead>
               <tbody className="text-gray-100">
                 {rows.map((t) => {
-                  const a = analistaMap[idStr(t?.analista_id)] || null;
-                  const s = supervisorMap[idStr(t?.supervisor_id)] || null;
-
+                  const a = analistaMap[idStr(t?.analista_id)];
+                  const s = supervisorMap[idStr(t?.supervisor_id)];
                   return (
                     <tr key={t.id} className="border-b border-gray-800/60">
                       <td className="py-2 pr-2">{fmtDateOnlyBR(t?.created_date || t?.data)}</td>
@@ -398,9 +396,8 @@ export default function AtividadesPage() {
                         <Pill>{t?.tipo || "-"}</Pill>
                       </td>
                       <td className="py-2 pr-2">{a?.nome || t?.analista_nome || "-"}</td>
-                      <td className="py-2 pr-2">
-                        {s?.nome || t?.supervisor_nome || "-"}
-                      </td>
+                      <td className="py-2 pr-2">{s?.nome || t?.supervisor_nome || "-"}</td>
+                      <td className="py-2 pr-2">{t?.ticket || t?.protocolo_gravacao || "-"}</td>
                       <td className="py-2 pr-2">{t?.registrado_por || t?.created_by || "-"}</td>
                     </tr>
                   );
@@ -411,9 +408,7 @@ export default function AtividadesPage() {
         )}
       </div>
 
-      {/* =========================
-          MODAL NOVA ATIVIDADE (FULLSCREEN, SEM SCROLL)
-          ========================= */}
+      {/* MODAL NOVA ATIVIDADE */}
       <Dialog
         open={openNew}
         onOpenChange={(open) => {
@@ -421,258 +416,242 @@ export default function AtividadesPage() {
           if (!open) resetForm();
         }}
       >
-        <DialogContent
-          // ✅ fullscreen e sem rolagem interna
-          className="
-            bg-[#121212] border border-gray-800 text-gray-100
-            w-[calc(100vw-32px)] max-w-none
-            h-[calc(100vh-32px)] max-h-none
-            overflow-hidden
-            p-0
-          "
-        >
-          <DialogHeader className="px-5 py-4 border-b border-gray-800">
+        <DialogContent className="bg-[#121212] border border-gray-800 text-gray-100 max-w-4xl">
+          <DialogHeader>
             <DialogTitle>Nova Atividade</DialogTitle>
             <DialogDescription className="text-gray-400">
-              A data será registrada automaticamente como {fmtDateOnlyBR(new Date().toISOString())}
+              A data será registrada automaticamente.
             </DialogDescription>
           </DialogHeader>
 
-          {/* corpo: 2 colunas, sem scroll */}
-          <div className="h-[calc(100vh-32px-72px)] grid grid-cols-12 gap-4 p-5 overflow-hidden">
-            {/* COLUNA ESQUERDA: dados */}
-            <div className="col-span-12 lg:col-span-4 flex flex-col gap-3 overflow-hidden">
-              <CompactBlock title="Dados da Atividade">
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="space-y-2">
-                    <Label>Tipo de Atividade</Label>
-                    <Select value={tipoAtividade} onValueChange={setTipoAtividade}>
-                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monitoria_offline">Monitoria Offline</SelectItem>
-                        <SelectItem value="monitoria_assistida">Monitoria Assistida</SelectItem>
-                        {/* adicione outros tipos se existir */}
-                      </SelectContent>
-                    </Select>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <Field label="Tipo de Atividade">
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPOS.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
 
-                  <div className="space-y-2">
-                    <Label>Analista</Label>
-                    <Select value={analistaId} onValueChange={handleSelectAnalista}>
-                      <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
-                        <SelectValue placeholder="Selecione o analista..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(analistas || []).map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a?.nome || a?.email || a.id}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <Field label="Analista">
+              <Select value={analistaId} onValueChange={handleAnalistaChange}>
+                <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {analistas.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a?.nome || a?.email || a.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
 
-                  <div className="space-y-2">
-                    <Label>Supervisor Responsável</Label>
-                    <div className="h-10 flex items-center px-3 rounded-md bg-[#1a1a1a] border border-gray-700 text-gray-100">
-                      {supervisorNome || "—"}
-                    </div>
-                    {!!supervisorId ? (
-                      <div className="text-[11px] text-gray-500">ID: {supervisorId}</div>
-                    ) : null}
-                  </div>
+            <Field label="Supervisor Responsável">
+              <Select value={supervisorId} onValueChange={setSupervisorId}>
+                <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {supervisores.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s?.nome || s?.nome_supervisor || s.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-gray-500 mt-1">Selecionado: {supervisorLabel}</div>
+            </Field>
 
-                  <div className="space-y-2">
-                    <Label>Protocolo da Gravação</Label>
+            {/* Campos específicos por tipo */}
+            {(tipo === "chamado" || tipo === "ligacao") ? (
+              <>
+                <Field label="Ticket / Protocolo do Chamado">
+                  <Input
+                    className="bg-[#1a1a1a] border-gray-700"
+                    value={ticket}
+                    onChange={(e) => setTicket(e.target.value)}
+                    placeholder="Ex.: CH00001"
+                  />
+                </Field>
+
+                {tipo === "ligacao" ? (
+                  <Field label="Duração da Ligação (opcional)">
                     <Input
                       className="bg-[#1a1a1a] border-gray-700"
-                      value={protocoloGravacao}
-                      onChange={(e) => setProtocoloGravacao(e.target.value)}
-                      placeholder="Digite o protocolo"
+                      value={duracao}
+                      onChange={(e) => setDuracao(e.target.value)}
+                      placeholder="Ex.: 00:08:32"
+                    />
+                  </Field>
+                ) : (
+                  <div />
+                )}
+              </>
+            ) : null}
+
+            {(tipo === "monitoria_offline" || tipo === "monitoria_assistida") ? (
+              <Field label="Protocolo da Gravação">
+                <Input
+                  className="bg-[#1a1a1a] border-gray-700"
+                  value={protocolo}
+                  onChange={(e) => setProtocolo(e.target.value)}
+                  placeholder="Digite o protocolo"
+                />
+              </Field>
+            ) : (
+              <div />
+            )}
+
+            {/* MONITORIA OFFLINE */}
+            {tipo === "monitoria_offline" ? (
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-white font-semibold">Tópicos de Avaliação</div>
+                  <div className="text-gray-300 text-sm">
+                    Total: <span className="text-green-400 font-semibold">{sumNotas(notasOffline)}</span>
+                  </div>
+                </div>
+
+                {/* ✅ NADA de pointer-events-none aqui.
+                    Apenas desabilita via disabled do Rating5 quando não pode */}
+                <div className="space-y-2">
+                  {OFFLINE_TOPICOS.map((t, idx) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between gap-3 rounded-md border border-gray-800 bg-[#0f0f0f] px-3 py-2"
+                    >
+                      <div className="text-gray-200 text-xs">
+                        <span className="text-gray-400 mr-2">{idx + 1} -</span>
+                        {t.label}
+                      </div>
+
+                      <Rating5
+                        value={notasOffline[t.id] || 0}
+                        disabled={!canRate}
+                        onChange={(n) =>
+                          setNotasOffline((prev) => ({ ...prev, [t.id]: n }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {!canRate ? (
+                  <div className="text-xs text-yellow-500">
+                    ⚠ Seu perfil ({currentUser?.role || "visitante"}) não pode classificar monitoria.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* MONITORIA ASSISTIDA */}
+            {tipo === "monitoria_assistida" ? (
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-white font-semibold">Perguntas (Monitoria Assistida)</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-gray-400 text-xs">Nota (1–5):</div>
+                    <Rating5
+                      value={notaAssistida || 0}
+                      disabled={!canRate}
+                      onChange={(n) => setNotaAssistida(n)}
                     />
                   </div>
                 </div>
-              </CompactBlock>
 
-              <CompactBlock title="Comentário (opcional)">
-                <Textarea
-                  className="bg-[#1a1a1a] border-gray-700 min-h-[120px]"
-                  value={comentario}
-                  onChange={(e) => setComentario(e.target.value)}
-                  placeholder="Detalhes adicionais..."
-                />
-              </CompactBlock>
+                {/* ✅ Select controlado corretamente (value + onValueChange) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {ASSISTIDA_PERGUNTAS.map((q, idx) => (
+                    <div
+                      key={q.id}
+                      className="rounded-md border border-gray-800 bg-[#0f0f0f] px-3 py-2"
+                    >
+                      <div className="text-xs text-gray-200 mb-2">
+                        <span className="text-gray-400 mr-2">{idx + 1} -</span>
+                        {q.label}
+                      </div>
 
-              <div className="mt-auto flex justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  className="bg-[#1a1a1a] border border-gray-700"
-                  onClick={() => setOpenNew(false)}
-                  disabled={criarMutation.isPending}
-                >
-                  Fechar
-                </Button>
-
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => criarMutation.mutate()}
-                  disabled={criarMutation.isPending}
-                >
-                  {criarMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar"
-                  )}
-                </Button>
-              </div>
-
-              {!canRate ? (
-                <div className="text-xs text-yellow-500">
-                  ⚠ Seu perfil ({currentUser?.role || "visitante"}) não pode classificar notas.
+                      <Select
+                        value={String(respostasAssistida[q.id] ?? "")} // ✅ nunca undefined
+                        onValueChange={(v) =>
+                          setRespostasAssistida((prev) => ({ ...prev, [q.id]: v }))
+                        }
+                        disabled={!canRate}
+                      >
+                        <SelectTrigger className="bg-[#1a1a1a] border-gray-700 h-9">
+                          <SelectValue placeholder="Selecionar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ASSISTIDA_OPCOES.map((op) => (
+                            <SelectItem key={op.value} value={op.value}>
+                              {op.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
                 </div>
-              ) : null}
+
+                {!canRate ? (
+                  <div className="text-xs text-yellow-500">
+                    ⚠ Seu perfil ({currentUser?.role || "visitante"}) não pode classificar monitoria.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* FEEDBACK */}
+            {tipo === "feedback" ? (
+              <div className="md:col-span-2 text-gray-400 text-xs">
+                Feedback: use o campo Comentário abaixo para registrar.
+              </div>
+            ) : null}
+
+            <div className="md:col-span-2 space-y-2">
+              <Label>Comentário</Label>
+              <Textarea
+                className="bg-[#1a1a1a] border-gray-700 min-h-[110px]"
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
+                placeholder="Detalhes adicionais..."
+              />
             </div>
+          </div>
 
-            {/* COLUNA DIREITA: avaliação (sem scroll) */}
-            <div className="col-span-12 lg:col-span-8 overflow-hidden flex flex-col gap-3">
-              {tipoAtividade === "monitoria_offline" ? (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              className="bg-[#1a1a1a] border border-gray-700"
+              onClick={() => setOpenNew(false)}
+              disabled={criarMutation.isPending}
+            >
+              Fechar
+            </Button>
+
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => criarMutation.mutate()}
+              disabled={criarMutation.isPending}
+            >
+              {criarMutation.isPending ? (
                 <>
-                  <CompactBlock
-                    title="Tópicos de Avaliação (Offline)"
-                    right={
-                      <div className="text-xs text-gray-400">
-                        Total:{" "}
-                        <span className="text-green-400 font-semibold">
-                          {sumNotas(notasOffline)}
-                        </span>
-                      </div>
-                    }
-                  >
-                    {/* ✅ Sem scroll: grid em 2 colunas, bem compacto */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
-                      {OFFLINE_TOPICOS.map((t, idx) => (
-                        <div
-                          key={t.id}
-                          className="flex items-center justify-between gap-3 rounded-md border border-gray-800 bg-[#0c0c0c] px-3 py-2"
-                        >
-                          <div className="text-xs text-gray-200">
-                            <span className="text-gray-400 mr-2">{idx + 1} -</span>
-                            {t.label}
-                          </div>
-
-                          <Nota5
-                            value={notasOffline[t.id] || 0}
-                            disabled={!canRate}
-                            onChange={(n) =>
-                              setNotasOffline((prev) => ({ ...prev, [t.id]: n }))
-                            }
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-3 text-[11px] text-gray-500">
-                      Dica: se quiser obrigar todas as notas antes de salvar, eu ajusto a validação.
-                    </div>
-                  </CompactBlock>
-
-                  <CompactBlock title="Resumo">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-md border border-gray-800 bg-[#0c0c0c] p-3">
-                        <div className="text-xs text-gray-400">Itens avaliados</div>
-                        <div className="text-lg font-semibold text-white">
-                          {OFFLINE_TOPICOS.length}
-                        </div>
-                      </div>
-                      <div className="rounded-md border border-gray-800 bg-[#0c0c0c] p-3">
-                        <div className="text-xs text-gray-400">Nota total</div>
-                        <div className="text-lg font-semibold text-green-400">
-                          {sumNotas(notasOffline)}
-                        </div>
-                      </div>
-                    </div>
-                  </CompactBlock>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
                 </>
               ) : (
-                <>
-                  <CompactBlock
-                    title="Perguntas (Assistida)"
-                    right={
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-gray-400">Nota geral:</div>
-                        <Nota5
-                          value={notaAssistida || 0}
-                          disabled={!canRate}
-                          onChange={(n) => setNotaAssistida(n)}
-                        />
-                      </div>
-                    }
-                  >
-                    {/* ✅ Sem scroll: grid em 2 colunas compactas */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
-                      {ASSISTIDA_PERGUNTAS.map((q, idx) => (
-                        <div
-                          key={q.id}
-                          className="rounded-md border border-gray-800 bg-[#0c0c0c] px-3 py-2"
-                        >
-                          <div className="text-xs text-gray-200 mb-2">
-                            <span className="text-gray-400 mr-2">{idx + 1} -</span>
-                            {q.label}
-                          </div>
-
-                          <Select
-                            value={String(respostasAssistida[q.id] ?? "")}
-                            onValueChange={(v) =>
-                              setRespostasAssistida((prev) => ({ ...prev, [q.id]: v }))
-                            }
-                            disabled={!canRate}
-                          >
-                            <SelectTrigger className="bg-[#121212] border-gray-700 h-9">
-                              <SelectValue placeholder="Selecionar..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPCOES_ASSISTIDA.map((op) => (
-                                <SelectItem key={op.value} value={op.value}>
-                                  {op.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ))}
-                    </div>
-                  </CompactBlock>
-
-                  <CompactBlock title="Resumo">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="rounded-md border border-gray-800 bg-[#0c0c0c] p-3">
-                        <div className="text-xs text-gray-400">Perguntas</div>
-                        <div className="text-lg font-semibold text-white">
-                          {ASSISTIDA_PERGUNTAS.length}
-                        </div>
-                      </div>
-                      <div className="rounded-md border border-gray-800 bg-[#0c0c0c] p-3">
-                        <div className="text-xs text-gray-400">Respondidas</div>
-                        <div className="text-lg font-semibold text-white">
-                          {Object.values(respostasAssistida || {}).filter(Boolean).length}
-                        </div>
-                      </div>
-                      <div className="rounded-md border border-gray-800 bg-[#0c0c0c] p-3">
-                        <div className="text-xs text-gray-400">Nota geral</div>
-                        <div className="text-lg font-semibold text-green-400">
-                          {notaAssistida || 0}
-                        </div>
-                      </div>
-                    </div>
-                  </CompactBlock>
-                </>
+                "Salvar"
               )}
-            </div>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
