@@ -194,14 +194,9 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
                   <button
                     type="button"
                     disabled={readOnly}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!readOnly) handleCheckboxChange(item.key, !topicos[item.key]);
-                    }}
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    onClick={() => !readOnly && handleCheckboxChange(item.key, !topicos[item.key])}
                     className={`
-                      mt-0.5 w-6 h-6 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all select-none
+                      mt-0.5 w-6 h-6 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all
                       ${topicos[item.key]
                         ? 'bg-[#ADF802] border-[#ADF802] text-black'
                         : 'bg-[#0d0d0d] border-gray-600 hover:border-[#ADF802]/60'
@@ -217,11 +212,8 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
                   </button>
                   <div className="flex-1">
                     <div
-                      className="text-sm font-medium text-white cursor-pointer block mb-1 select-none"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        if (!readOnly) handleCheckboxChange(item.key, !topicos[item.key]);
-                      }}
+                      className="text-sm font-medium text-white cursor-pointer block mb-1"
+                      onClick={() => !readOnly && handleCheckboxChange(item.key, !topicos[item.key])}
                     >
                       {item.pergunta}
                     </div>
