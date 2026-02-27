@@ -50,6 +50,14 @@ import MonitoriaAssistidaForm from '@/components/MonitoriaAssistidaForm';
 import { getUserModulePermissions, isModuleVisible } from '@/components/rbacHelpers';
 import { MODULES } from '@/components/moduleConstants';
 
+// ===== Utils: request_id obrigatório (schema Base44) =====
+const makeRequestId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random()
+    .toString(16)
+    .slice(2)}`;
+};
+
 // =========================
 // CONSTANTES / NORMALIZAÇÃO
 // =========================
