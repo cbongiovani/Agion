@@ -750,7 +750,7 @@ export default function DashboardOKR() {
 
                 <div className="flex justify-end pt-4">
                   <Button
-                    className="bg-[#1a1a1a] border border-gray-700 hover:bg-[#242424]"
+                    className="bg-white text-black hover:bg-gray-200 border border-gray-300"
                     onClick={() => {
                       setDetailOpen(false);
                       setDetailSupervisor(null);
