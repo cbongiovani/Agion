@@ -806,19 +806,22 @@ if (editingAtividade) {
                     </div>
                     <div>
                       <Label>Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(val) => setFormData({ ...formData, status: val })}
-                      >
-                        <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#242424] border-gray-700">
-                          <SelectItem value="Aberto">Aberto</SelectItem>
-                          <SelectItem value="Em evolução">Em evolução</SelectItem>
-                          <SelectItem value="Concluído">Concluído</SelectItem>
-                        </SelectContent>
-                      </Select>
+<Select
+  value={formData.status}
+  onValueChange={(val) => setFormData({ ...formData, status: val })}
+>
+  <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
+    <SelectValue />
+  </SelectTrigger>
+
+  <SelectContent className="bg-[#242424] border-gray-700">
+    {STATUS_OPTIONS.map((s) => (
+      <SelectItem key={s.value} value={s.value}>
+        {s.label}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
                     </div>
                   </div>
                 )}
