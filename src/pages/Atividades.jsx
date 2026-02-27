@@ -472,6 +472,11 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
   const handleSubmit = (e) => {
   e.preventDefault();
 
+  console.log('selectedType =>', selectedType);
+  console.log('formData.tipo =>', formData.tipo);
+  console.log('formData.protocolo_gravacao =>', formData.protocolo_gravacao);
+  console.log('formData.ticket_acompanhado =>', formData.ticket_acompanhado);
+
   if (submitLockRef.current || createMutation.isPending || updateMutation.isPending) return;
   submitLockRef.current = true;
 
@@ -481,7 +486,6 @@ const buildAtividadePayload = ({ formData, selectedType, editingAtividade }) => 
     editingAtividade,
   });
 
-  // 🔎 DEBUG opcional (pode remover depois)
   console.log('Payload enviado para Base44:', payload);
 
   if (editingAtividade) {
