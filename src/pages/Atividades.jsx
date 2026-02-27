@@ -1,356 +1,354 @@
-import React, { useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import React, { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
-import { toast } from "sonner";
-import { Plus, Loader2, RefreshCw } from "lucide-react";
+import { Eye, CheckCircle2, XCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
-/** =========================
- * HELPERS
- * ========================= */
+/** helpers */
 function idStr(v) {
-  if (v === null || v === undefined) return "";
+  if (v === null || v === undefined) return '';
   return String(v).trim();
 }
 
 function fmtDateOnlyBR(v) {
-  if (!v) return "-";
+  if (!v) return '-';
   const s = String(v);
-  const iso = s.includes("T") ? s.split("T")[0] : s;
+  // se vier ISO, pega só yyyy-mm-dd
+  const iso = s.includes('T') ? s.split('T')[0] : s;
+  // dd/mm/yyyy já ok
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(iso)) return iso;
+  // yyyy-mm-dd -> dd/mm/yyyy
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-    const [y, m, d] = iso.split("-");
+    const [y, m, d] = iso.split('-');
     return `${d}/${m}/${y}`;
   }
   try {
     const d = new Date(s);
     if (Number.isNaN(d.getTime())) return s;
-    return d.toLocaleDateString("pt-BR");
+    return d.toLocaleDateString('pt-BR');
   } catch {
     return s;
   }
 }
 
-/** =========================
- * COMPONENTS
- * ========================= */
-function Field({ label, children }) {
+function extractUsefulError(err) {
+  const status = err?.status || err?.response?.status;
+  const msg =
+    err?.message ||
+    err?.response?.data?.message ||
+    err?.response?.data?.error ||
+    'Falha inesperada.';
+  const details =
+    err?.response?.data?.details ||
+    err?.response?.data?.errors ||
+    err?.data?.errors;
+
+  return {
+    status,
+    message: msg,
+    details: typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
+  };
+}
+
+/** UI field */
+function Field({ label, value }) {
   return (
-    <div className="space-y-2">
-      <Label className="text-gray-300">{label}</Label>
-      {children}
+    <div className="space-y-1">
+      <div className="text-gray-400 text-xs">{label}</div>
+      <div className="text-gray-100 font-medium break-words">{value ?? '-'}</div>
     </div>
   );
 }
 
-// ✅ placar 1–5 com clique garantido
-function Rating5({ value, onChange, disabled }) {
-  const v = Number(value) || 0;
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((n) => {
-        const active = v === n;
-        return (
-          <button
-            key={n}
-            type="button" // ✅ CRÍTICO (não vira submit)
-            disabled={disabled}
-            onClick={() => onChange(n)}
-            className={[
-              "h-8 w-8 rounded-md border text-xs font-semibold transition",
-              active
-                ? "bg-green-700/70 border-green-500 text-white"
-                : "bg-[#121212] border-gray-700 text-gray-200",
-              disabled
-                ? "opacity-60 cursor-not-allowed"
-                : "cursor-pointer hover:border-gray-500",
-            ].join(" ")}
-          >
-            {n}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Pill({ children }) {
-  return (
-    <span className="px-2 py-1 rounded-md text-xs border border-gray-700 bg-[#1a1a1a] text-gray-200">
-      {children}
-    </span>
-  );
-}
-
-/** =========================
- * CONFIG (ajuste se quiser)
- * ========================= */
-const TIPOS = [
-  { value: "chamado", label: "Chamado" },
-  { value: "ligacao", label: "Ligação" },
-  { value: "monitoria_offline", label: "Monitoria Offline" },
-  { value: "monitoria_assistida", label: "Monitoria Assistida" },
-  { value: "feedback", label: "Feedback" },
-];
-
-// Offline (tópicos do placar 1–5)
-const OFFLINE_TOPICOS = [
-  { id: "t1", label: "Saudação Padrão de Atendimento" },
-  { id: "t2", label: "Validação da loja e colaborador em linha" },
-  { id: "t3", label: "Domínio/conhecimento do problema" },
-  { id: "t4", label: "Comunicação direta e objetiva" },
-  { id: "t5", label: "Domínio na condução da ligação" },
-  { id: "t6", label: "Tratou a loja com respeito" },
-  { id: "t7", label: "Teve equilíbrio emocional" },
-];
-
-// Assistida (perguntas com Select + nota geral 1–5)
-const ASSISTIDA_PERGUNTAS = [
-  { id: "q1", label: "Apresentação e abordagem inicial" },
-  { id: "q2", label: "Validação de loja/usuário/caixa" },
-  { id: "q3", label: "Diagnóstico e condução técnica" },
-  { id: "q4", label: "Comunicação clara e objetiva" },
-  { id: "q5", label: "Encerramento correto (recap + próximos passos)" },
-];
-
-const ASSISTIDA_OPCOES = [
-  { value: "correto", label: "Correto" },
-  { value: "parcial", label: "Parcial" },
-  { value: "incorreto", label: "Incorreto" },
-  { value: "na", label: "N/A" },
-];
-
-function sumNotas(notasObj) {
-  return Object.values(notasObj || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
-}
-
-/** =========================
- * PAGE
- * ========================= */
-export default function Atividades() {
+export default function Aprovacao() {
   const queryClient = useQueryClient();
 
-  const [search, setSearch] = useState("");
+  // busca global
+  const [search, setSearch] = useState('');
 
-  // modal criar
-  const [openNew, setOpenNew] = useState(false);
+  // rejeição
+  const [selected, setSelected] = useState(null); // registro de aprovacao
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectMotivo, setRejectMotivo] = useState('');
 
-  // form
-  const [tipo, setTipo] = useState("chamado");
-  const [analistaId, setAnalistaId] = useState("");
-  const [supervisorId, setSupervisorId] = useState("");
-  const [protocolo, setProtocolo] = useState("");
+  // view modal (reaproveita para ambos)
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewTipo, setViewTipo] = useState(null); // 'atividade' | 'fechamento'
+  const [viewRegistro, setViewRegistro] = useState(null); // objeto da entidade alvo (Atividade ou FechamentoSemanal)
+  const [viewAprovacao, setViewAprovacao] = useState(null); // objeto AprovacaoAtividade
 
-  // campos por tipo
-  const [ticket, setTicket] = useState(""); // chamado/ligacao
-  const [duracao, setDuracao] = useState(""); // ligacao
-  const [comentario, setComentario] = useState(""); // todos
-
-  // monitoria offline
-  const [notasOffline, setNotasOffline] = useState({}); // {t1:1..5}
-
-  // monitoria assistida
-  const [respostasAssistida, setRespostasAssistida] = useState({}); // {q1: "correto"...}
-  const [notaAssistida, setNotaAssistida] = useState(0); // 1..5
+  // nomes resolvidos (atividade)
+  const [viewSupervisorNome, setViewSupervisorNome] = useState('');
+  const [viewAnalistaNome, setViewAnalistaNome] = useState('');
 
   const { data: currentUser } = useQuery({
-    queryKey: ["currentUser"],
+    queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
 
-  // ✅ supervisor consegue classificar (corrige “sem interação” por disabled)
-  const canRate =
-    currentUser?.role === "admin" ||
-    currentUser?.role === "coordenacao" ||
-    currentUser?.role === "supervisor";
-
-  // listas base
-  const { data: analistas = [], isLoading: loadingAnalistas } = useQuery({
-    queryKey: ["analistas_list"],
+  // ===== 1) buscar aprovações pendentes (todas) =====
+  const {
+    data: aprovacoesPendentes = [],
+    isLoading: loadingAprov,
+  } = useQuery({
+    queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
-      const raw = await base44.entities.Analista.list("-created_date", 900);
+      const list = await base44.entities.AprovacaoAtividade.filter({
+        status: 'pendente',
+      });
+      return Array.isArray(list) ? list : [];
+    },
+    enabled: !!currentUser,
+    staleTime: 5 * 1000,
+  });
+
+  // separar por tipo
+  const aprovacoesAtividade = useMemo(
+    () => aprovacoesPendentes.filter((a) => a?.tipo === 'atividade'),
+    [aprovacoesPendentes]
+  );
+  const aprovacoesFechamento = useMemo(
+    () => aprovacoesPendentes.filter((a) => a?.tipo === 'fechamento'),
+    [aprovacoesPendentes]
+  );
+
+  // ===== 2) carregar listas base para "ver" (IDs) =====
+  // Atividades
+  const {
+    data: atividades = [],
+    isLoading: loadingAtividades,
+  } = useQuery({
+    queryKey: ['atividades_for_aprovacao', aprovacoesAtividade.length],
+    queryFn: async () => {
+      // lista grande (ajuste se precisar)
+      const raw = await base44.entities.Atividade.list('-created_date', 800);
       return Array.isArray(raw) ? raw : [];
     },
     enabled: !!currentUser,
   });
 
-  const { data: supervisores = [], isLoading: loadingSupervisores } = useQuery({
-    queryKey: ["supervisores_list"],
+  // Fechamentos
+  const {
+    data: fechamentos = [],
+    isLoading: loadingFechamentos,
+  } = useQuery({
+    queryKey: ['fechamentos_for_aprovacao', aprovacoesFechamento.length],
     queryFn: async () => {
-      const raw = await base44.entities.Supervisor.list("-created_date", 300);
+      const raw = await base44.entities.FechamentoSemanal.list('-created_date', 400);
       return Array.isArray(raw) ? raw : [];
     },
     enabled: !!currentUser,
   });
 
-  const analistaMap = useMemo(() => {
-    const m = {};
-    for (const a of analistas) m[idStr(a?.id)] = a;
-    return m;
-  }, [analistas]);
+  // ===== 3) construir linhas exibidas (com busca) =====
+  const searchNorm = search.trim().toLowerCase();
 
-  const supervisorMap = useMemo(() => {
-    const m = {};
-    for (const s of supervisores) m[idStr(s?.id)] = s;
-    return m;
-  }, [supervisores]);
+  const rowsAtividades = useMemo(() => {
+    // map: aprovacao -> atividade
+    const ids = new Set(aprovacoesAtividade.map((a) => idStr(a?.atividade_id)).filter(Boolean));
+    const pend = atividades.filter((t) => ids.has(idStr(t?.id)));
 
-  // listagem de atividades
-  const { data: atividades = [], isLoading: loadingAtividades } = useQuery({
-    queryKey: ["atividades_list"],
-    queryFn: async () => {
-      const raw = await base44.entities.Atividade.list("-created_date", 600);
-      return Array.isArray(raw) ? raw : [];
-    },
-    enabled: !!currentUser,
-  });
+    if (!searchNorm) return pend;
 
-  const rows = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    if (!s) return atividades;
-
-    return (atividades || []).filter((t) => {
+    return pend.filter((t) => {
       const blob = [
-        t?.id,
         t?.codigo_atividade,
+        t?.id,
         t?.tipo,
-        t?.ticket,
-        t?.protocolo_gravacao,
-        t?.comentario,
         t?.registrado_por,
         t?.created_by,
+        t?.ticket,
+        t?.comentario,
+        t?.status,
       ]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .toLowerCase();
 
-      return blob.includes(s);
+      return blob.includes(searchNorm);
     });
-  }, [atividades, search]);
+  }, [aprovacoesAtividade, atividades, searchNorm]);
 
-  function resetForm() {
-    setTipo("chamado");
-    setAnalistaId("");
-    setSupervisorId("");
-    setProtocolo("");
-    setTicket("");
-    setDuracao("");
-    setComentario("");
-    setNotasOffline({});
-    setRespostasAssistida({});
-    setNotaAssistida(0);
-  }
+  const rowsFechamentos = useMemo(() => {
+    const ids = new Set(aprovacoesFechamento.map((a) => idStr(a?.atividade_id)).filter(Boolean));
+    const pend = fechamentos.filter((f) => ids.has(idStr(f?.id)));
 
-  // auto-supervisor (se o analista tiver supervisor_id)
-  function handleAnalistaChange(id) {
-    setAnalistaId(id);
-    const a = analistaMap[idStr(id)];
-    const sup = idStr(a?.supervisor_id || a?.supervisor || "");
-    if (sup) setSupervisorId(sup);
-  }
+    if (!searchNorm) return pend;
 
-  const criarMutation = useMutation({
-    mutationFn: async () => {
-      if (!tipo) throw new Error("Selecione o tipo.");
-      if (!analistaId) throw new Error("Selecione o analista.");
+    return pend.filter((f) => {
+      const blob = [
+        f?.id,
+        f?.created_by,
+        f?.registrado_por,
+        f?.semana_inicio,
+        f?.semana_fim,
+        f?.analista_nome,
+        f?.supervisor_nome,
+        f?.observacoes,
+        f?.destaques,
+        f?.pontos_criticos,
+        f?.plano_acao,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
 
-      // validações específicas
-      if ((tipo === "chamado" || tipo === "ligacao") && !ticket?.trim()) {
-        throw new Error("Informe o ticket/protocolo do chamado/ligação.");
-      }
+      return blob.includes(searchNorm);
+    });
+  }, [aprovacoesFechamento, fechamentos, searchNorm]);
 
-      if (tipo === "monitoria_offline" && !canRate) {
-        throw new Error("Seu perfil não pode classificar monitoria offline.");
-      }
-
-      if (tipo === "monitoria_assistida" && !canRate) {
-        throw new Error("Seu perfil não pode classificar monitoria assistida.");
-      }
-
-      // payload base
-      const payload = {
-        tipo,
-        analista_id: analistaId,
-        analista_nome: analistaMap[idStr(analistaId)]?.nome || null,
-        supervisor_id: supervisorId || null,
-        supervisor_nome: supervisorMap[idStr(supervisorId)]?.nome || null,
-
-        ticket: ticket || null,
-        duracao: duracao || null,
-
-        protocolo_gravacao: protocolo || null,
-        comentario: comentario || null,
-
-        // monitorias
-        notas_offline: tipo === "monitoria_offline" ? notasOffline : null,
-        nota_total_offline: tipo === "monitoria_offline" ? sumNotas(notasOffline) : null,
-
-        respostas_assistida: tipo === "monitoria_assistida" ? respostasAssistida : null,
-        nota_assistida: tipo === "monitoria_assistida" ? (notaAssistida || null) : null,
-      };
-
-      return await base44.entities.Atividade.create(payload);
+  // ===== 4) mutations aprovar/rejeitar =====
+  const aprovarMutation = useMutation({
+    mutationFn: async ({ aprovacaoId }) => {
+      return await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
+        status: 'aprovado',
+      });
     },
     onSuccess: async () => {
-      toast.success("✅ Atividade criada");
-      setOpenNew(false);
-      resetForm();
-      await queryClient.invalidateQueries({ queryKey: ["atividades_list"] });
+      toast.success('✅ Aprovado');
+      await queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      await queryClient.invalidateQueries({ queryKey: ['atividades_for_aprovacao'] });
+      await queryClient.invalidateQueries({ queryKey: ['fechamentos_for_aprovacao'] });
     },
     onError: (e) => {
-      toast.error("Erro ao criar", { description: e?.message || "Falha inesperada" });
+      const info = extractUsefulError(e);
+      toast.error('Erro ao aprovar', { description: info.message });
     },
   });
 
-  const supervisorLabel = useMemo(() => {
-    const s = supervisorMap[idStr(supervisorId)];
-    return s?.nome || s?.nome_supervisor || (supervisorId ? supervisorId : "—");
-  }, [supervisorId, supervisorMap]);
+  const rejeitarMutation = useMutation({
+    mutationFn: async ({ aprovacaoId, motivo }) => {
+      return await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
+        status: 'rejeitado',
+        motivo_rejeicao: motivo || 'Rejeitado',
+      });
+    },
+    onSuccess: async () => {
+      toast.success('❌ Rejeitado');
+      setRejectOpen(false);
+      setRejectMotivo('');
+      setSelected(null);
+      await queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      await queryClient.invalidateQueries({ queryKey: ['atividades_for_aprovacao'] });
+      await queryClient.invalidateQueries({ queryKey: ['fechamentos_for_aprovacao'] });
+    },
+    onError: (e) => {
+      const info = extractUsefulError(e);
+      toast.error('Erro ao rejeitar', { description: info.message });
+    },
+  });
+
+  // ===== 5) helpers para abrir "ver" =====
+  const findAprovacaoByTarget = (tipo, targetId) => {
+    const id = idStr(targetId);
+    return aprovacoesPendentes.find(
+      (a) => a?.tipo === tipo && idStr(a?.atividade_id) === id && a?.status === 'pendente'
+    );
+  };
+
+  const openViewAtividade = async (atividade) => {
+    const aprov = findAprovacaoByTarget('atividade', atividade?.id);
+    setViewTipo('atividade');
+    setViewAprovacao(aprov || null);
+
+    try {
+      const full = await base44.entities.Atividade.get(atividade.id);
+
+      const supId = full?.supervisor_id || full?.supervisor || '';
+      const anaId = full?.analista_id || full?.analista || '';
+
+      let supNome = '';
+      let anaNome = '';
+
+      try {
+        if (supId) {
+          const s = await base44.entities.Supervisor.get(supId);
+          supNome = s?.nome || s?.nome_supervisor || '';
+        }
+      } catch {}
+
+      try {
+        if (anaId) {
+          const a = await base44.entities.Analista.get(anaId);
+          anaNome = a?.nome || '';
+        }
+      } catch {}
+
+      setViewSupervisorNome(supNome);
+      setViewAnalistaNome(anaNome);
+
+      setViewRegistro(full || atividade);
+    } catch {
+      setViewSupervisorNome('');
+      setViewAnalistaNome('');
+      setViewRegistro(atividade);
+    }
+
+    setViewOpen(true);
+  };
+
+  const openViewFechamento = async (fechamento) => {
+    const aprov = findAprovacaoByTarget('fechamento', fechamento?.id);
+    setViewTipo('fechamento');
+    setViewAprovacao(aprov || null);
+
+    try {
+      const full = await base44.entities.FechamentoSemanal.get(fechamento.id);
+      setViewRegistro(full || fechamento);
+    } catch {
+      setViewRegistro(fechamento);
+    }
+
+    setViewOpen(true);
+  };
+
+  const doReject = () => {
+    if (!selected?.id) return;
+    rejeitarMutation.mutate({ aprovacaoId: selected.id, motivo: rejectMotivo });
+  };
+
+  const canDecide = (currentUser?.role === 'admin') || (currentUser?.role === 'coordenacao') || true;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Atividades</h1>
-          <p className="text-gray-400">Registre e gerencie as atividades do Suporte</p>
+          <h1 className="text-2xl font-semibold text-white">Aprovação</h1>
+          <p className="text-gray-400">Pendências aguardando validação</p>
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="bg-[#1a1a1a] border border-gray-700"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["atividades_list"] })}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Atualizar
-          </Button>
-
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => setOpenNew(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Atividade
-          </Button>
-        </div>
+        <Button
+          variant="secondary"
+          className="bg-[#1a1a1a] border border-gray-700"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] })}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Atualizar
+        </Button>
       </div>
 
       {/* Buscar */}
@@ -360,301 +358,372 @@ export default function Atividades() {
           className="bg-[#1a1a1a] border-gray-700"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por código, tipo, ticket, protocolo..."
+          placeholder="CH00001 / FECH / ID / Tipo / e-mail..."
         />
       </div>
 
-      {/* Lista */}
+      {/* Seção 1: Atividades */}
       <div className="bg-[#121212] border border-gray-800 rounded p-4">
-        {(loadingAtividades || loadingAnalistas || loadingSupervisores) ? (
-          <div className="text-gray-400 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+        <div className="flex items-center justify-between">
+          <div className="text-white font-semibold">Aprovar atividades</div>
+          <div className="text-gray-400 text-sm">
+            Pendentes: {aprovacoesAtividade.length}
           </div>
-        ) : rows.length === 0 ? (
-          <div className="text-gray-400">Nenhuma atividade encontrada.</div>
-        ) : (
-          <div className="w-full overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="text-gray-400">
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-2 pr-2">Data</th>
-                  <th className="text-left py-2 pr-2">Tipo</th>
-                  <th className="text-left py-2 pr-2">Analista</th>
-                  <th className="text-left py-2 pr-2">Supervisor</th>
-                  <th className="text-left py-2 pr-2">Ticket/Protocolo</th>
-                  <th className="text-left py-2 pr-2">Criado por</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-100">
-                {rows.map((t) => {
-                  const a = analistaMap[idStr(t?.analista_id)];
-                  const s = supervisorMap[idStr(t?.supervisor_id)];
-                  return (
-                    <tr key={t.id} className="border-b border-gray-800/60">
-                      <td className="py-2 pr-2">{fmtDateOnlyBR(t?.created_date || t?.data)}</td>
-                      <td className="py-2 pr-2">
-                        <Pill>{t?.tipo || "-"}</Pill>
-                      </td>
-                      <td className="py-2 pr-2">{a?.nome || t?.analista_nome || "-"}</td>
-                      <td className="py-2 pr-2">{s?.nome || t?.supervisor_nome || "-"}</td>
-                      <td className="py-2 pr-2">{t?.ticket || t?.protocolo_gravacao || "-"}</td>
-                      <td className="py-2 pr-2">{t?.registrado_por || t?.created_by || "-"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </div>
+
+        <div className="mt-3 border-t border-gray-800 pt-3">
+          {(loadingAprov || loadingAtividades) ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+            </div>
+          ) : rowsAtividades.length === 0 ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <span className="text-yellow-500">⚠</span> Nenhuma atividade pendente encontrada.
+            </div>
+          ) : (
+            <div className="w-full overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="text-gray-400">
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-2 pr-2">Código</th>
+                    <th className="text-left py-2 pr-2">Tipo</th>
+                    <th className="text-left py-2 pr-2">Status</th>
+                    <th className="text-left py-2 pr-2">Criada por</th>
+                    <th className="text-right py-2">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-100">
+                  {rowsAtividades.map((t) => {
+                    const aprov = findAprovacaoByTarget('atividade', t?.id);
+                    return (
+                      <tr key={t.id} className="border-b border-gray-800/60">
+                        <td className="py-2 pr-2 font-medium">
+                          {t?.codigo_atividade || t?.id}
+                        </td>
+                        <td className="py-2 pr-2">{t?.tipo || '-'}</td>
+                        <td className="py-2 pr-2">{aprov?.status || 'pendente'}</td>
+                        <td className="py-2 pr-2">
+                          {t?.registrado_por || t?.created_by || '-'}
+                        </td>
+                        <td className="py-2 text-right space-x-2">
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            onClick={() => openViewAtividade(t)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" /> Ver
+                          </Button>
+
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            disabled={!canDecide || aprovarMutation.isPending}
+                            onClick={() => aprov?.id && aprovarMutation.mutate({ aprovacaoId: aprov.id })}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" /> Aprovar
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            disabled={!canDecide || rejeitarMutation.isPending}
+                            onClick={() => {
+                              setSelected(aprov);
+                              setRejectMotivo('');
+                              setRejectOpen(true);
+                            }}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" /> Rejeitar
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* MODAL NOVA ATIVIDADE */}
+      {/* Seção 2: Fechamento Semanal */}
+      <div className="bg-[#121212] border border-gray-800 rounded p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-white font-semibold">Aprovar fechamentos semanais</div>
+          <div className="text-gray-400 text-sm">
+            Pendentes: {aprovacoesFechamento.length}
+          </div>
+        </div>
+
+        <div className="mt-3 border-t border-gray-800 pt-3">
+          {(loadingAprov || loadingFechamentos) ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+            </div>
+          ) : rowsFechamentos.length === 0 ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <span className="text-yellow-500">⚠</span> Nenhum fechamento semanal pendente encontrado.
+            </div>
+          ) : (
+            <div className="w-full overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="text-gray-400">
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-2 pr-2">Semana</th>
+                    <th className="text-left py-2 pr-2">Supervisor</th>
+                    <th className="text-left py-2 pr-2">Status</th>
+                    <th className="text-left py-2 pr-2">Criado por</th>
+                    <th className="text-right py-2">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-100">
+                  {rowsFechamentos.map((f) => {
+                    const aprov = findAprovacaoByTarget('fechamento', f?.id);
+                    const semana =
+                      (f?.semana_inicio || f?.semana_fim)
+                        ? `${fmtDateOnlyBR(f?.semana_inicio)} → ${fmtDateOnlyBR(f?.semana_fim)}`
+                        : '-';
+
+                    return (
+                      <tr key={f.id} className="border-b border-gray-800/60">
+                        <td className="py-2 pr-2 font-medium">{semana}</td>
+                        <td className="py-2 pr-2">
+                          {f?.supervisor_nome || f?.supervisor || f?.supervisor_id || '-'}
+                        </td>
+                        <td className="py-2 pr-2">{aprov?.status || 'pendente'}</td>
+                        <td className="py-2 pr-2">
+                          {f?.registrado_por || f?.created_by || '-'}
+                        </td>
+                        <td className="py-2 text-right space-x-2">
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            onClick={() => openViewFechamento(f)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" /> Ver
+                          </Button>
+
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            disabled={!canDecide || aprovarMutation.isPending}
+                            onClick={() => aprov?.id && aprovarMutation.mutate({ aprovacaoId: aprov.id })}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" /> Aprovar
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            disabled={!canDecide || rejeitarMutation.isPending}
+                            onClick={() => {
+                              setSelected(aprov);
+                              setRejectMotivo('');
+                              setRejectOpen(true);
+                            }}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" /> Rejeitar
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal VER (Atividade ou Fechamento) */}
       <Dialog
-        open={openNew}
+        open={viewOpen}
         onOpenChange={(open) => {
-          setOpenNew(open);
-          if (!open) resetForm();
+          setViewOpen(open);
+          if (!open) {
+            setViewTipo(null);
+            setViewRegistro(null);
+            setViewAprovacao(null);
+            setViewSupervisorNome('');
+            setViewAnalistaNome('');
+          }
         }}
       >
-        <DialogContent className="bg-[#121212] border border-gray-800 text-gray-100 max-w-4xl">
+        <DialogContent className="bg-[#121212] border border-gray-800 text-gray-100 max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Nova Atividade</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              A data será registrada automaticamente.
-            </DialogDescription>
+            <DialogTitle>Visualizar {viewTipo === 'fechamento' ? 'fechamento semanal' : 'atividade'}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <Field label="Tipo de Atividade">
-              <Select value={tipo} onValueChange={setTipo}>
-                <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPOS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+          {!viewRegistro ? (
+            <div className="text-gray-400">Nenhum registro selecionado.</div>
+          ) : viewTipo === 'fechamento' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <Field label="Semana início" value={fmtDateOnlyBR(viewRegistro?.semana_inicio)} />
+              <Field label="Semana fim" value={fmtDateOnlyBR(viewRegistro?.semana_fim)} />
 
-            <Field label="Analista">
-              <Select value={analistaId} onValueChange={handleAnalistaChange}>
-                <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {analistas.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a?.nome || a?.email || a.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field label="Supervisor" value={viewRegistro?.supervisor_nome || viewRegistro?.supervisor || viewRegistro?.supervisor_id || '-'} />
+              <Field label="Analista" value={viewRegistro?.analista_nome || viewRegistro?.analista || viewRegistro?.analista_id || '-'} />
 
-            <Field label="Supervisor Responsável">
-              <Select value={supervisorId} onValueChange={setSupervisorId}>
-                <SelectTrigger className="bg-[#1a1a1a] border-gray-700">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {supervisores.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s?.nome || s?.nome_supervisor || s.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="text-xs text-gray-500 mt-1">Selecionado: {supervisorLabel}</div>
-            </Field>
+              <Field label="Ligações Next IP" value={viewRegistro?.ligacoes_next_ip ?? viewRegistro?.ligacoes ?? '-'} />
+              <Field label="Chamados Verdana" value={viewRegistro?.chamados_verdana ?? viewRegistro?.chamados ?? '-'} />
+              <Field label="Monitorias" value={viewRegistro?.monitorias ?? '-'} />
+              <Field label="Feedbacks Individuais" value={viewRegistro?.feedbacks_individuais ?? viewRegistro?.feedbacks ?? '-'} />
 
-            {/* Campos específicos por tipo */}
-            {(tipo === "chamado" || tipo === "ligacao") ? (
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Backlog final</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.backlog_final ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Destaques</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.destaques ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Pontos críticos</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.pontos_criticos ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Plano de ação</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.plano_acao ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Observações gerais</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.observacoes_gerais ?? viewRegistro?.observacoes ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 text-xs text-gray-500">
+                Criado por: {viewRegistro?.registrado_por || viewRegistro?.created_by || '-'} · ID: {idStr(viewRegistro?.id) || '-'}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <Field
+                label="Código"
+                value={viewRegistro?.codigo_atividade || viewRegistro?.id}
+              />
+              <Field label="Tipo" value={viewRegistro?.tipo || '-'} />
+
+              <Field
+                label="Supervisor"
+                value={
+                  viewSupervisorNome ||
+                  viewRegistro?.supervisor_nome ||
+                  viewRegistro?.supervisor ||
+                  viewRegistro?.supervisor_id ||
+                  '-'
+                }
+              />
+              <Field
+                label="Analista"
+                value={
+                  viewAnalistaNome ||
+                  viewRegistro?.analista_nome ||
+                  viewRegistro?.analista ||
+                  viewRegistro?.analista_id ||
+                  '-'
+                }
+              />
+
+              <Field label="Ticket" value={viewRegistro?.ticket || '-'} />
+              <Field label="Status" value={viewRegistro?.status || '-'} />
+              <Field label="Nota (0-10)" value={viewRegistro?.nota ?? '-'} />
+              <Field label="Data" value={fmtDateOnlyBR(viewRegistro?.data)} />
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Comentário</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.comentario || '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 text-xs text-gray-500">
+                Criada por: {viewRegistro?.registrado_por || viewRegistro?.created_by || '-'} · ID: {idStr(viewRegistro?.id) || '-'} · Request ID: {viewRegistro?.request_id || '-'}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            {viewAprovacao?.id ? (
               <>
-                <Field label="Ticket / Protocolo do Chamado">
-                  <Input
-                    className="bg-[#1a1a1a] border-gray-700"
-                    value={ticket}
-                    onChange={(e) => setTicket(e.target.value)}
-                    placeholder="Ex.: CH00001"
-                  />
-                </Field>
+                <Button
+                  variant="secondary"
+                  className="bg-[#1a1a1a] border border-gray-700"
+                  disabled={!canDecide || aprovarMutation.isPending}
+                  onClick={() => aprovarMutation.mutate({ aprovacaoId: viewAprovacao.id })}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Aprovar
+                </Button>
 
-                {tipo === "ligacao" ? (
-                  <Field label="Duração da Ligação (opcional)">
-                    <Input
-                      className="bg-[#1a1a1a] border-gray-700"
-                      value={duracao}
-                      onChange={(e) => setDuracao(e.target.value)}
-                      placeholder="Ex.: 00:08:32"
-                    />
-                  </Field>
-                ) : (
-                  <div />
-                )}
+                <Button
+                  variant="destructive"
+                  disabled={!canDecide || rejeitarMutation.isPending}
+                  onClick={() => {
+                    setSelected(viewAprovacao);
+                    setRejectMotivo('');
+                    setRejectOpen(true);
+                  }}
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Rejeitar
+                </Button>
               </>
             ) : null}
 
-            {(tipo === "monitoria_offline" || tipo === "monitoria_assistida") ? (
-              <Field label="Protocolo da Gravação">
-                <Input
-                  className="bg-[#1a1a1a] border-gray-700"
-                  value={protocolo}
-                  onChange={(e) => setProtocolo(e.target.value)}
-                  placeholder="Digite o protocolo"
-                />
-              </Field>
-            ) : (
-              <div />
-            )}
-
-            {/* MONITORIA OFFLINE */}
-            {tipo === "monitoria_offline" ? (
-              <div className="md:col-span-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-white font-semibold">Tópicos de Avaliação</div>
-                  <div className="text-gray-300 text-sm">
-                    Total: <span className="text-green-400 font-semibold">{sumNotas(notasOffline)}</span>
-                  </div>
-                </div>
-
-                {/* ✅ NADA de pointer-events-none aqui.
-                    Apenas desabilita via disabled do Rating5 quando não pode */}
-                <div className="space-y-2">
-                  {OFFLINE_TOPICOS.map((t, idx) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between gap-3 rounded-md border border-gray-800 bg-[#0f0f0f] px-3 py-2"
-                    >
-                      <div className="text-gray-200 text-xs">
-                        <span className="text-gray-400 mr-2">{idx + 1} -</span>
-                        {t.label}
-                      </div>
-
-                      <Rating5
-                        value={notasOffline[t.id] || 0}
-                        disabled={!canRate}
-                        onChange={(n) =>
-                          setNotasOffline((prev) => ({ ...prev, [t.id]: n }))
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {!canRate ? (
-                  <div className="text-xs text-yellow-500">
-                    ⚠ Seu perfil ({currentUser?.role || "visitante"}) não pode classificar monitoria.
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {/* MONITORIA ASSISTIDA */}
-            {tipo === "monitoria_assistida" ? (
-              <div className="md:col-span-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-white font-semibold">Perguntas (Monitoria Assistida)</div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-gray-400 text-xs">Nota (1–5):</div>
-                    <Rating5
-                      value={notaAssistida || 0}
-                      disabled={!canRate}
-                      onChange={(n) => setNotaAssistida(n)}
-                    />
-                  </div>
-                </div>
-
-                {/* ✅ Select controlado corretamente (value + onValueChange) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {ASSISTIDA_PERGUNTAS.map((q, idx) => (
-                    <div
-                      key={q.id}
-                      className="rounded-md border border-gray-800 bg-[#0f0f0f] px-3 py-2"
-                    >
-                      <div className="text-xs text-gray-200 mb-2">
-                        <span className="text-gray-400 mr-2">{idx + 1} -</span>
-                        {q.label}
-                      </div>
-
-                      <Select
-                        value={String(respostasAssistida[q.id] ?? "")} // ✅ nunca undefined
-                        onValueChange={(v) =>
-                          setRespostasAssistida((prev) => ({ ...prev, [q.id]: v }))
-                        }
-                        disabled={!canRate}
-                      >
-                        <SelectTrigger className="bg-[#1a1a1a] border-gray-700 h-9">
-                          <SelectValue placeholder="Selecionar..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ASSISTIDA_OPCOES.map((op) => (
-                            <SelectItem key={op.value} value={op.value}>
-                              {op.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-
-                {!canRate ? (
-                  <div className="text-xs text-yellow-500">
-                    ⚠ Seu perfil ({currentUser?.role || "visitante"}) não pode classificar monitoria.
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {/* FEEDBACK */}
-            {tipo === "feedback" ? (
-              <div className="md:col-span-2 text-gray-400 text-xs">
-                Feedback: use o campo Comentário abaixo para registrar.
-              </div>
-            ) : null}
-
-            <div className="md:col-span-2 space-y-2">
-              <Label>Comentário</Label>
-              <Textarea
-                className="bg-[#1a1a1a] border-gray-700 min-h-[110px]"
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
-                placeholder="Detalhes adicionais..."
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
             <Button
               variant="secondary"
               className="bg-[#1a1a1a] border border-gray-700"
-              onClick={() => setOpenNew(false)}
-              disabled={criarMutation.isPending}
+              onClick={() => setViewOpen(false)}
             >
               Fechar
-            </Button>
-
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => criarMutation.mutate()}
-              disabled={criarMutation.isPending}
-            >
-              {criarMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Salvar"
-              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Rejeição (motivo) */}
+      <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <AlertDialogContent className="bg-[#121212] border border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rejeitar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe o motivo da rejeição (opcional, mas recomendado).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2">
+            <Label>Motivo</Label>
+            <Textarea
+              className="bg-[#1a1a1a] border-gray-700"
+              value={rejectMotivo}
+              onChange={(e) => setRejectMotivo(e.target.value)}
+              placeholder="Ex.: registro incompleto, dados inconsistentes..."
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#1a1a1a] border border-gray-700">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={doReject}
+              disabled={!selected?.id || rejeitarMutation.isPending}
+            >
+              {rejeitarMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
