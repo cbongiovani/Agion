@@ -160,12 +160,20 @@ export default function Aprovacao() {
   const { data: aprovacoesPendentes = [], isLoading: loadingAprov } = useQuery({
     queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
-      const list = await base44.entities.AprovacaoAtividade.filter({
-        tipo: 'atividade',
-        status: 'pendente',
-      });
-      return Array.isArray(list) ? list : [];
-    },
+  const a1 = await base44.entities.AprovacaoAtividade.filter({
+    tipo: 'atividade',
+    status: 'pendente',
+  });
+
+  const a2 = await base44.entities.AprovacaoAtividade.filter({
+    tipo: 'fechamento',
+    status: 'pendente',
+  });
+
+  const l1 = Array.isArray(a1) ? a1 : [];
+  const l2 = Array.isArray(a2) ? a2 : [];
+  return [...l1, ...l2];
+},
     enabled: !!currentUser,
     staleTime: 5 * 1000,
   });
