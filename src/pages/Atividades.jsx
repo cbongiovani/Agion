@@ -379,7 +379,13 @@ export default function Atividades() {
         registrado_por: user.email,
       });
 
-      await ensureApprovalForActivity(created.id);
+      try {
+  const aprov = await ensureApprovalForActivity(created.id);
+  console.log("APROVACAO CRIADA:", aprov);
+} catch (err) {
+  console.error("ERRO AO CRIAR APROVACAO:", err);
+  throw err;
+}
 
       // Notifica coordenadores (best effort)
       try {
