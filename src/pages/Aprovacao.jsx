@@ -1,37 +1,58 @@
-// src/pages/Aprovacao.jsx
-import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  RefreshCw,
-  Eye,
-} from 'lucide-react';
-import { toast } from 'sonner';
-
+import React, { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 
+import { Eye, CheckCircle2, XCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+/** helpers */
 function idStr(v) {
   if (v === null || v === undefined) return '';
   return String(v).trim();
+}
+
+function fmtDateOnlyBR(v) {
+  if (!v) return '-';
+  const s = String(v);
+  // se vier ISO, pega só yyyy-mm-dd
+  const iso = s.includes('T') ? s.split('T')[0] : s;
+  // dd/mm/yyyy já ok
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(iso)) return iso;
+  // yyyy-mm-dd -> dd/mm/yyyy
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    return d.toLocaleDateString('pt-BR');
+  } catch {
+    return s;
+  }
 }
 
 function extractUsefulError(err) {
@@ -49,52 +70,15 @@ function extractUsefulError(err) {
   return {
     status,
     message: msg,
-    details:
-      typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
+    details: typeof details === 'string' ? details : details ? JSON.stringify(details) : '',
   };
 }
 
-function fmtDate(v) {
-  if (!v) return '-';
-  try {
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return String(v);
-    return d.toLocaleString('pt-BR');
-  } catch {
-    return String(v);
-  }
-}
-
-// ✅ ADD (junto dos helpers)
-function fmtDateOnlyBR(v) {
-  if (!v) return '';
-  const s = String(v);
-  // ISO -> pega só a parte da data pra não “voltar dia” por timezone
-  const isoDate = s.includes('T') ? s.split('T')[0] : s;
-  // se já vier dd/mm/aaaa, mantém
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(isoDate)) return isoDate;
-  // yyyy-mm-dd -> dd/mm/yyyy
-  if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
-    const [y, m, d] = isoDate.split('-');
-    return `${d}/${m}/${y}`;
-  }
-  // fallback
-  try {
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return s;
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yy = d.getFullYear();
-    return `${dd}/${mm}/${yy}`;
-  } catch {
-    return s;
-  }
-}
-
+/** UI field */
 function Field({ label, value }) {
   return (
-    <div>
-      <div className="text-gray-400">{label}</div>
+    <div className="space-y-1">
+      <div className="text-gray-400 text-xs">{label}</div>
       <div className="text-gray-100 font-medium break-words">{value ?? '-'}</div>
     </div>
   );
@@ -103,471 +87,598 @@ function Field({ label, value }) {
 export default function Aprovacao() {
   const queryClient = useQueryClient();
 
+  // busca global
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState(null); // para rejeição
+
+  // rejeição
+  const [selected, setSelected] = useState(null); // registro de aprovacao
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectMotivo, setRejectMotivo] = useState('');
-  const [confirmApproveId, setConfirmApproveId] = useState(null);
 
-  // ✅ NOVO: visualizar atividade
+  // view modal (reaproveita para ambos)
   const [viewOpen, setViewOpen] = useState(false);
-  const [viewAtividade, setViewAtividade] = useState(null);
+  const [viewTipo, setViewTipo] = useState(null); // 'atividade' | 'fechamento'
+  const [viewRegistro, setViewRegistro] = useState(null); // objeto da entidade alvo (Atividade ou FechamentoSemanal)
+  const [viewAprovacao, setViewAprovacao] = useState(null); // objeto AprovacaoAtividade
+
+  // nomes resolvidos (atividade)
   const [viewSupervisorNome, setViewSupervisorNome] = useState('');
   const [viewAnalistaNome, setViewAnalistaNome] = useState('');
-  const openView = async (atividade) => {
-  try {
-    const full = await base44.entities.Atividade.get(atividade.id);
-
-    const supId = full?.supervisor_id || full?.supervisor || '';
-    const anaId = full?.analista_id || full?.analista || '';
-
-    let supNome = '';
-    let anaNome = '';
-
-    try {
-      if (supId) {
-        const s = await base44.entities.Supervisor.get(supId);
-        supNome = s?.nome || s?.nome_supervisor || '';
-      }
-    } catch {}
-
-    try {
-      if (anaId) {
-        const a = await base44.entities.Analista.get(anaId);
-        anaNome = a?.nome || '';
-      }
-    } catch {}
-
-    setViewSupervisorNome(supNome);
-    setViewAnalistaNome(anaNome);
-
-    setViewAtividade(full || atividade);
-  } catch (e) {
-    setViewSupervisorNome('');
-    setViewAnalistaNome('');
-    setViewAtividade(atividade);
-  }
-
-  setViewOpen(true);
-};
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
 
-  // 1) Buscar aprovações pendentes do tipo "atividade"
-  const { data: aprovacoesPendentes = [], isLoading: loadingAprov } = useQuery({
+  // ===== 1) buscar aprovações pendentes (todas) =====
+  const {
+    data: aprovacoesPendentes = [],
+    isLoading: loadingAprov,
+  } = useQuery({
     queryKey: ['aprovacoesPendentes'],
     queryFn: async () => {
-  const a1 = await base44.entities.AprovacaoAtividade.filter({
-    tipo: 'atividade',
-    status: 'pendente',
-  });
-
-  const a2 = await base44.entities.AprovacaoAtividade.filter({
-    tipo: 'fechamento',
-    status: 'pendente',
-  });
-
-  const l1 = Array.isArray(a1) ? a1 : [];
-  const l2 = Array.isArray(a2) ? a2 : [];
-  return [...l1, ...l2];
-},
+      const list = await base44.entities.AprovacaoAtividade.filter({
+        status: 'pendente',
+      });
+      return Array.isArray(list) ? list : [];
+    },
     enabled: !!currentUser,
     staleTime: 5 * 1000,
   });
 
-  // 2) Buscar atividades e filtrar pelas pendentes (normalizando IDs)
-  const { data: atividadesPendentes = [], isLoading: loadingAtiv } = useQuery({
-    queryKey: ['atividadesPendentes', aprovacoesPendentes.length],
+  // separar por tipo
+  const aprovacoesAtividade = useMemo(
+    () => aprovacoesPendentes.filter((a) => a?.tipo === 'atividade'),
+    [aprovacoesPendentes]
+  );
+  const aprovacoesFechamento = useMemo(
+    () => aprovacoesPendentes.filter((a) => a?.tipo === 'fechamento'),
+    [aprovacoesPendentes]
+  );
+
+  // ===== 2) carregar listas base para "ver" (IDs) =====
+  // Atividades
+  const {
+    data: atividades = [],
+    isLoading: loadingAtividades,
+  } = useQuery({
+    queryKey: ['atividades_for_aprovacao', aprovacoesAtividade.length],
     queryFn: async () => {
-      const ids = aprovacoesPendentes.map((a) => idStr(a.atividade_id)).filter(Boolean);
-      const set = new Set(ids);
-
-      // Ajuste o limite se necessário
+      // lista grande (ajuste se precisar)
       const raw = await base44.entities.Atividade.list('-created_date', 800);
-      const arr = Array.isArray(raw) ? raw : [];
-
-      return arr.filter((at) => set.has(idStr(at.id)));
+      return Array.isArray(raw) ? raw : [];
     },
-    enabled: !!currentUser && aprovacoesPendentes.length > 0,
-    staleTime: 5 * 1000,
+    enabled: !!currentUser,
   });
 
-  // Mapa para achar a aprovação pendente por atividade_id rapidamente
-  const aprovacaoPorAtividade = useMemo(() => {
-    const m = new Map();
-    for (const a of aprovacoesPendentes) {
-      const key = idStr(a.atividade_id);
-      if (!key) continue;
-      if (!m.has(key)) m.set(key, a);
-    }
-    return m;
-  }, [aprovacoesPendentes]);
+  // Fechamentos
+  const {
+    data: fechamentos = [],
+    isLoading: loadingFechamentos,
+  } = useQuery({
+    queryKey: ['fechamentos_for_aprovacao', aprovacoesFechamento.length],
+    queryFn: async () => {
+      const raw = await base44.entities.FechamentoSemanal.list('-created_date', 400);
+      return Array.isArray(raw) ? raw : [];
+    },
+    enabled: !!currentUser,
+  });
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return atividadesPendentes;
+  // ===== 3) construir linhas exibidas (com busca) =====
+  const searchNorm = search.trim().toLowerCase();
 
-    return atividadesPendentes.filter((a) => {
-      const cod = String(a.codigo_atividade || '').toLowerCase();
-      const id = String(a.id || '').toLowerCase();
-      const tipo = String(a.tipo || '').toLowerCase();
-      const criado = String(a.registrado_por || a.created_by || '').toLowerCase();
-      return cod.includes(q) || id.includes(q) || tipo.includes(q) || criado.includes(q);
+  const rowsAtividades = useMemo(() => {
+    // map: aprovacao -> atividade
+    const ids = new Set(aprovacoesAtividade.map((a) => idStr(a?.atividade_id)).filter(Boolean));
+    const pend = atividades.filter((t) => ids.has(idStr(t?.id)));
+
+    if (!searchNorm) return pend;
+
+    return pend.filter((t) => {
+      const blob = [
+        t?.codigo_atividade,
+        t?.id,
+        t?.tipo,
+        t?.registrado_por,
+        t?.created_by,
+        t?.ticket,
+        t?.comentario,
+        t?.status,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return blob.includes(searchNorm);
     });
-  }, [atividadesPendentes, search]);
+  }, [aprovacoesAtividade, atividades, searchNorm]);
 
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
-    queryClient.invalidateQueries({ queryKey: ['atividadesPendentes'] });
-    queryClient.invalidateQueries({ queryKey: ['atividades'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-  };
+  const rowsFechamentos = useMemo(() => {
+    const ids = new Set(aprovacoesFechamento.map((a) => idStr(a?.atividade_id)).filter(Boolean));
+    const pend = fechamentos.filter((f) => ids.has(idStr(f?.id)));
 
-  // === Aprovar ===
+    if (!searchNorm) return pend;
+
+    return pend.filter((f) => {
+      const blob = [
+        f?.id,
+        f?.created_by,
+        f?.registrado_por,
+        f?.semana_inicio,
+        f?.semana_fim,
+        f?.analista_nome,
+        f?.supervisor_nome,
+        f?.observacoes,
+        f?.destaques,
+        f?.pontos_criticos,
+        f?.plano_acao,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return blob.includes(searchNorm);
+    });
+  }, [aprovacoesFechamento, fechamentos, searchNorm]);
+
+  // ===== 4) mutations aprovar/rejeitar =====
   const aprovarMutation = useMutation({
-    mutationFn: async (atividadeId) => {
-      const key = idStr(atividadeId);
-      const aprov = aprovacaoPorAtividade.get(key);
-      if (!aprov?.id) throw new Error('Aprovação pendente não encontrada para esta atividade.');
-
-      return await base44.entities.AprovacaoAtividade.update(aprov.id, {
+    mutationFn: async ({ aprovacaoId }) => {
+      return await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
         status: 'aprovado',
-        motivo_rejeicao: '',
-        data_aprovacao: new Date().toISOString(),
-        aprovado_por: currentUser?.email || '',
       });
     },
-    onSuccess: () => {
-      toast.success('✅ Atividade aprovada');
-      setConfirmApproveId(null);
-      invalidateAll();
+    onSuccess: async () => {
+      toast.success('✅ Aprovado');
+      await queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      await queryClient.invalidateQueries({ queryKey: ['atividades_for_aprovacao'] });
+      await queryClient.invalidateQueries({ queryKey: ['fechamentos_for_aprovacao'] });
     },
-    onError: (err) => {
-      const e = extractUsefulError(err);
-      toast.error('❌ Erro ao aprovar', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${
-          e.details ? `\n${e.details}` : ''
-        }`,
-      });
+    onError: (e) => {
+      const info = extractUsefulError(e);
+      toast.error('Erro ao aprovar', { description: info.message });
     },
   });
 
-  // === Rejeitar ===
   const rejeitarMutation = useMutation({
-    mutationFn: async ({ atividadeId, motivo }) => {
-      const key = idStr(atividadeId);
-      const aprov = aprovacaoPorAtividade.get(key);
-      if (!aprov?.id) throw new Error('Aprovação pendente não encontrada para esta atividade.');
-
-      return await base44.entities.AprovacaoAtividade.update(aprov.id, {
+    mutationFn: async ({ aprovacaoId, motivo }) => {
+      return await base44.entities.AprovacaoAtividade.update(aprovacaoId, {
         status: 'rejeitado',
-        motivo_rejeicao: motivo,
-        data_aprovacao: new Date().toISOString(),
-        aprovado_por: currentUser?.email || '',
+        motivo_rejeicao: motivo || 'Rejeitado',
       });
     },
-    onSuccess: () => {
-      toast.success('✅ Atividade rejeitada');
+    onSuccess: async () => {
+      toast.success('❌ Rejeitado');
       setRejectOpen(false);
       setRejectMotivo('');
       setSelected(null);
-      invalidateAll();
+      await queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] });
+      await queryClient.invalidateQueries({ queryKey: ['atividades_for_aprovacao'] });
+      await queryClient.invalidateQueries({ queryKey: ['fechamentos_for_aprovacao'] });
     },
-    onError: (err) => {
-      const e = extractUsefulError(err);
-      toast.error('❌ Erro ao rejeitar', {
-        description: `${e.status ? `HTTP ${e.status} — ` : ''}${e.message}${
-          e.details ? `\n${e.details}` : ''
-        }`,
-      });
+    onError: (e) => {
+      const info = extractUsefulError(e);
+      toast.error('Erro ao rejeitar', { description: info.message });
     },
   });
 
-  const openReject = (atividade) => {
-    setSelected(atividade);
-    setRejectMotivo('');
-    setRejectOpen(true);
+  // ===== 5) helpers para abrir "ver" =====
+  const findAprovacaoByTarget = (tipo, targetId) => {
+    const id = idStr(targetId);
+    return aprovacoesPendentes.find(
+      (a) => a?.tipo === tipo && idStr(a?.atividade_id) === id && a?.status === 'pendente'
+    );
   };
 
-  const doReject = async () => {
-    if (!selected?.id) return;
-    const motivo = rejectMotivo.trim();
-    if (!motivo) {
-      toast.error('Informe o motivo da rejeição.');
-      return;
+  const openViewAtividade = async (atividade) => {
+    const aprov = findAprovacaoByTarget('atividade', atividade?.id);
+    setViewTipo('atividade');
+    setViewAprovacao(aprov || null);
+
+    try {
+      const full = await base44.entities.Atividade.get(atividade.id);
+
+      const supId = full?.supervisor_id || full?.supervisor || '';
+      const anaId = full?.analista_id || full?.analista || '';
+
+      let supNome = '';
+      let anaNome = '';
+
+      try {
+        if (supId) {
+          const s = await base44.entities.Supervisor.get(supId);
+          supNome = s?.nome || s?.nome_supervisor || '';
+        }
+      } catch {}
+
+      try {
+        if (anaId) {
+          const a = await base44.entities.Analista.get(anaId);
+          anaNome = a?.nome || '';
+        }
+      } catch {}
+
+      setViewSupervisorNome(supNome);
+      setViewAnalistaNome(anaNome);
+
+      setViewRegistro(full || atividade);
+    } catch {
+      setViewSupervisorNome('');
+      setViewAnalistaNome('');
+      setViewRegistro(atividade);
     }
-    await rejeitarMutation.mutateAsync({ atividadeId: selected.id, motivo });
+
+    setViewOpen(true);
   };
 
-  const isBusy = loadingAprov || loadingAtiv;
+  const openViewFechamento = async (fechamento) => {
+    const aprov = findAprovacaoByTarget('fechamento', fechamento?.id);
+    setViewTipo('fechamento');
+    setViewAprovacao(aprov || null);
+
+    try {
+      const full = await base44.entities.FechamentoSemanal.get(fechamento.id);
+      setViewRegistro(full || fechamento);
+    } catch {
+      setViewRegistro(fechamento);
+    }
+
+    setViewOpen(true);
+  };
+
+  const doReject = () => {
+    if (!selected?.id) return;
+    rejeitarMutation.mutate({ aprovacaoId: selected.id, motivo: rejectMotivo });
+  };
+
+  const canDecide = (currentUser?.role === 'admin') || (currentUser?.role === 'coordenacao') || true;
 
   return (
-    <div className="p-6 text-gray-100">
-      <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="p-6 space-y-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Aprovação</h1>
-          <p className="text-gray-400 mt-1">Atividades pendentes aguardando validação</p>
+          <h1 className="text-2xl font-semibold text-white">Aprovação</h1>
+          <p className="text-gray-400">Pendências aguardando validação</p>
         </div>
 
         <Button
           variant="secondary"
-          className="bg-[#1a1a1a] border border-gray-700 gap-2"
-          onClick={invalidateAll}
+          className="bg-[#1a1a1a] border border-gray-700"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['aprovacoesPendentes'] })}
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4 mr-2" />
           Atualizar
         </Button>
       </div>
 
-      <div className="bg-[#121212] border border-gray-800 rounded p-4 mb-6">
+      {/* Buscar */}
+      <div className="bg-[#121212] border border-gray-800 rounded p-4 space-y-2">
         <Label>Buscar</Label>
         <Input
+          className="bg-[#1a1a1a] border-gray-700"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-[#1a1a1a] border-gray-700 mt-2"
-          placeholder="CH00001 / ID / Tipo / e-mail..."
+          placeholder="CH00001 / FECH / ID / Tipo / e-mail..."
         />
       </div>
 
-      <div className="bg-[#121212] border border-gray-800 rounded overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <div className="text-sm text-gray-300">
-            Pendentes:{' '}
-            <span className="text-gray-100 font-semibold">{filtered.length}</span>
+      {/* Seção 1: Atividades */}
+      <div className="bg-[#121212] border border-gray-800 rounded p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-white font-semibold">Aprovar atividades</div>
+          <div className="text-gray-400 text-sm">
+            Pendentes: {aprovacoesAtividade.length}
           </div>
         </div>
 
-        {isBusy ? (
-          <div className="p-6 flex items-center gap-2 text-gray-300">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Carregando...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="p-6 text-gray-400 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Nenhuma atividade pendente encontrada.
-          </div>
-        ) : (
-          <div className="w-full overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#0f0f0f] text-gray-300">
-                <tr>
-                  <th className="text-left p-3">Código</th>
-                  <th className="text-left p-3">Tipo</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Criada por</th>
-                  <th className="text-right p-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((a) => {
-                  const aprov = aprovacaoPorAtividade.get(idStr(a.id));
-                  return (
-                    <tr key={a.id} className="border-t border-gray-800 hover:bg-[#141414]">
-                      <td className="p-3 text-gray-100 font-medium">
-                        {a.codigo_atividade || a.id}
-                      </td>
-                      <td className="p-3 text-gray-200">{a.tipo || '-'}</td>
-                      <td className="p-3 text-gray-200">{aprov?.status || 'pendente'}</td>
-                      <td className="p-3 text-gray-300">
-                        {a.registrado_por || a.created_by || '-'}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* ✅ NOVO: Ver detalhes */}
+        <div className="mt-3 border-t border-gray-800 pt-3">
+          {(loadingAprov || loadingAtividades) ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+            </div>
+          ) : rowsAtividades.length === 0 ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <span className="text-yellow-500">⚠</span> Nenhuma atividade pendente encontrada.
+            </div>
+          ) : (
+            <div className="w-full overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="text-gray-400">
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-2 pr-2">Código</th>
+                    <th className="text-left py-2 pr-2">Tipo</th>
+                    <th className="text-left py-2 pr-2">Status</th>
+                    <th className="text-left py-2 pr-2">Criada por</th>
+                    <th className="text-right py-2">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-100">
+                  {rowsAtividades.map((t) => {
+                    const aprov = findAprovacaoByTarget('atividade', t?.id);
+                    return (
+                      <tr key={t.id} className="border-b border-gray-800/60">
+                        <td className="py-2 pr-2 font-medium">
+                          {t?.codigo_atividade || t?.id}
+                        </td>
+                        <td className="py-2 pr-2">{t?.tipo || '-'}</td>
+                        <td className="py-2 pr-2">{aprov?.status || 'pendente'}</td>
+                        <td className="py-2 pr-2">
+                          {t?.registrado_por || t?.created_by || '-'}
+                        </td>
+                        <td className="py-2 text-right space-x-2">
                           <Button
                             variant="secondary"
-                            className="bg-[#1a1a1a] border border-gray-700 gap-2"
-                            onClick={() => openView(a)}
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            onClick={() => openViewAtividade(t)}
                           >
-                            <Eye className="w-4 h-4" />
-                            Ver
+                            <Eye className="w-4 h-4 mr-2" /> Ver
                           </Button>
 
                           <Button
                             variant="secondary"
-                            className="bg-[#1a1a1a] border border-gray-700 gap-2"
-                            onClick={() => setConfirmApproveId(a.id)}
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            disabled={!canDecide || aprovarMutation.isPending}
+                            onClick={() => aprov?.id && aprovarMutation.mutate({ aprovacaoId: aprov.id })}
                           >
-                            <CheckCircle2 className="w-4 h-4" />
-                            Aprovar
+                            <CheckCircle2 className="w-4 h-4 mr-2" /> Aprovar
                           </Button>
 
                           <Button
                             variant="destructive"
-                            className="gap-2"
-                            onClick={() => openReject(a)}
+                            disabled={!canDecide || rejeitarMutation.isPending}
+                            onClick={() => {
+                              setSelected(aprov);
+                              setRejectMotivo('');
+                              setRejectOpen(true);
+                            }}
                           >
-                            <XCircle className="w-4 h-4" />
-                            Rejeitar
+                            <XCircle className="w-4 h-4 mr-2" /> Rejeitar
                           </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Confirm Approve */}
-      <AlertDialog
-        open={!!confirmApproveId}
-        onOpenChange={(open) => !open && setConfirmApproveId(null)}
-      >
-        <AlertDialogContent className="bg-[#121212] border-gray-800 text-gray-100">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Aprovar atividade?</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Essa ação libera a atividade.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#1a1a1a] border border-gray-700">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => confirmApproveId && aprovarMutation.mutate(confirmApproveId)}
-              disabled={aprovarMutation.isPending}
-            >
-              {aprovarMutation.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Aprovando...
-                </span>
-              ) : (
-                'Aprovar'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Reject modal */}
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Rejeitar atividade</DialogTitle>
-          </DialogHeader>
-
-          <div className="text-sm text-gray-400">
-            Informe o motivo da rejeição para a atividade{' '}
-            <span className="text-gray-200 font-semibold">
-              {selected?.codigo_atividade || selected?.id || '-'}
-            </span>
-            .
+      {/* Seção 2: Fechamento Semanal */}
+      <div className="bg-[#121212] border border-gray-800 rounded p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-white font-semibold">Aprovar fechamentos semanais</div>
+          <div className="text-gray-400 text-sm">
+            Pendentes: {aprovacoesFechamento.length}
           </div>
+        </div>
 
-          <div className="mt-4">
-            <Label>Motivo</Label>
-            <Textarea
-              value={rejectMotivo}
-              onChange={(e) => setRejectMotivo(e.target.value)}
-              className="bg-[#1a1a1a] border-gray-700 mt-2"
-              placeholder="Ex.: informações incompletas / dados inválidos / precisa ajustar..."
-            />
-          </div>
+        <div className="mt-3 border-t border-gray-800 pt-3">
+          {(loadingAprov || loadingFechamentos) ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+            </div>
+          ) : rowsFechamentos.length === 0 ? (
+            <div className="text-gray-400 flex items-center gap-2">
+              <span className="text-yellow-500">⚠</span> Nenhum fechamento semanal pendente encontrado.
+            </div>
+          ) : (
+            <div className="w-full overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="text-gray-400">
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-2 pr-2">Semana</th>
+                    <th className="text-left py-2 pr-2">Supervisor</th>
+                    <th className="text-left py-2 pr-2">Status</th>
+                    <th className="text-left py-2 pr-2">Criado por</th>
+                    <th className="text-right py-2">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-100">
+                  {rowsFechamentos.map((f) => {
+                    const aprov = findAprovacaoByTarget('fechamento', f?.id);
+                    const semana =
+                      (f?.semana_inicio || f?.semana_fim)
+                        ? `${fmtDateOnlyBR(f?.semana_inicio)} → ${fmtDateOnlyBR(f?.semana_fim)}`
+                        : '-';
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button
-              variant="secondary"
-              className="bg-[#1a1a1a] border border-gray-700"
-              onClick={() => setRejectOpen(false)}
-              disabled={rejeitarMutation.isPending}
-            >
-              Cancelar
-            </Button>
+                    return (
+                      <tr key={f.id} className="border-b border-gray-800/60">
+                        <td className="py-2 pr-2 font-medium">{semana}</td>
+                        <td className="py-2 pr-2">
+                          {f?.supervisor_nome || f?.supervisor || f?.supervisor_id || '-'}
+                        </td>
+                        <td className="py-2 pr-2">{aprov?.status || 'pendente'}</td>
+                        <td className="py-2 pr-2">
+                          {f?.registrado_por || f?.created_by || '-'}
+                        </td>
+                        <td className="py-2 text-right space-x-2">
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            onClick={() => openViewFechamento(f)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" /> Ver
+                          </Button>
 
-            <Button
-              variant="destructive"
-              onClick={doReject}
-              disabled={rejeitarMutation.isPending}
-            >
-              {rejeitarMutation.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Rejeitando...
-                </span>
-              ) : (
-                'Rejeitar'
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+                          <Button
+                            variant="secondary"
+                            className="bg-[#1a1a1a] border border-gray-700"
+                            disabled={!canDecide || aprovarMutation.isPending}
+                            onClick={() => aprov?.id && aprovarMutation.mutate({ aprovacaoId: aprov.id })}
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" /> Aprovar
+                          </Button>
 
-      {/* ✅ NOVO: View modal */}
+                          <Button
+                            variant="destructive"
+                            disabled={!canDecide || rejeitarMutation.isPending}
+                            onClick={() => {
+                              setSelected(aprov);
+                              setRejectMotivo('');
+                              setRejectOpen(true);
+                            }}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" /> Rejeitar
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal VER (Atividade ou Fechamento) */}
       <Dialog
         open={viewOpen}
         onOpenChange={(open) => {
           setViewOpen(open);
-          if (!open) setViewAtividade(null);
+          if (!open) {
+            setViewTipo(null);
+            setViewRegistro(null);
+            setViewAprovacao(null);
+            setViewSupervisorNome('');
+            setViewAnalistaNome('');
+          }
         }}
       >
-        <DialogContent className="bg-[#121212] border-gray-800 text-gray-100 max-w-3xl">
+        <DialogContent className="bg-[#121212] border border-gray-800 text-gray-100 max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Visualizar atividade</DialogTitle>
+            <DialogTitle>Visualizar {viewTipo === 'fechamento' ? 'fechamento semanal' : 'atividade'}</DialogTitle>
           </DialogHeader>
 
-          {!viewAtividade ? (
-            <div className="text-gray-400">Nenhuma atividade selecionada.</div>
+          {!viewRegistro ? (
+            <div className="text-gray-400">Nenhum registro selecionado.</div>
+          ) : viewTipo === 'fechamento' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <Field label="Semana início" value={fmtDateOnlyBR(viewRegistro?.semana_inicio)} />
+              <Field label="Semana fim" value={fmtDateOnlyBR(viewRegistro?.semana_fim)} />
+
+              <Field label="Supervisor" value={viewRegistro?.supervisor_nome || viewRegistro?.supervisor || viewRegistro?.supervisor_id || '-'} />
+              <Field label="Analista" value={viewRegistro?.analista_nome || viewRegistro?.analista || viewRegistro?.analista_id || '-'} />
+
+              <Field label="Ligações Next IP" value={viewRegistro?.ligacoes_next_ip ?? viewRegistro?.ligacoes ?? '-'} />
+              <Field label="Chamados Verdana" value={viewRegistro?.chamados_verdana ?? viewRegistro?.chamados ?? '-'} />
+              <Field label="Monitorias" value={viewRegistro?.monitorias ?? '-'} />
+              <Field label="Feedbacks Individuais" value={viewRegistro?.feedbacks_individuais ?? viewRegistro?.feedbacks ?? '-'} />
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Backlog final</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.backlog_final ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Destaques</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.destaques ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Pontos críticos</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.pontos_criticos ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Plano de ação</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.plano_acao ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Observações gerais</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.observacoes_gerais ?? viewRegistro?.observacoes ?? '-'}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 text-xs text-gray-500">
+                Criado por: {viewRegistro?.registrado_por || viewRegistro?.created_by || '-'} · ID: {idStr(viewRegistro?.id) || '-'}
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <Field
                 label="Código"
-                value={viewAtividade.codigo_atividade || viewAtividade.id}
+                value={viewRegistro?.codigo_atividade || viewRegistro?.id}
               />
-              <Field label="Tipo" value={viewAtividade.tipo || '-'} />
+              <Field label="Tipo" value={viewRegistro?.tipo || '-'} />
 
               <Field
-  label="Supervisor"
-  value={
-    viewSupervisorNome ||
-    viewAtividade?.supervisor_nome ||
-    viewAtividade?.supervisor ||
-    viewAtividade?.supervisor_id ||
-    '-'
-  }
-/>
+                label="Supervisor"
+                value={
+                  viewSupervisorNome ||
+                  viewRegistro?.supervisor_nome ||
+                  viewRegistro?.supervisor ||
+                  viewRegistro?.supervisor_id ||
+                  '-'
+                }
+              />
+              <Field
+                label="Analista"
+                value={
+                  viewAnalistaNome ||
+                  viewRegistro?.analista_nome ||
+                  viewRegistro?.analista ||
+                  viewRegistro?.analista_id ||
+                  '-'
+                }
+              />
 
-<Field
-  label="Analista"
-  value={
-    viewAnalistaNome ||
-    viewAtividade?.analista_nome ||
-    viewAtividade?.analista ||
-    viewAtividade?.analista_id ||
-    '-'
-  }
-/>
-              <Field label="Ticket" value={viewAtividade.ticket || '-'} />
-              <Field label="Status" value={viewAtividade.status || '-'} />
+              <Field label="Ticket" value={viewRegistro?.ticket || '-'} />
+              <Field label="Status" value={viewRegistro?.status || '-'} />
+              <Field label="Nota (0-10)" value={viewRegistro?.nota ?? '-'} />
+              <Field label="Data" value={fmtDateOnlyBR(viewRegistro?.data)} />
 
-              <Field label="Nota (0-10)" value={viewAtividade.nota ?? '-'} />
-              <Field label="Data" value={fmtDateOnlyBR(viewAtividade.data)} />
-
-              <div className="md:col-span-2">
-                <div className="text-gray-400">Comentário</div>
-                <div className="text-gray-100 whitespace-pre-wrap bg-[#1a1a1a] border border-gray-700 rounded p-3 mt-2">
-                  {viewAtividade.comentario || '-'}
+              <div className="md:col-span-2 space-y-1">
+                <div className="text-gray-400 text-xs">Comentário</div>
+                <div className="text-gray-100 bg-[#1a1a1a] border border-gray-700 rounded p-3 whitespace-pre-wrap">
+                  {viewRegistro?.comentario || '-'}
                 </div>
               </div>
 
-              <div className="md:col-span-2 text-gray-500 text-xs">
-                Criada por: {viewAtividade.registrado_por || viewAtividade.created_by || '-'}
-                {' · '}
-                ID: {idStr(viewAtividade.id) || '-'}
-                {' · '}
-                Request ID: {viewAtividade.request_id || '-'}
+              <div className="md:col-span-2 text-xs text-gray-500">
+                Criada por: {viewRegistro?.registrado_por || viewRegistro?.created_by || '-'} · ID: {idStr(viewRegistro?.id) || '-'} · Request ID: {viewRegistro?.request_id || '-'}
               </div>
             </div>
           )}
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end gap-2 pt-2">
+            {viewAprovacao?.id ? (
+              <>
+                <Button
+                  variant="secondary"
+                  className="bg-[#1a1a1a] border border-gray-700"
+                  disabled={!canDecide || aprovarMutation.isPending}
+                  onClick={() => aprovarMutation.mutate({ aprovacaoId: viewAprovacao.id })}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Aprovar
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  disabled={!canDecide || rejeitarMutation.isPending}
+                  onClick={() => {
+                    setSelected(viewAprovacao);
+                    setRejectMotivo('');
+                    setRejectOpen(true);
+                  }}
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Rejeitar
+                </Button>
+              </>
+            ) : null}
+
             <Button
               variant="secondary"
               className="bg-[#1a1a1a] border border-gray-700"
@@ -578,6 +689,41 @@ export default function Aprovacao() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Rejeição (motivo) */}
+      <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <AlertDialogContent className="bg-[#121212] border border-gray-800 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rejeitar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe o motivo da rejeição (opcional, mas recomendado).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2">
+            <Label>Motivo</Label>
+            <Textarea
+              className="bg-[#1a1a1a] border-gray-700"
+              value={rejectMotivo}
+              onChange={(e) => setRejectMotivo(e.target.value)}
+              placeholder="Ex.: registro incompleto, dados inconsistentes..."
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#1a1a1a] border border-gray-700">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={doReject}
+              disabled={!selected?.id || rejeitarMutation.isPending}
+            >
+              {rejeitarMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
