@@ -448,12 +448,12 @@ export default function Atividades() {
 
   const getTipoColor = (tipo) => {
     const colors = {
-      Chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      Ligações: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-      'Monitoria Offline': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      'Monitoria Assistida': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-      'Feedback Individual': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    };
+  chamados: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  ligacoes: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  monitoria_offline: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  monitoria_assistida: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  feedback: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+};
     return colors[tipo] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
