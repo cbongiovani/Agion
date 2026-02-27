@@ -631,7 +631,7 @@ export default function Atividades() {
                   </div>
                 )}
 
-                {selectedType === 'Ligacoes' && (
+                {selectedType === 'ligacoes' && (
                   <div>
                     <Label>Protocolo da Gravação</Label>
                     <Input
@@ -687,7 +687,7 @@ export default function Atividades() {
                   </div>
                 )}
 
-                {selectedType !== 'Monitoria Offline' && selectedType !== 'Monitoria Assistida' && (
+                {selectedType !== 'monitoria_offline' && selectedType !== 'monitoria_assistida' && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label>Nota (0-10)</Label>
