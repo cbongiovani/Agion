@@ -191,17 +191,40 @@ export default function MonitoriaAssistidaForm({ data = {}, onChange, onLinkChan
                 </div>
               ) : (
                 <div className="flex items-start gap-3">
-                  <Checkbox
-                    id={item.key}
-                    checked={topicos[item.key] || false}
-                    onCheckedChange={(checked) => handleCheckboxChange(item.key, checked)}
-                    className="mt-1"
+                  <button
+                    type="button"
                     disabled={readOnly}
-                  />
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!readOnly) handleCheckboxChange(item.key, !topicos[item.key]);
+                    }}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    className={`
+                      mt-0.5 w-6 h-6 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all select-none
+                      ${topicos[item.key]
+                        ? 'bg-[#ADF802] border-[#ADF802] text-black'
+                        : 'bg-[#0d0d0d] border-gray-600 hover:border-[#ADF802]/60'
+                      }
+                      ${readOnly ? 'cursor-default opacity-70' : 'cursor-pointer'}
+                    `}
+                  >
+                    {topicos[item.key] && (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
                   <div className="flex-1">
-                    <label htmlFor={item.key} className="text-sm font-medium text-white cursor-pointer block mb-1">
+                    <div
+                      className="text-sm font-medium text-white cursor-pointer block mb-1 select-none"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (!readOnly) handleCheckboxChange(item.key, !topicos[item.key]);
+                      }}
+                    >
                       {item.pergunta}
-                    </label>
+                    </div>
                     <p className="text-xs text-emerald-400">✓ {item.resposta}</p>
                   </div>
                   {!readOnly && (
