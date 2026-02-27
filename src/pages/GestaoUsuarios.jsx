@@ -82,6 +82,14 @@ export default function GestaoUsuarios() {
       const actor = await base44.auth.me();
       const oldData = users.find((u) => u.id === userId);
       await base44.entities.User.update(userId, data);
+
+      // Se a função mudou, reseta automaticamente as permissões de módulo para o preset da nova função
+      if (data.role && data.role !== oldData?.role) {
+        await resetToRolePreset(oldData.email, data.role, actor.email);
+        queryClient.invalidateQueries({ queryKey: ['userModulePermission', oldData.email] });
+        queryClient.invalidateQueries({ queryKey: ['modulePermissions', oldData.email] });
+      }
+
       await base44.entities.Log.create({
         usuario_email: actor.email,
         usuario_nome: actor.full_name,
