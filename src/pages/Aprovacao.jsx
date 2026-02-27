@@ -488,22 +488,23 @@ export default function Aprovacao() {
 
               <Field
   label="Supervisor"
-  value={getSupervisorNome(
-    viewAtividade.supervisor_id ||
-    viewAtividade.supervisor ||
-    viewAtividade.supervisor_nome
-  )}
+  value={
+    viewAtividade?.supervisor_nome ||
+    viewAtividade?.supervisor ||
+    viewAtividade?.supervisor_id ||
+    '-'
+  }
 />
 
 <Field
   label="Analista"
-  value={getAnalistaNome(
-    viewAtividade.analista_id ||
-    viewAtividade.analista ||
-    viewAtividade.analista_nome
-  )}
+  value={
+    viewAtividade?.analista_nome ||
+    viewAtividade?.analista ||
+    viewAtividade?.analista_id ||
+    '-'
+  }
 />
-
               <Field label="Ticket" value={viewAtividade.ticket || '-'} />
               <Field label="Status" value={viewAtividade.status || '-'} />
 
