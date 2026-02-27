@@ -854,12 +854,15 @@ export default function Atividades() {
 
           <div>
             <Label>Analista</Label>
-            <Select value={filterAnalista} onValueChange={setFilterAnalista}>
+            <Select
+  value={filterAnalista || ALL}
+  onValueChange={(v) => setFilterAnalista(v === ALL ? '' : v)}
+>
               <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value={ALL}>Todos</SelectItem>
                 {analistas.map((a) => (
                   <SelectItem key={a.id} value={idStr(a.id)}>
                     {a.nome}
@@ -871,12 +874,15 @@ export default function Atividades() {
 
           <div>
             <Label>Tipo</Label>
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
+            <Select
+  value={filterTipo || ALL}
+  onValueChange={(v) => setFilterTipo(v === ALL ? '' : v)}
+>
               <SelectTrigger className="bg-[#1a1a1a] border-gray-700 mt-2">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value={ALL}>Todos</SelectItem>
                 <SelectItem value="Chamados">Chamados</SelectItem>
                 <SelectItem value="Ligações">Ligações</SelectItem>
                 <SelectItem value="Monitoria Offline">Monitoria Offline</SelectItem>
