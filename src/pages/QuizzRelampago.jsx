@@ -429,8 +429,8 @@ const { data: todasRespostasQuizz = [] } = useQuery({
 }, [todasRespostasQuizz, minhasRespostasQuizz, currentUser, canManageQuiz]);
 
   const iniciarParticipacao = (quizz) => {
-    if (!isAnalyst) {
-      toast.error('Apenas analistas podem participar.');
+    if (canManageQuiz) {
+      toast.error('Gestores não participam do quizz como jogadores.');
       return;
     }
     if (jaParticipou(quizz.id)) {
