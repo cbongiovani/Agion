@@ -390,12 +390,22 @@ const { data: usuarios = [] } = useQuery({
   };
 
   const getAnalistaNome = (analistaId, usuarioId) => {
-    const usuario = usuarios.find(u => u.id === usuarioId);
-    if (usuario?.nome_customizado) return usuario.nome_customizado;
-    if (usuario?.full_name) return usuario.full_name;
-    const analista = analistas.find(a => a.id === analistaId);
-    return analista?.nome || 'Usuário';
-  };
+  // Se não tem permissão para listar usuários, mostra algo seguro
+  if (!canManageQuiz) {
+    // se for o próprio usuário logado, mostra o nome dele
+    if (usuarioId === currentUser?.id) {
+      return currentUser?.nome_customizado || currentUser?.full_name || currentUser?.email || 'Você';
+    }
+    return 'Participante';
+  }
+
+  const usuario = usuarios.find(u => u.id === usuarioId);
+  if (usuario?.nome_customizado) return usuario.nome_customizado;
+  if (usuario?.full_name) return usuario.full_name;
+
+  const analista = analistas.find(a => a.id === analistaId);
+  return analista?.nome || 'Usuário';
+};
 
   const jaParticipou = useCallback((quizzId) => {
     if (!currentUser) return false;
