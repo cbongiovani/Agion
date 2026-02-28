@@ -623,8 +623,8 @@ Retorne APENAS um objeto JSON válido, sem markdown.`;
 
   return (
     <div className="space-y-6">
-      <QuizzReiDoSuporteWidget />
-      <QuizzCarrosselTop3 />
+      {canManageQuiz && <QuizzReiDoSuporteWidget />}
+      {canManageQuiz && <QuizzCarrosselTop3 />}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
