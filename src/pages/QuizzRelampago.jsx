@@ -75,8 +75,8 @@ export default function QuizzRelampago() {
   const isNoc = role === 'noc';
   const canManageQuiz = isAdmin || isSupervisor || isNoc;
 
-  // Se no seu sistema o analista pode vir como "analista" OU "analyst", suportamos ambos:
-  const isAnalyst = role === 'analista' || role === 'analyst';
+  // Analista: qualquer role que não seja admin/supervisor/noc pode participar
+  const isAnalyst = !canManageQuiz && !!currentUser;
 
   const { data: quizzes = [], isLoading: loadingQuizzes } = useQuery({
     queryKey: ['quizzRelampago', role],
