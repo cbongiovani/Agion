@@ -118,25 +118,26 @@ const { data: usuarios = [] } = useQuery({
   });
 
   const { data: respostasQuizz = [] } = useQuery({
-    queryKey: ['respostasQuizz', selectedQuizz?.id],
-    queryFn: () => base44.entities.RespostaQuizz.filter({ quizz_id: selectedQuizz.id }),
-    enabled: !!selectedQuizz,
-    staleTime: 5 * 60 * 1000,
-  });
+  queryKey: ['respostasQuizz', selectedQuizz?.id],
+  queryFn: () => base44.entities.RespostaQuizz.filter({ quizz_id: selectedQuizz.id }),
+  enabled: !!selectedQuizz,
+  staleTime: 5 * 60 * 1000,
+});
 
-  // ⚠️ Isso pode ficar pesado com o tempo. Mantive por compatibilidade.
-  const { data: minhasRespostasQuizz = [] } = useQuery({
+// 🔹 Para ANALISTA (somente as próprias respostas)
+const { data: minhasRespostasQuizz = [] } = useQuery({
   queryKey: ['minhasRespostasQuizz', currentUser?.id],
-  enabled: !!currentUser && !canManageQuiz, // analista
+  enabled: !!currentUser && !canManageQuiz,
   queryFn: async () => {
     return await base44.entities.RespostaQuizz.filter({ usuario_id: currentUser.id });
   },
   staleTime: 2 * 60 * 1000,
 });
 
+// 🔹 Para ADMIN / SUPERVISOR / NOC (todas respostas)
 const { data: todasRespostasQuizz = [] } = useQuery({
   queryKey: ['todasRespostasQuizz'],
-  enabled: !!currentUser && canManageQuiz, // admin/supervisor/noc
+  enabled: !!currentUser && canManageQuiz,
   queryFn: () => base44.entities.RespostaQuizz.list(),
   staleTime: 5 * 60 * 1000,
 });
