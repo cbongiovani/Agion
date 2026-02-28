@@ -48,7 +48,7 @@ export default function QuizzNotificationWidget() {
   return (
     <div className="mb-3">
       <button
-        onClick={() => navigate('/QuizzRelampago')}
+        onClick={() => navigate(createPageUrl('QuizzRelampago'))}
         className="w-full relative overflow-hidden group"
       >
         {/* Animação de balanço */}

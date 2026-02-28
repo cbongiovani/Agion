@@ -79,20 +79,20 @@ export default function QuizzRelampago() {
   const isAnalyst = role === 'analista' || role === 'analyst';
 
   const { data: quizzes = [], isLoading: loadingQuizzes } = useQuery({
-    queryKey: ['quizzRelampago'],
+    queryKey: ['quizzRelampago', role],
     queryFn: async () => {
       const todosQuizzes = await base44.entities.QuizzRelampago.list('-created_date', 50);
 
       // Admin/supervisor/noc veem tudo
       if (canManageQuiz) return todosQuizzes;
 
-      // Analistas veem apenas quizzes aprovados e ativos
+      // Analistas (e qualquer outro role) veem apenas quizzes ativos aprovados
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'quizz', status: 'aprovado' });
       const aprovados = new Set(aprovacoes.map(a => a.atividade_id));
 
       return todosQuizzes.filter(q => aprovados.has(q.id) && q.status === 'Ativo');
     },
-    enabled: !!currentUser,
+    enabled: !!currentUser && role !== '',
     staleTime: 5 * 60 * 1000,
   });
 
