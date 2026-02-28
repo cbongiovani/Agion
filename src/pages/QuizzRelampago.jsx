@@ -96,17 +96,20 @@ export default function QuizzRelampago() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: analistas = [] } = useQuery({
-    queryKey: ['analistas'],
-    queryFn: () => base44.entities.Analista.list(),
-    staleTime: 10 * 60 * 1000,
-  });
+  // ✅ Só admin/supervisor/noc pode listar usuários/analistas
+const { data: analistas = [] } = useQuery({
+  queryKey: ['analistas'],
+  queryFn: () => base44.entities.Analista.list(),
+  staleTime: 10 * 60 * 1000,
+  enabled: canManageQuiz, // <-- ADICIONE ISSO
+});
 
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
-    staleTime: 10 * 60 * 1000,
-  });
+const { data: usuarios = [] } = useQuery({
+  queryKey: ['usuarios'],
+  queryFn: () => base44.entities.User.list(),
+  staleTime: 10 * 60 * 1000,
+  enabled: canManageQuiz, // <-- ADICIONE ISSO
+});
 
   const { data: perguntasQuizz = [], isLoading: loadingPerguntas } = useQuery({
     queryKey: ['perguntasQuizz', selectedQuizz?.id],
