@@ -624,7 +624,7 @@ Retorne APENAS um objeto JSON válido, sem markdown.`;
     toast.info('Pergunta recusada. Tente gerar outra.');
   };
 
-  const { isLoading: loadingUser } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
+
 
   if (loadingUser || loadingQuizzes) {
     return (
