@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -9,23 +9,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Plus, Trophy, Clock, CheckCircle, XCircle, Pencil, Trash2, Eye, Play, Calendar, User, Award, Timer, Sparkles, Upload, X, Loader2, Crown } from 'lucide-react';
+import { Zap, Plus, Trophy, Clock, CheckCircle, Pencil, Trash2, Play, Calendar, User, Award, Timer, Sparkles, Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import QuizzReiDoSuporteWidget from '@/components/QuizzReiDoSuporteWidget';
 import QuizzCarrosselTop3 from '@/components/QuizzCarrosselTop3';
 import { notificarCoordenadores } from '@/components/notificationHelper';
 
+function normalizeRole(role) {
+  return String(role || '').trim().toLowerCase();
+}
+
+function getStatusByDate(data_inicio) {
+  const inicio = new Date(data_inicio);
+  return inicio <= new Date() ? 'Ativo' : 'Agendado';
+}
+
 export default function QuizzRelampago() {
   const queryClient = useQueryClient();
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-   const [selectedQuizz, setSelectedQuizz] = useState(null);
-   const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'participate', 'results'
-   const [deleteQuizzId, setDeleteQuizzId] = useState(null);
-   const [deletePerguntaId, setDeletePerguntaId] = useState(null);
-   const [deleteParticipanteData, setDeleteParticipanteData] = useState(null);
-   const [editingQuizzId, setEditingQuizzId] = useState(null);
-  
+  const [selectedQuizz, setSelectedQuizz] = useState(null);
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'participate', 'results'
+  const [deleteQuizzId, setDeleteQuizzId] = useState(null);
+  const [deletePerguntaId, setDeletePerguntaId] = useState(null);
+  const [deleteParticipanteData, setDeleteParticipanteData] = useState(null);
+  const [editingQuizzId, setEditingQuizzId] = useState(null);
+
   const [quizzForm, setQuizzForm] = useState({
     titulo: '',
     descricao: '',
@@ -39,9 +49,11 @@ export default function QuizzRelampago() {
 
   const [participacaoState, setParticipacaoState] = useState({
     perguntaAtual: 0,
-    respostas: [],
     tempoInicio: null,
   });
+
+  const [nowTick, setNowTick] = useState(Date.now());
+  const [isAnswering, setIsAnswering] = useState(false);
 
   const [gerarComIA, setGerarComIA] = useState(false);
   const [arquivosIA, setArquivosIA] = useState([]);
@@ -55,21 +67,30 @@ export default function QuizzRelampago() {
     queryFn: () => base44.auth.me(),
   });
 
+  const role = useMemo(() => normalizeRole(currentUser?.role), [currentUser?.role]);
+
+  // ✅ Defina aqui quem cria/edita e quem participa
+  const isAdmin = role === 'admin';
+  const isSupervisor = role === 'supervisor';
+  const isNoc = role === 'noc';
+  const canManageQuiz = isAdmin || isSupervisor || isNoc;
+
+  // Se no seu sistema o analista pode vir como "analista" OU "analyst", suportamos ambos:
+  const isAnalyst = role === 'analista' || role === 'analyst';
+
   const { data: quizzes = [], isLoading: loadingQuizzes } = useQuery({
     queryKey: ['quizzRelampago'],
     queryFn: async () => {
       const todosQuizzes = await base44.entities.QuizzRelampago.list('-created_date', 50);
-      
-      // Admin, supervisor e noc veem todos
-      if (currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc') {
-        return todosQuizzes;
-      }
-      
-      // Analistas veem apenas quizzes aprovados E ativos
+
+      // Admin/supervisor/noc veem tudo
+      if (canManageQuiz) return todosQuizzes;
+
+      // Analistas veem apenas quizzes aprovados e ativos
       const aprovacoes = await base44.entities.AprovacaoAtividade.filter({ tipo: 'quizz', status: 'aprovado' });
-      const aprovados = aprovacoes.map(a => a.atividade_id);
-      
-      return todosQuizzes.filter(q => aprovados.includes(q.id) && q.status === 'Ativo');
+      const aprovados = new Set(aprovacoes.map(a => a.atividade_id));
+
+      return todosQuizzes.filter(q => aprovados.has(q.id) && q.status === 'Ativo');
     },
     enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
@@ -81,7 +102,13 @@ export default function QuizzRelampago() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: perguntasQuizz = [] } = useQuery({
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: perguntasQuizz = [], isLoading: loadingPerguntas } = useQuery({
     queryKey: ['perguntasQuizz', selectedQuizz?.id],
     queryFn: () => base44.entities.PerguntaQuizz.filter({ quizz_id: selectedQuizz.id }, 'ordem'),
     enabled: !!selectedQuizz,
@@ -94,44 +121,45 @@ export default function QuizzRelampago() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // ⚠️ Isso pode ficar pesado com o tempo. Mantive por compatibilidade.
   const { data: todasRespostasQuizz = [] } = useQuery({
     queryKey: ['todasRespostasQuizz'],
     queryFn: () => base44.entities.RespostaQuizz.list(),
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
-    staleTime: 10 * 60 * 1000,
-  });
+  // ✅ Timer “de verdade” (re-render enquanto participa)
+  useEffect(() => {
+    if (viewMode !== 'participate') return;
+    const id = setInterval(() => setNowTick(Date.now()), 100);
+    return () => clearInterval(id);
+  }, [viewMode]);
 
   const createQuizzMutation = useMutation({
     mutationFn: async (data) => {
       const quizz = await base44.entities.QuizzRelampago.create(data.quizz);
-      
-      // Criar registro de aprovação
+
       await base44.entities.AprovacaoAtividade.create({
         atividade_id: quizz.id,
         tipo: 'quizz',
         status: 'pendente'
       });
-      
+
       const perguntasData = data.perguntas.map((p, idx) => ({
         ...p,
         quizz_id: quizz.id,
         ordem: idx + 1,
       }));
-      
+
       await base44.entities.PerguntaQuizz.bulkCreate(perguntasData);
-      
+
       await notificarCoordenadores(
         'novo_quizz',
         'Novo Quizz Criado',
-        `${currentUser?.full_name || 'Um coordenador'} criou um novo quizz: ${data.quizz.titulo} - Aguardando aprovação`,
+        `${currentUser?.full_name || 'Usuário'} criou um novo quizz: ${data.quizz.titulo} - Aguardando aprovação`,
         'Aprovacao'
       );
-      
+
       return quizz;
     },
     onSuccess: () => {
@@ -141,32 +169,52 @@ export default function QuizzRelampago() {
       resetForm();
       setIsCreateDialogOpen(false);
     },
+    onError: (e) => toast.error(e?.message || 'Erro ao criar quizz'),
   });
 
-  const updateQuizzMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      return await base44.entities.QuizzRelampago.update(id, data);
+  // ✅ Editar quizz + perguntas (substitui perguntas)
+  const updateQuizzFullMutation = useMutation({
+    mutationFn: async ({ id, data, perguntas }) => {
+      await base44.entities.QuizzRelampago.update(id, data);
+
+      // Substitui perguntas (simples e estável)
+      const existentes = await base44.entities.PerguntaQuizz.filter({ quizz_id: id });
+      for (const p of existentes) {
+        await base44.entities.PerguntaQuizz.delete(p.id);
+      }
+
+      const novas = perguntas.map((p, idx) => ({
+        ...p,
+        quizz_id: id,
+        ordem: idx + 1,
+      }));
+
+      await base44.entities.PerguntaQuizz.bulkCreate(novas);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quizzRelampago'] });
+      if (selectedQuizz?.id) queryClient.invalidateQueries({ queryKey: ['perguntasQuizz', selectedQuizz.id] });
       toast.success('Quizz atualizado!');
       setEditingQuizzId(null);
+      resetForm();
+      setIsCreateDialogOpen(false);
     },
+    onError: (e) => toast.error(e?.message || 'Erro ao atualizar quizz'),
   });
 
   const deleteQuizzMutation = useMutation({
     mutationFn: async (quizzId) => {
       const perguntas = await base44.entities.PerguntaQuizz.filter({ quizz_id: quizzId });
       const respostas = await base44.entities.RespostaQuizz.filter({ quizz_id: quizzId });
-      
+
       for (const resposta of respostas) {
         await base44.entities.RespostaQuizz.delete(resposta.id);
       }
-      
+
       for (const pergunta of perguntas) {
         await base44.entities.PerguntaQuizz.delete(pergunta.id);
       }
-      
+
       await base44.entities.QuizzRelampago.delete(quizzId);
     },
     onSuccess: () => {
@@ -174,6 +222,7 @@ export default function QuizzRelampago() {
       toast.success('Quizz excluído!');
       setDeleteQuizzId(null);
     },
+    onError: (e) => toast.error(e?.message || 'Erro ao excluir quizz'),
   });
 
   const deletePerguntaMutation = useMutation({
@@ -185,10 +234,11 @@ export default function QuizzRelampago() {
       await base44.entities.PerguntaQuizz.delete(perguntaId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['perguntasQuizz'] });
+      queryClient.invalidateQueries({ queryKey: ['perguntasQuizz', selectedQuizz?.id] });
       toast.success('Pergunta excluída!');
       setDeletePerguntaId(null);
     },
+    onError: (e) => toast.error(e?.message || 'Erro ao excluir pergunta'),
   });
 
   const submeterRespostaMutation = useMutation({
@@ -196,99 +246,33 @@ export default function QuizzRelampago() {
       return await base44.entities.RespostaQuizz.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['respostasQuizz'] });
+      queryClient.invalidateQueries({ queryKey: ['respostasQuizz', selectedQuizz?.id] });
       queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
     },
+    onError: (e) => toast.error(e?.message || 'Erro ao enviar resposta'),
   });
 
   const deleteParticipanteMutation = useMutation({
-    mutationFn: async ({ quizzId, analistaId, usuarioId }) => {
-      if (currentUser?.role !== 'admin') {
-        throw new Error('Apenas coordenadores podem remover participações');
-      }
-      
-      const respostas = await base44.entities.RespostaQuizz.filter({ 
+    mutationFn: async ({ quizzId, usuarioId }) => {
+      if (!isAdmin) throw new Error('Apenas Administrador pode remover participações');
+
+      const respostas = await base44.entities.RespostaQuizz.filter({
         quizz_id: quizzId,
         usuario_id: usuarioId
       });
-      
+
       for (const resposta of respostas) {
         await base44.entities.RespostaQuizz.delete(resposta.id);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['respostasQuizz'] });
+      queryClient.invalidateQueries({ queryKey: ['respostasQuizz', selectedQuizz?.id] });
       queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
       toast.success('Participação removida! O analista pode participar novamente.');
       setDeleteParticipanteData(null);
     },
-    onError: (error) => {
-      toast.error(error.message || 'Erro ao remover participação');
-    },
+    onError: (error) => toast.error(error.message || 'Erro ao remover participação'),
   });
-
-  const isAnalyst = currentUser?.role === 'analyst';
-  const isCoordOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'noc';
-  const isCoord = currentUser?.role === 'admin';
-
-  const handleCreateQuizz = () => {
-    if (!quizzForm.titulo || !quizzForm.data_inicio || !quizzForm.data_fim) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    if (perguntas.length < 1) {
-      toast.error('Adicione pelo menos uma pergunta');
-      return;
-    }
-
-    const perguntasValidas = perguntas.every(p => 
-      p.pergunta && p.alternativa_a && p.alternativa_b && p.alternativa_c && p.alternativa_d && p.resposta_correta
-    );
-
-    if (!perguntasValidas) {
-      toast.error('Preencha todas as perguntas completamente');
-      return;
-    }
-
-    if (editingQuizzId) {
-      updateQuizzMutation.mutate({
-        id: editingQuizzId,
-        data: {
-          ...quizzForm,
-        }
-      });
-    } else {
-      createQuizzMutation.mutate({
-        quizz: {
-          ...quizzForm,
-          criado_por: currentUser.email,
-          criador_nome: currentUser.full_name,
-          status: new Date(quizzForm.data_inicio) <= new Date() ? 'Ativo' : 'Agendado',
-        },
-        perguntas,
-      });
-    }
-  };
-
-  const handleEditarQuizz = (quizz) => {
-    setEditingQuizzId(quizz.id);
-    setQuizzForm({
-      titulo: quizz.titulo,
-      descricao: quizz.descricao,
-      data_inicio: quizz.data_inicio,
-      data_fim: quizz.data_fim,
-    });
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleToggleStatus = (quizz) => {
-    const novoStatus = quizz.status === 'Ativo' ? 'Encerrado' : 'Ativo';
-    updateQuizzMutation.mutate({
-      id: quizz.id,
-      data: { status: novoStatus }
-    });
-  };
 
   const resetForm = () => {
     setQuizzForm({
@@ -301,118 +285,105 @@ export default function QuizzRelampago() {
       { pergunta: '', alternativa_a: '', alternativa_b: '', alternativa_c: '', alternativa_d: '', resposta_correta: '', ordem: 1 }
     ]);
     setEditingQuizzId(null);
+    setPerguntaGeradaIA(null);
+    setGerarComIA(false);
+    setArquivosIA([]);
+    setContextoIA('');
+    setCategoriaIA('');
   };
 
-  const addPergunta = () => {
-    setPerguntas([...perguntas, {
-      pergunta: '',
-      alternativa_a: '',
-      alternativa_b: '',
-      alternativa_c: '',
-      alternativa_d: '',
-      resposta_correta: '',
-      ordem: perguntas.length + 1
-    }]);
+  const handleCreateOrUpdate = () => {
+    if (!quizzForm.titulo || !quizzForm.data_inicio || !quizzForm.data_fim) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    if (perguntas.length < 1) {
+      toast.error('Adicione pelo menos uma pergunta');
+      return;
+    }
+    const perguntasValidas = perguntas.every(p =>
+      p.pergunta && p.alternativa_a && p.alternativa_b && p.alternativa_c && p.alternativa_d && p.resposta_correta
+    );
+    if (!perguntasValidas) {
+      toast.error('Preencha todas as perguntas completamente');
+      return;
+    }
+
+    const status = getStatusByDate(quizzForm.data_inicio);
+
+    if (editingQuizzId) {
+      updateQuizzFullMutation.mutate({
+        id: editingQuizzId,
+        data: { ...quizzForm, status },
+        perguntas,
+      });
+    } else {
+      createQuizzMutation.mutate({
+        quizz: {
+          ...quizzForm,
+          criado_por: currentUser.email,
+          criador_nome: currentUser.full_name,
+          status,
+        },
+        perguntas,
+      });
+    }
   };
 
-  const removePergunta = (index) => {
-    setPerguntas(perguntas.filter((_, i) => i !== index));
+  const handleEditarQuizz = async (quizz) => {
+    try {
+      setEditingQuizzId(quizz.id);
+      setQuizzForm({
+        titulo: quizz.titulo,
+        descricao: quizz.descricao,
+        data_inicio: quizz.data_inicio,
+        data_fim: quizz.data_fim,
+      });
+
+      // ✅ Carregar perguntas no form
+      const qs = await base44.entities.PerguntaQuizz.filter({ quizz_id: quizz.id }, 'ordem');
+      setPerguntas(
+        (qs?.length ? qs : [{ pergunta: '', alternativa_a: '', alternativa_b: '', alternativa_c: '', alternativa_d: '', resposta_correta: '', ordem: 1 }])
+          .map((p, idx) => ({
+            pergunta: p.pergunta || '',
+            alternativa_a: p.alternativa_a || '',
+            alternativa_b: p.alternativa_b || '',
+            alternativa_c: p.alternativa_c || '',
+            alternativa_d: p.alternativa_d || '',
+            resposta_correta: p.resposta_correta || '',
+            ordem: idx + 1,
+          }))
+      );
+
+      setIsCreateDialogOpen(true);
+    } catch (e) {
+      toast.error(e?.message || 'Erro ao carregar perguntas para edição');
+    }
   };
 
   const updatePergunta = (index, field, value) => {
-    const newPerguntas = [...perguntas];
-    newPerguntas[index][field] = value;
-    setPerguntas(newPerguntas);
-  };
-
-  const iniciarParticipacao = (quizz) => {
-    // Verificar se já participou antes de iniciar
-    if (jaParticipou(quizz.id)) {
-      toast.error('Você já participou deste quizz!');
-      return;
-    }
-    
-    setSelectedQuizz(quizz);
-    setViewMode('participate');
-    setParticipacaoState({
-      perguntaAtual: 0,
-      respostas: [],
-      tempoInicio: Date.now(),
+    setPerguntas((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
     });
   };
 
-  const responderPergunta = async (alternativa) => {
-    const tempoResposta = (Date.now() - participacaoState.tempoInicio) / 1000;
-    const perguntaAtual = perguntasQuizz[participacaoState.perguntaAtual];
-    const correta = alternativa === perguntaAtual.resposta_correta;
-
-    const analistaLogado = analistas.find(a => a.usuario_email === currentUser.email);
-
-    await submeterRespostaMutation.mutateAsync({
-      quizz_id: selectedQuizz.id,
-      pergunta_id: perguntaAtual.id,
-      analista_id: analistaLogado?.id || `usr_${currentUser.id}`,
-      usuario_id: currentUser.id,
-      resposta_selecionada: alternativa,
-      correta,
-      tempo_resposta_segundos: tempoResposta,
-      data_hora_resposta: new Date().toISOString(),
-    });
-
-    const novasRespostas = [...participacaoState.respostas, { pergunta_id: perguntaAtual.id, correta, tempo: tempoResposta }];
-
-    if (participacaoState.perguntaAtual < perguntasQuizz.length - 1) {
-      setParticipacaoState({
-        perguntaAtual: participacaoState.perguntaAtual + 1,
-        respostas: novasRespostas,
-        tempoInicio: Date.now(),
-      });
-    } else {
-      // Invalidar queries para atualizar a verificação de participação
-      await queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
-      await queryClient.invalidateQueries({ queryKey: ['respostasQuizz'] });
-      toast.success('Quizz concluído! Confira o ranking.');
-      setViewMode('results');
-    }
+  const addPergunta = () => {
+    setPerguntas((prev) => [
+      ...prev,
+      { pergunta: '', alternativa_a: '', alternativa_b: '', alternativa_c: '', alternativa_d: '', resposta_correta: '', ordem: prev.length + 1 }
+    ]);
   };
 
-  const visualizarResultados = (quizz) => {
-    setSelectedQuizz(quizz);
-    setViewMode('results');
+  const removePergunta = (index) => {
+    setPerguntas((prev) => prev.filter((_, i) => i !== index).map((p, idx) => ({ ...p, ordem: idx + 1 })));
   };
 
-  const calcularRanking = () => {
-    if (!respostasQuizz.length) return [];
-
-    const rankingMap = {};
-
-    respostasQuizz.forEach(resposta => {
-      const chave = resposta.usuario_id;
-      if (!rankingMap[chave]) {
-        rankingMap[chave] = {
-          analista_id: resposta.analista_id,
-          usuario_id: resposta.usuario_id,
-          acertos: 0,
-          tempoTotal: 0,
-          respostas: [],
-        };
-      }
-
-      if (resposta.correta) {
-        rankingMap[chave].acertos += 1;
-      }
-      rankingMap[chave].tempoTotal += resposta.tempo_resposta_segundos;
-      rankingMap[chave].respostas.push(resposta);
-    });
-
-    const ranking = Object.values(rankingMap)
-      .sort((a, b) => {
-        if (b.acertos !== a.acertos) return b.acertos - a.acertos;
-        return a.tempoTotal - b.tempoTotal;
-      })
-      .slice(0, 5);
-
-    return ranking;
+  const getStatusColor = (status) => {
+    if (status === 'Ativo') return 'bg-green-500/20 text-green-400 border-green-500/30';
+    if (status === 'Encerrado') return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
   };
 
   const getAnalistaNome = (analistaId, usuarioId) => {
@@ -423,15 +394,114 @@ export default function QuizzRelampago() {
     return analista?.nome || 'Usuário';
   };
 
-  const getStatusColor = (status) => {
-    if (status === 'Ativo') return 'bg-green-500/20 text-green-400 border-green-500/30';
-    if (status === 'Encerrado') return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+  const jaParticipou = useCallback((quizzId) => {
+    if (!currentUser) return false;
+    return todasRespostasQuizz.some(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
+  }, [todasRespostasQuizz, currentUser]);
+
+  const iniciarParticipacao = (quizz) => {
+    if (!isAnalyst) {
+      toast.error('Apenas analistas podem participar.');
+      return;
+    }
+    if (jaParticipou(quizz.id)) {
+      toast.error('Você já participou deste quizz!');
+      return;
+    }
+
+    setSelectedQuizz(quizz);
+    setViewMode('participate');
+    setParticipacaoState({
+      perguntaAtual: 0,
+      tempoInicio: Date.now(),
+    });
+    setIsAnswering(false);
+  };
+
+  const responderPergunta = async (alternativa) => {
+    if (isAnswering) return; // trava spam
+    if (!selectedQuizz) return;
+    const perguntaAtual = perguntasQuizz[participacaoState.perguntaAtual];
+    if (!perguntaAtual) return;
+
+    setIsAnswering(true);
+    try {
+      const tempoResposta = ((Date.now() - participacaoState.tempoInicio) / 1000);
+
+      const correta = alternativa === perguntaAtual.resposta_correta;
+      const analistaLogado = analistas.find(a => a.usuario_email === currentUser.email);
+
+      await submeterRespostaMutation.mutateAsync({
+        quizz_id: selectedQuizz.id,
+        pergunta_id: perguntaAtual.id,
+        analista_id: analistaLogado?.id || `usr_${currentUser.id}`,
+        usuario_id: currentUser.id,
+        resposta_selecionada: alternativa,
+        correta,
+        tempo_resposta_segundos: tempoResposta,
+        data_hora_resposta: new Date().toISOString(),
+      });
+
+      if (participacaoState.perguntaAtual < perguntasQuizz.length - 1) {
+        setParticipacaoState((prev) => ({
+          perguntaAtual: prev.perguntaAtual + 1,
+          tempoInicio: Date.now(),
+        }));
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
+        await queryClient.invalidateQueries({ queryKey: ['respostasQuizz', selectedQuizz.id] });
+        toast.success('Quizz concluído! Confira o ranking.');
+        setViewMode('results');
+      }
+    } finally {
+      setIsAnswering(false);
+    }
+  };
+
+  const visualizarResultados = (quizz) => {
+    setSelectedQuizz(quizz);
+    setViewMode('results');
+  };
+
+  const calcularRanking = () => {
+    if (!respostasQuizz.length) return [];
+    const rankingMap = {};
+
+    respostasQuizz.forEach(resposta => {
+      const chave = resposta.usuario_id;
+      if (!rankingMap[chave]) {
+        rankingMap[chave] = {
+          analista_id: resposta.analista_id,
+          usuario_id: resposta.usuario_id,
+          acertos: 0,
+          tempoTotal: 0,
+        };
+      }
+
+      if (resposta.correta) rankingMap[chave].acertos += 1;
+      rankingMap[chave].tempoTotal += resposta.tempo_resposta_segundos;
+    });
+
+    return Object.values(rankingMap)
+      .sort((a, b) => (b.acertos !== a.acertos ? b.acertos - a.acertos : a.tempoTotal - b.tempoTotal))
+      .slice(0, 5);
+  };
+
+  const ranking = selectedQuizz ? calcularRanking() : [];
+
+  const handleToggleStatus = (quizz) => {
+    const novoStatus = quizz.status === 'Ativo' ? 'Encerrado' : 'Ativo';
+    base44.entities.QuizzRelampago.update(quizz.id, { status: novoStatus })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['quizzRelampago'] });
+        toast.success('Status atualizado!');
+      })
+      .catch((e) => toast.error(e?.message || 'Erro ao alterar status'));
   };
 
   const handleFileUploadIA = (e) => {
-    const files = Array.from(e.target.files);
-    
+    const files = Array.from(e.target.files || []);
+
     if (arquivosIA.length + files.length > 5) {
       toast.error('Máximo de 5 arquivos permitidos');
       return;
@@ -445,11 +515,11 @@ export default function QuizzRelampago() {
       return true;
     });
 
-    setArquivosIA([...arquivosIA, ...filesValidos]);
+    setArquivosIA(prev => [...prev, ...filesValidos]);
   };
 
   const removerArquivoIA = (index) => {
-    setArquivosIA(arquivosIA.filter((_, i) => i !== index));
+    setArquivosIA(prev => prev.filter((_, i) => i !== index));
   };
 
   const gerarPerguntaComIA = async () => {
@@ -460,8 +530,7 @@ export default function QuizzRelampago() {
 
     setLoadingIA(true);
     try {
-      let file_urls = [];
-      
+      const file_urls = [];
       for (const arquivo of arquivosIA) {
         const { file_url } = await base44.integrations.Core.UploadFile({ file: arquivo });
         file_urls.push(file_url);
@@ -469,27 +538,16 @@ export default function QuizzRelampago() {
 
       const prompt = `Você é um especialista em criar questões rápidas sobre processos de suporte técnico N1.
 
-Baseado no contexto fornecido, crie UMA questão de múltipla escolha com as seguintes características:
-- 1 pergunta clara e objetiva sobre processos do setor
+Baseado no contexto fornecido, crie UMA questão de múltipla escolha com:
+- 1 pergunta clara
 - 4 alternativas (A, B, C, D)
-- Apenas 1 alternativa correta
-- Questões sobre: processos, procedimentos, fluxos de trabalho, atendimento, sistemas
-${categoriaIA ? `- Categoria específica: ${categoriaIA}` : ''}
+- Apenas 1 correta
+${categoriaIA ? `- Categoria: ${categoriaIA}` : ''}
 
-Contexto fornecido pelo usuário:
+Contexto:
 ${contextoIA || 'Use os arquivos anexados como referência'}
 
-IMPORTANTE: Retorne APENAS um objeto JSON válido, sem markdown, sem explicações adicionais.
-
-Formato esperado:
-{
-  "pergunta": "texto da pergunta aqui",
-  "alternativa_a": "texto da alternativa A",
-  "alternativa_b": "texto da alternativa B",
-  "alternativa_c": "texto da alternativa C",
-  "alternativa_d": "texto da alternativa D",
-  "resposta_correta": "A" ou "B" ou "C" ou "D"
-}`;
+Retorne APENAS um objeto JSON válido, sem markdown.`;
 
       const response = await base44.integrations.Core.InvokeLLM({
         prompt,
@@ -510,7 +568,7 @@ Formato esperado:
 
       setPerguntaGeradaIA(response);
     } catch (error) {
-      toast.error('Erro ao gerar pergunta: ' + error.message);
+      toast.error('Erro ao gerar pergunta: ' + (error?.message || ''));
     } finally {
       setLoadingIA(false);
     }
@@ -518,15 +576,13 @@ Formato esperado:
 
   const aprovarPerguntaIA = () => {
     if (!perguntaGeradaIA) return;
-    
-    const novaPergunta = {
-      ...perguntaGeradaIA,
-      ordem: perguntas.length + 1
-    };
-    
-    setPerguntas([...perguntas, novaPergunta]);
+
+    setPerguntas(prev => [
+      ...prev,
+      { ...perguntaGeradaIA, ordem: prev.length + 1 }
+    ]);
+
     toast.success('Pergunta adicionada!');
-    
     setPerguntaGeradaIA(null);
     setGerarComIA(false);
     setContextoIA('');
@@ -539,19 +595,6 @@ Formato esperado:
     toast.info('Pergunta recusada. Tente gerar outra.');
   };
 
-  const ranking = selectedQuizz ? calcularRanking() : [];
-
-  const jaParticipou = (quizzId) => {
-    if (!currentUser) return false;
-
-    // Verificar se o usuário tem respostas para este quizz nas respostas carregadas
-    const respostasParaEsteQuizz = todasRespostasQuizz.filter(
-      r => r.quizz_id === quizzId && r.usuario_id === currentUser.id
-    );
-    
-    return respostasParaEsteQuizz.length > 0;
-  };
-
   if (loadingQuizzes) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -560,10 +603,16 @@ Formato esperado:
     );
   }
 
+  const elapsedSeconds =
+    viewMode === 'participate' && participacaoState.tempoInicio
+      ? ((nowTick - participacaoState.tempoInicio) / 1000).toFixed(1)
+      : '0.0';
+
   return (
     <div className="space-y-6">
       <QuizzReiDoSuporteWidget />
       <QuizzCarrosselTop3 />
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white flex items-center gap-3">
@@ -572,7 +621,8 @@ Formato esperado:
           </h1>
           <p className="text-gray-400 mt-1">Teste seus conhecimentos com perguntas rápidas</p>
         </div>
-        {isCoordOrSuper && viewMode === 'list' && (
+
+        {canManageQuiz && viewMode === 'list' && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-yellow-600 hover:bg-yellow-700 gap-2">
@@ -580,10 +630,12 @@ Formato esperado:
                 Criar Quizz
               </Button>
             </DialogTrigger>
+
             <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-4xl max-h-[85vh] overflow-y-auto">
-               <DialogHeader>
-                 <DialogTitle>{editingQuizzId ? 'Editar Quizz Relâmpago' : 'Criar Novo Quizz Relâmpago'}</DialogTitle>
-               </DialogHeader>
+              <DialogHeader>
+                <DialogTitle>{editingQuizzId ? 'Editar Quizz Relâmpago' : 'Criar Novo Quizz Relâmpago'}</DialogTitle>
+              </DialogHeader>
+
               <div className="space-y-4">
                 <div>
                   <Label>Título</Label>
@@ -594,6 +646,7 @@ Formato esperado:
                     placeholder="Ex: Processos de Atendimento"
                   />
                 </div>
+
                 <div>
                   <Label>Descrição</Label>
                   <Textarea
@@ -603,6 +656,7 @@ Formato esperado:
                     placeholder="Descreva o tema do quizz..."
                   />
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Data/Hora Início</Label>
@@ -656,6 +710,7 @@ Formato esperado:
                           )}
                         </div>
                       </CardHeader>
+
                       <CardContent className="space-y-3">
                         <div>
                           <Label className="text-xs">Pergunta</Label>
@@ -666,40 +721,20 @@ Formato esperado:
                             placeholder="Digite a pergunta..."
                           />
                         </div>
+
                         <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs">Alternativa A</Label>
-                            <Input
-                              value={pergunta.alternativa_a}
-                              onChange={(e) => updatePergunta(index, 'alternativa_a', e.target.value)}
-                              className="bg-[#0a0a0a] border-gray-600 mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Alternativa B</Label>
-                            <Input
-                              value={pergunta.alternativa_b}
-                              onChange={(e) => updatePergunta(index, 'alternativa_b', e.target.value)}
-                              className="bg-[#0a0a0a] border-gray-600 mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Alternativa C</Label>
-                            <Input
-                              value={pergunta.alternativa_c}
-                              onChange={(e) => updatePergunta(index, 'alternativa_c', e.target.value)}
-                              className="bg-[#0a0a0a] border-gray-600 mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Alternativa D</Label>
-                            <Input
-                              value={pergunta.alternativa_d}
-                              onChange={(e) => updatePergunta(index, 'alternativa_d', e.target.value)}
-                              className="bg-[#0a0a0a] border-gray-600 mt-1"
-                            />
-                          </div>
+                          {['a', 'b', 'c', 'd'].map((letra) => (
+                            <div key={letra}>
+                              <Label className="text-xs">Alternativa {letra.toUpperCase()}</Label>
+                              <Input
+                                value={pergunta[`alternativa_${letra}`]}
+                                onChange={(e) => updatePergunta(index, `alternativa_${letra}`, e.target.value)}
+                                className="bg-[#0a0a0a] border-gray-600 mt-1"
+                              />
+                            </div>
+                          ))}
                         </div>
+
                         <div>
                           <Label className="text-xs">Resposta Correta</Label>
                           <Select
@@ -723,17 +758,33 @@ Formato esperado:
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
-                   <Button variant="outline" onClick={() => { setIsCreateDialogOpen(false); resetForm(); }} className="border-gray-700">
-                     Cancelar
-                   </Button>
-                   <Button onClick={handleCreateQuizz} className="bg-yellow-600 hover:bg-yellow-700">
-                     {editingQuizzId ? 'Salvar Alterações' : 'Criar Quizz'}
-                   </Button>
-                 </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setIsCreateDialogOpen(false); resetForm(); }}
+                    className="border-gray-700"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleCreateOrUpdate}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                    disabled={createQuizzMutation.isPending || updateQuizzFullMutation.isPending}
+                  >
+                    {(createQuizzMutation.isPending || updateQuizzFullMutation.isPending) ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </span>
+                    ) : (
+                      editingQuizzId ? 'Salvar Alterações' : 'Criar Quizz'
+                    )}
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
         )}
+
         {viewMode !== 'list' && (
           <Button onClick={() => { setViewMode('list'); setSelectedQuizz(null); }} variant="outline" className="border-gray-700">
             Voltar à Lista
@@ -741,6 +792,7 @@ Formato esperado:
         )}
       </div>
 
+      {/* LISTA */}
       {viewMode === 'list' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {quizzes.map((quizz) => (
@@ -752,26 +804,28 @@ Formato esperado:
                       <Zap className="w-5 h-5 text-yellow-400" />
                       {quizz.titulo}
                     </CardTitle>
-                    <CardDescription className="text-gray-400 mt-2">
-                      {quizz.descricao}
-                    </CardDescription>
+                    <CardDescription className="text-gray-400 mt-2">{quizz.descricao}</CardDescription>
                   </div>
+
                   <div className="flex items-center gap-2">
-                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(quizz.status)}`}>
-                             {quizz.status}
-                           </span>
-                           {isCoordOrSuper && (
-                               <Button
-                                 size="sm"
-                                 onClick={() => handleToggleStatus(quizz)}
-                                 className={quizz.status === 'Ativo' ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs gap-1' : 'bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs gap-1'}
-                               >
-                                 {quizz.status === 'Ativo' ? '⊘ Inativar' : '✓ Reativar'}
-                               </Button>
-                             )}
-                         </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(quizz.status)}`}>
+                      {quizz.status}
+                    </span>
+                    {canManageQuiz && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleToggleStatus(quizz)}
+                        className={quizz.status === 'Ativo'
+                          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs gap-1'
+                          : 'bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs gap-1'}
+                      >
+                        {quizz.status === 'Ativo' ? '⊘ Inativar' : '✓ Reativar'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
+
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-gray-400">
                   <Calendar className="w-4 h-4" />
@@ -781,24 +835,28 @@ Formato esperado:
                   <User className="w-4 h-4" />
                   <span>Criado por: {quizz.criador_nome}</span>
                 </div>
-                <div className="flex gap-2 pt-2">
-                  {(isAnalyst) && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
+
+                <div className="flex gap-2 pt-2 flex-wrap">
+                  {isAnalyst && quizz.status === 'Ativo' && !jaParticipou(quizz.id) && (
                     <Button onClick={() => iniciarParticipacao(quizz)} className="flex-1 bg-yellow-600 hover:bg-yellow-700">
                       <Play className="w-4 h-4 mr-2" />
                       Participar
                     </Button>
                   )}
-                  {(isAnalyst) && jaParticipou(quizz.id) && (
+
+                  {isAnalyst && jaParticipou(quizz.id) && (
                     <Button disabled className="flex-1 bg-gray-600 cursor-not-allowed">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Realizado
                     </Button>
                   )}
+
                   <Button onClick={() => visualizarResultados(quizz)} variant="outline" className="flex-1 border-gray-700">
                     <Trophy className="w-4 h-4 mr-2" />
                     Ver Ranking
                   </Button>
-                  {isCoordOrSuper && (
+
+                  {canManageQuiz && (
                     <>
                       <Button onClick={() => handleEditarQuizz(quizz)} variant="outline" className="border-gray-700 gap-2">
                         <Pencil className="w-4 h-4" />
@@ -816,41 +874,56 @@ Formato esperado:
         </div>
       )}
 
-      {viewMode === 'participate' && perguntasQuizz.length > 0 && (
+      {/* PARTICIPAR */}
+      {viewMode === 'participate' && (
         <Card className="bg-[#242424] border-gray-800 max-w-3xl mx-auto">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">
-                Pergunta {participacaoState.perguntaAtual + 1} de {perguntasQuizz.length}
+                {loadingPerguntas ? 'Carregando...' : `Pergunta ${participacaoState.perguntaAtual + 1} de ${perguntasQuizz.length}`}
               </CardTitle>
               <div className="flex items-center gap-2 text-yellow-400">
                 <Timer className="w-5 h-5" />
-                <span className="text-sm font-mono">
-                  {((Date.now() - participacaoState.tempoInicio) / 1000).toFixed(1)}s
-                </span>
+                <span className="text-sm font-mono">{elapsedSeconds}s</span>
               </div>
             </div>
           </CardHeader>
+
           <CardContent className="space-y-4">
-            <div className="bg-[#1a1a1a] p-4 rounded-lg">
-              <p className="text-white text-lg">{perguntasQuizz[participacaoState.perguntaAtual]?.pergunta}</p>
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              {['A', 'B', 'C', 'D'].map((letra) => (
-                <Button
-                  key={letra}
-                  onClick={() => responderPergunta(letra)}
-                  className="bg-[#1a1a1a] hover:bg-yellow-600 border border-gray-700 hover:border-yellow-500 text-left h-auto py-4 px-4 justify-start"
-                >
-                  <span className="font-bold text-yellow-400 mr-3">{letra}</span>
-                  <span className="text-white">{perguntasQuizz[participacaoState.perguntaAtual]?.[`alternativa_${letra.toLowerCase()}`]}</span>
-                </Button>
-              ))}
-            </div>
+            {loadingPerguntas ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-yellow-400" />
+              </div>
+            ) : perguntasQuizz.length === 0 ? (
+              <p className="text-center text-gray-400 py-10">Nenhuma pergunta cadastrada para este quizz.</p>
+            ) : (
+              <>
+                <div className="bg-[#1a1a1a] p-4 rounded-lg">
+                  <p className="text-white text-lg">{perguntasQuizz[participacaoState.perguntaAtual]?.pergunta}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {['A', 'B', 'C', 'D'].map((letra) => (
+                    <Button
+                      key={letra}
+                      onClick={() => responderPergunta(letra)}
+                      disabled={isAnswering || submeterRespostaMutation.isPending}
+                      className="bg-[#1a1a1a] hover:bg-yellow-600 border border-gray-700 hover:border-yellow-500 text-left h-auto py-4 px-4 justify-start"
+                    >
+                      <span className="font-bold text-yellow-400 mr-3">{letra}</span>
+                      <span className="text-white">
+                        {perguntasQuizz[participacaoState.perguntaAtual]?.[`alternativa_${letra.toLowerCase()}`]}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
+      {/* RESULTADOS */}
       {viewMode === 'results' && (
         <div className="space-y-6">
           <Card className="bg-[#242424] border-gray-800">
@@ -864,48 +937,49 @@ Formato esperado:
               {ranking.length > 0 ? (
                 <div className="space-y-3">
                   {ranking.map((participante, index) => (
-                   <div key={participante.analista_id} className={`flex items-center gap-4 p-4 rounded-lg border ${
-                     index === 0 ? 'bg-yellow-500/10 border-yellow-500/30' :
-                     index === 1 ? 'bg-gray-400/10 border-gray-400/30' :
-                     index === 2 ? 'bg-amber-600/10 border-amber-600/30' :
-                     'bg-[#1a1a1a] border-gray-700'
-                   }`}>
-                     <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#0a0a0a]">
-                       {index === 0 && <Award className="w-6 h-6 text-yellow-400" />}
-                       {index === 1 && <Award className="w-6 h-6 text-gray-400" />}
-                       {index === 2 && <Award className="w-6 h-6 text-amber-600" />}
-                       {index > 2 && <span className="text-gray-400 font-bold">{index + 1}º</span>}
-                     </div>
-                     <div className="flex-1">
-                       <p className="text-white font-semibold">{getAnalistaNome(participante.analista_id, participante.usuario_id)}</p>
-                       <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                         <span className="flex items-center gap-1">
-                           <CheckCircle className="w-4 h-4 text-green-400" />
-                           {participante.acertos} acertos
-                         </span>
-                         <span className="flex items-center gap-1">
-                           <Clock className="w-4 h-4" />
-                           {participante.tempoTotal.toFixed(1)}s
-                         </span>
-                       </div>
-                     </div>
-                     {isCoord && (
-                       <Button
-                         variant="ghost"
-                         size="icon"
-                         onClick={() => setDeleteParticipanteData({
-                           quizzId: selectedQuizz.id,
-                           analistaId: participante.analista_id,
-                           usuarioId: participante.usuario_id,
-                           nome: getAnalistaNome(participante.analista_id, participante.usuario_id)
-                         })}
-                         className="text-red-400 hover:text-red-300"
-                         title="Remover participação"
-                       >
-                         <Trash2 className="w-4 h-4" />
-                       </Button>
-                     )}
-                   </div>
+                    <div
+                      key={`${participante.usuario_id}-${index}`}
+                      className={`flex items-center gap-4 p-4 rounded-lg border ${
+                        index === 0 ? 'bg-yellow-500/10 border-yellow-500/30' :
+                        index === 1 ? 'bg-gray-400/10 border-gray-400/30' :
+                        index === 2 ? 'bg-amber-600/10 border-amber-600/30' :
+                        'bg-[#1a1a1a] border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#0a0a0a]">
+                        {index <= 2 ? <Award className={`w-6 h-6 ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-400' : 'text-amber-600'}`} /> : <span className="text-gray-400 font-bold">{index + 1}º</span>}
+                      </div>
+
+                      <div className="flex-1">
+                        <p className="text-white font-semibold">{getAnalistaNome(participante.analista_id, participante.usuario_id)}</p>
+                        <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
+                          <span className="flex items-center gap-1">
+                            <CheckCircle className="w-4 h-4 text-green-400" />
+                            {participante.acertos} acertos
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {participante.tempoTotal.toFixed(1)}s
+                          </span>
+                        </div>
+                      </div>
+
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteParticipanteData({
+                            quizzId: selectedQuizz.id,
+                            usuarioId: participante.usuario_id,
+                            nome: getAnalistaNome(participante.analista_id, participante.usuario_id)
+                          })}
+                          className="text-red-400 hover:text-red-300"
+                          title="Remover participação"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -914,7 +988,7 @@ Formato esperado:
             </CardContent>
           </Card>
 
-          {isCoordOrSuper && (
+          {canManageQuiz && (
             <Card className="bg-[#242424] border-gray-800">
               <CardHeader>
                 <CardTitle className="text-white">Perguntas e Respostas</CardTitle>
@@ -923,20 +997,17 @@ Formato esperado:
                 {perguntasQuizz.map((pergunta, index) => (
                   <div key={pergunta.id} className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">
                     <div className="flex items-start justify-between mb-3">
-                      <p className="text-white font-medium">
-                        {index + 1}. {pergunta.pergunta}
-                      </p>
-                      {isCoordOrSuper && (
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         onClick={() => setDeletePerguntaId(pergunta.id)}
-                         className="text-red-400 hover:text-red-300"
-                       >
-                         <Trash2 className="w-4 h-4" />
-                       </Button>
-                      )}
+                      <p className="text-white font-medium">{index + 1}. {pergunta.pergunta}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletePerguntaId(pergunta.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
+
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       {['A', 'B', 'C', 'D'].map((letra) => (
                         <div
@@ -959,6 +1030,7 @@ Formato esperado:
         </div>
       )}
 
+      {/* ALERTS */}
       <AlertDialog open={!!deleteQuizzId} onOpenChange={() => setDeleteQuizzId(null)}>
         <AlertDialogContent className="bg-[#242424] border-gray-800">
           <AlertDialogHeader>
@@ -1004,7 +1076,7 @@ Formato esperado:
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Remover Participação?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Isso permitirá que <span className="font-semibold text-white">{deleteParticipanteData?.nome}</span> participe novamente deste quizz.
+              Isso permitirá que <span className="font-semibold text-white">{deleteParticipanteData?.nome}</span> participe novamente.
               Todas as respostas anteriores serão excluídas permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1013,7 +1085,6 @@ Formato esperado:
             <AlertDialogAction
               onClick={() => deleteParticipanteMutation.mutate({
                 quizzId: deleteParticipanteData?.quizzId,
-                analistaId: deleteParticipanteData?.analistaId,
                 usuarioId: deleteParticipanteData?.usuarioId
               })}
               className="bg-red-600 hover:bg-red-700"
@@ -1024,6 +1095,7 @@ Formato esperado:
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* IA */}
       <Dialog open={gerarComIA} onOpenChange={setGerarComIA}>
         <DialogContent className="bg-[#242424] border-gray-800 text-white max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -1051,7 +1123,7 @@ Formato esperado:
                   value={contextoIA}
                   onChange={(e) => setContextoIA(e.target.value)}
                   className="bg-[#1a1a1a] border-gray-700 mt-2 h-32"
-                  placeholder="Cole aqui o texto base para a IA gerar a pergunta..."
+                  placeholder="Cole aqui o texto base..."
                 />
               </div>
 
@@ -1075,6 +1147,7 @@ Formato esperado:
                     </Button>
                   </label>
                 </div>
+
                 {arquivosIA.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {arquivosIA.map((file, index) => (
@@ -1115,12 +1188,7 @@ Formato esperado:
           ) : (
             <div className="space-y-4">
               <div className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-700">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-[#ADF802]">Pergunta Gerada</span>
-                </div>
-                
                 <p className="font-semibold text-white mb-4">{perguntaGeradaIA.pergunta}</p>
-                
                 <div className="space-y-2">
                   {['a', 'b', 'c', 'd'].map((letra) => (
                     <div
@@ -1136,9 +1204,8 @@ Formato esperado:
                     </div>
                   ))}
                 </div>
-
-                <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
-                  <span>Resposta Correta: {perguntaGeradaIA.resposta_correta}</span>
+                <div className="mt-4 text-xs text-gray-400">
+                  Resposta Correta: {perguntaGeradaIA.resposta_correta}
                 </div>
               </div>
 
