@@ -624,7 +624,9 @@ Retorne APENAS um objeto JSON válido, sem markdown.`;
     toast.info('Pergunta recusada. Tente gerar outra.');
   };
 
-  if (loadingQuizzes) {
+  const { isLoading: loadingUser } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
+
+  if (loadingUser || loadingQuizzes) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
