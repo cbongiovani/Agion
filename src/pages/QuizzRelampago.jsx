@@ -478,6 +478,7 @@ const { data: todasRespostasQuizz = [] } = useQuery({
         }));
       } else {
         await queryClient.invalidateQueries({ queryKey: ['todasRespostasQuizz'] });
+        await queryClient.invalidateQueries({ queryKey: ['minhasRespostasQuizz', currentUser?.id] });
         await queryClient.invalidateQueries({ queryKey: ['respostasQuizz', selectedQuizz.id] });
         toast.success('Quizz concluído! Confira o ranking.');
         setViewMode('results');
