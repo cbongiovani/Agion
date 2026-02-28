@@ -626,7 +626,7 @@ Retorne APENAS um objeto JSON válido, sem markdown.`;
 
 
 
-  if (loadingUser || loadingQuizzes) {
+  if (loadingUser || (loadingQuizzes && role !== '')) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
