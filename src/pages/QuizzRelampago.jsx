@@ -125,11 +125,21 @@ const { data: usuarios = [] } = useQuery({
   });
 
   // ⚠️ Isso pode ficar pesado com o tempo. Mantive por compatibilidade.
-  const { data: todasRespostasQuizz = [] } = useQuery({
-    queryKey: ['todasRespostasQuizz'],
-    queryFn: () => base44.entities.RespostaQuizz.list(),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: minhasRespostasQuizz = [] } = useQuery({
+  queryKey: ['minhasRespostasQuizz', currentUser?.id],
+  enabled: !!currentUser && !canManageQuiz, // analista
+  queryFn: async () => {
+    return await base44.entities.RespostaQuizz.filter({ usuario_id: currentUser.id });
+  },
+  staleTime: 2 * 60 * 1000,
+});
+
+const { data: todasRespostasQuizz = [] } = useQuery({
+  queryKey: ['todasRespostasQuizz'],
+  enabled: !!currentUser && canManageQuiz, // admin/supervisor/noc
+  queryFn: () => base44.entities.RespostaQuizz.list(),
+  staleTime: 5 * 60 * 1000,
+});
 
   // ✅ Timer “de verdade” (re-render enquanto participa)
   useEffect(() => {
@@ -408,9 +418,14 @@ const { data: usuarios = [] } = useQuery({
 };
 
   const jaParticipou = useCallback((quizzId) => {
-    if (!currentUser) return false;
-    return todasRespostasQuizz.some(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
-  }, [todasRespostasQuizz, currentUser]);
+  if (!currentUser) return false;
+
+  // Se pode gerenciar, usa o "todasRespostasQuizz"
+  // Se é analista, usa só as "minhasRespostasQuizz"
+  const fonte = canManageQuiz ? todasRespostasQuizz : minhasRespostasQuizz;
+
+  return fonte.some(r => r.quizz_id === quizzId && r.usuario_id === currentUser.id);
+}, [todasRespostasQuizz, minhasRespostasQuizz, currentUser, canManageQuiz]);
 
   const iniciarParticipacao = (quizz) => {
     if (!isAnalyst) {
