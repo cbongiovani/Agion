@@ -442,7 +442,11 @@ const { data: usuarios = [] } = useQuery({
       const tempoResposta = ((Date.now() - participacaoState.tempoInicio) / 1000);
 
       const correta = alternativa === perguntaAtual.resposta_correta;
-      const analistaLogado = analistas.find(a => a.usuario_email === currentUser.email);
+      const analistaLogado = canManageQuiz
+  ? analistas.find(a => a.usuario_email === currentUser.email)
+  : null;
+
+analista_id: analistaLogado?.id || `usr_${currentUser.id}`,
 
       await submeterRespostaMutation.mutateAsync({
         quizz_id: selectedQuizz.id,
