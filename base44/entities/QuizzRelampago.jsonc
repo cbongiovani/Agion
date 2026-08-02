@@ -1,0 +1,47 @@
+{
+  "name": "QuizzRelampago",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do quizz rel\u00e2mpago"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do quizz"
+    },
+    "data_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora de in\u00edcio"
+    },
+    "data_fim": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora de encerramento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Ativo",
+        "Encerrado",
+        "Agendado"
+      ],
+      "default": "Agendado",
+      "description": "Status do quizz"
+    },
+    "criado_por": {
+      "type": "string",
+      "description": "Email de quem criou o quizz"
+    },
+    "criador_nome": {
+      "type": "string",
+      "description": "Nome de quem criou"
+    }
+  },
+  "required": [
+    "titulo",
+    "data_inicio",
+    "data_fim"
+  ]
+}

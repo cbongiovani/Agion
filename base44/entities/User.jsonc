@@ -1,0 +1,31 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "supervisor",
+        "analyst",
+        "noc"
+      ],
+      "default": "analyst",
+      "description": "Role do usu\u00e1rio no sistema"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active",
+      "description": "Status do usu\u00e1rio (ativo/inativo)"
+    },
+    "nome_customizado": {
+      "type": "string",
+      "description": "Nome customizado do usu\u00e1rio (sobrescreve full_name na UI)"
+    }
+  },
+  "required": []
+}

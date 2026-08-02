@@ -1,0 +1,40 @@
+{
+  "name": "ComentarioRanking",
+  "type": "object",
+  "properties": {
+    "analista_id": {
+      "type": "string",
+      "description": "ID do analista que recebeu o coment\u00e1rio"
+    },
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que comentou"
+    },
+    "usuario_nome": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que comentou"
+    },
+    "comentario": {
+      "type": "string",
+      "description": "Texto do coment\u00e1rio"
+    },
+    "ano": {
+      "type": "number",
+      "description": "Ano do ranking"
+    },
+    "mes": {
+      "type": "number",
+      "description": "M\u00eas do ranking"
+    },
+    "semana": {
+      "type": "number",
+      "description": "Semana do ranking"
+    }
+  },
+  "required": [
+    "analista_id",
+    "usuario_id",
+    "usuario_nome",
+    "comentario"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "Log",
+  "type": "object",
+  "properties": {
+    "usuario_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que realizou a a\u00e7\u00e3o"
+    },
+    "usuario_nome": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que realizou a a\u00e7\u00e3o"
+    },
+    "acao": {
+      "type": "string",
+      "enum": [
+        "Criou",
+        "Atualizou",
+        "Excluiu",
+        "Login",
+        "Logout",
+        "Convidou Usu\u00e1rio",
+        "Alterou Permiss\u00e3o",
+        "Exportou Relat\u00f3rio"
+      ],
+      "description": "Tipo de a\u00e7\u00e3o realizada"
+    },
+    "entidade": {
+      "type": "string",
+      "enum": [
+        "Atividade",
+        "FechamentoSemanal",
+        "Analista",
+        "Supervisor",
+        "Incidente",
+        "Usu\u00e1rio",
+        "Sistema"
+      ],
+      "description": "Entidade afetada pela a\u00e7\u00e3o"
+    },
+    "detalhes": {
+      "type": "string",
+      "description": "Detalhes adicionais sobre a a\u00e7\u00e3o"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Endere\u00e7o IP do usu\u00e1rio"
+    },
+    "metadados": {
+      "type": "object",
+      "description": "Dados adicionais em JSON"
+    }
+  },
+  "required": [
+    "usuario_email",
+    "acao",
+    "entidade"
+  ]
+}

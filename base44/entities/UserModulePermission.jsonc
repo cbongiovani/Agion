@@ -1,0 +1,263 @@
+{
+  "name": "UserModulePermission",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio",
+      "index": true
+    },
+    "modules": {
+      "type": "object",
+      "description": "Permiss\u00f5es por m\u00f3dulo",
+      "properties": {
+        "dashboard": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "atividades": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "fechamento_semanal": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "supervisores": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "analistas": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "ranking": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "quizz_relampago": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "avaliacoes": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "certificados": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "war_room": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "manual_supervisor": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "aprovacao": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "gestao_usuarios": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "logs_sistema": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "Email de quem atualizou as permiss\u00f5es"
+    }
+  },
+  "required": [
+    "user_email",
+    "modules"
+  ]
+}

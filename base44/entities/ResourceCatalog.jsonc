@@ -1,0 +1,73 @@
+{
+  "name": "ResourceCatalog",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Identificador \u00fanico do recurso (ex: 'atividades', 'war_room')",
+      "index": true
+    },
+    "label": {
+      "type": "string",
+      "description": "Nome leg\u00edvel do recurso"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "menu",
+        "operacao",
+        "acao",
+        "admin"
+      ],
+      "description": "Categoria: menu (aba), operacao (funcionalidade), acao (bot\u00e3o/a\u00e7\u00e3o), admin (administrativo)"
+    },
+    "module": {
+      "type": "string",
+      "description": "M\u00f3dulo ao qual pertence (ex: 'Atividades', 'Aprova\u00e7\u00e3o', 'War Room')"
+    },
+    "route": {
+      "type": "string",
+      "description": "Rota da p\u00e1gina (ex: '/atividades', '/war-room')"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "A\u00e7\u00f5es dispon\u00edveis (view, create, edit, delete, approve, export, admin)"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o recurso est\u00e1 ativo no sistema"
+    },
+    "tooltip": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o/tooltip do recurso"
+    }
+  },
+  "required": [
+    "key",
+    "label",
+    "category",
+    "module",
+    "actions"
+  ],
+  "indexes": [
+    {
+      "fields": [
+        "key"
+      ]
+    },
+    {
+      "fields": [
+        "category"
+      ]
+    },
+    {
+      "fields": [
+        "module"
+      ]
+    }
+  ]
+}

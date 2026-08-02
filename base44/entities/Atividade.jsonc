@@ -1,0 +1,207 @@
+{
+  "name": "Atividade",
+  "type": "object",
+  "properties": {
+    "codigo_atividade": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico da atividade (ex: CH00001, LG00002). Gerado automaticamente no create.",
+      "index": true
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Idempotency key obrigat\u00f3rio. Gere um UUID por submit para impedir duplicidade (ex: crypto.randomUUID()).",
+      "index": true
+    },
+    "data": {
+      "type": "string",
+      "format": "date",
+      "description": "Data da atividade (YYYY-MM-DD).",
+      "index": true
+    },
+    "supervisor_id": {
+      "type": "string",
+      "description": "ID do supervisor respons\u00e1vel pelo analista.",
+      "index": true
+    },
+    "analista_id": {
+      "type": "string",
+      "description": "ID do analista.",
+      "index": true
+    },
+    "registrado_por": {
+      "type": "string",
+      "description": "Email de quem registrou a atividade.",
+      "index": true
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Chamados",
+        "Liga\u00e7\u00f5es",
+        "Monitoria Offline",
+        "Monitoria Assistida",
+        "Feedback Individual"
+      ],
+      "description": "Tipo da atividade. ATEN\u00c7\u00c3O: deve ser enviado exatamente como no enum (com acento).",
+      "index": true
+    },
+    "protocolo_gravacao": {
+      "type": "string",
+      "description": "Protocolo da grava\u00e7\u00e3o. Usado em Liga\u00e7\u00f5es e Monitoria Offline (valida\u00e7\u00e3o por UI)."
+    },
+    "link_gravacao_teams": {
+      "type": "string",
+      "description": "Link da grava\u00e7\u00e3o (Teams). Usado em Monitoria Assistida (valida\u00e7\u00e3o por UI)."
+    },
+    "ticket_acompanhado": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "Ticket acompanhado. Usado em Chamados."
+    },
+    "tipo_feedback": {
+      "type": "string",
+      "enum": [
+        "Positivo",
+        "Negativo"
+      ],
+      "description": "Tipo de feedback. Usado em Feedback Individual."
+    },
+    "topicos_monitoria_offline": {
+      "type": "object",
+      "description": "T\u00f3picos de avalia\u00e7\u00e3o para Monitoria Offline (valores 1 a 5).",
+      "additionalProperties": false,
+      "properties": {
+        "saudacao_padrao": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "validacao_loja": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "dominio_problema": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "comunicacao_direta": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "dominio_conclusao": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tratou_respeito": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "teve_equilibrio": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "ruido_ambiente": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "retorno_loja": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "encerramento_padrao": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        }
+      }
+    },
+    "topicos_monitoria_assistida": {
+      "type": "object",
+      "description": "T\u00f3picos de avalia\u00e7\u00e3o t\u00e9cnica para Monitoria Assistida. Estrutura livre para perguntas/respostas edit\u00e1veis.",
+      "additionalProperties": true
+    },
+    "nota": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Nota de 0 a 10."
+    },
+    "comentario": {
+      "type": "string",
+      "description": "Coment\u00e1rio sobre a atividade."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Aberto",
+        "Em evolu\u00e7\u00e3o",
+        "Conclu\u00eddo"
+      ],
+      "default": "Aberto",
+      "description": "Status da atividade. ATEN\u00c7\u00c3O: deve ser enviado exatamente como no enum (com acento).",
+      "index": true
+    },
+    "alerta_coordenador": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o coordenador marcou esta atividade como requerendo aten\u00e7\u00e3o.",
+      "index": true
+    }
+  },
+  "required": [
+    "data",
+    "supervisor_id",
+    "analista_id",
+    "tipo",
+    "nota",
+    "request_id"
+  ],
+  "indexes": [
+    {
+      "fields": [
+        "request_id"
+      ]
+    },
+    {
+      "fields": [
+        "codigo_atividade"
+      ]
+    },
+    {
+      "fields": [
+        "analista_id"
+      ]
+    },
+    {
+      "fields": [
+        "supervisor_id"
+      ]
+    },
+    {
+      "fields": [
+        "data"
+      ]
+    },
+    {
+      "fields": [
+        "tipo"
+      ]
+    },
+    {
+      "fields": [
+        "registrado_por",
+        "data",
+        "tipo",
+        "analista_id"
+      ]
+    }
+  ]
+}

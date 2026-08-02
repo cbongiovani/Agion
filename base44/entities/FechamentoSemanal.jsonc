@@ -1,0 +1,89 @@
+{
+  "name": "FechamentoSemanal",
+  "type": "object",
+  "properties": {
+    "semana_inicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de in\u00edcio da semana",
+      "index": true
+    },
+    "semana_fim": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de fim da semana",
+      "index": true
+    },
+    "supervisor_id": {
+      "type": "string",
+      "description": "ID do supervisor",
+      "index": true
+    },
+    "analista_id": {
+      "type": "string",
+      "description": "ID do analista avaliado"
+    },
+    "total_ligacoes_next_ip": {
+      "type": "number",
+      "description": "Total de liga\u00e7\u00f5es Next IP"
+    },
+    "total_chamados_verdana": {
+      "type": "number",
+      "description": "Total de chamados Verdana"
+    },
+    "total_monitorias": {
+      "type": "number",
+      "description": "Total de monitorias realizadas"
+    },
+    "total_1_1": {
+      "type": "number",
+      "description": "Total de Feedbacks Individuais"
+    },
+    "backlog_final": {
+      "type": "number",
+      "description": "Backlog final da semana"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es gerais"
+    },
+    "destaques": {
+      "type": "string",
+      "description": "Destaques da semana"
+    },
+    "pontos_criticos": {
+      "type": "string",
+      "description": "Pontos cr\u00edticos identificados"
+    },
+    "plano_acao": {
+      "type": "string",
+      "description": "Plano de a\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "semana_inicio",
+    "semana_fim",
+    "supervisor_id",
+    "total_ligacoes_next_ip",
+    "total_chamados_verdana",
+    "total_monitorias",
+    "total_1_1"
+  ],
+  "indexes": [
+    {
+      "fields": [
+        "supervisor_id"
+      ]
+    },
+    {
+      "fields": [
+        "semana_inicio"
+      ]
+    },
+    {
+      "fields": [
+        "semana_fim"
+      ]
+    }
+  ]
+}

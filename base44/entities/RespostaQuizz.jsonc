@@ -1,0 +1,54 @@
+{
+  "name": "RespostaQuizz",
+  "type": "object",
+  "properties": {
+    "quizz_id": {
+      "type": "string",
+      "description": "ID do quizz rel\u00e2mpago"
+    },
+    "pergunta_id": {
+      "type": "string",
+      "description": "ID da pergunta"
+    },
+    "analista_id": {
+      "type": "string",
+      "description": "ID do analista que respondeu"
+    },
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "resposta_selecionada": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "Alternativa selecionada"
+    },
+    "correta": {
+      "type": "boolean",
+      "description": "Se a resposta est\u00e1 correta"
+    },
+    "tempo_resposta_segundos": {
+      "type": "number",
+      "description": "Tempo gasto para responder em segundos"
+    },
+    "data_hora_resposta": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora da resposta"
+    }
+  },
+  "required": [
+    "quizz_id",
+    "pergunta_id",
+    "analista_id",
+    "usuario_id",
+    "resposta_selecionada",
+    "correta",
+    "tempo_resposta_segundos"
+  ]
+}

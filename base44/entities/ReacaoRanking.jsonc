@@ -1,0 +1,47 @@
+{
+  "name": "ReacaoRanking",
+  "type": "object",
+  "properties": {
+    "analista_id": {
+      "type": "string",
+      "description": "ID do analista que recebeu a rea\u00e7\u00e3o"
+    },
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que reagiu"
+    },
+    "usuario_nome": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que reagiu"
+    },
+    "tipo_reacao": {
+      "type": "string",
+      "enum": [
+        "\ud83c\udf89",
+        "\ud83d\udc4f",
+        "\ud83c\udfc6",
+        "\u2b50",
+        "\ud83d\udd25"
+      ],
+      "description": "Emoji da rea\u00e7\u00e3o"
+    },
+    "ano": {
+      "type": "number",
+      "description": "Ano do ranking"
+    },
+    "mes": {
+      "type": "number",
+      "description": "M\u00eas do ranking"
+    },
+    "semana": {
+      "type": "number",
+      "description": "Semana do ranking"
+    }
+  },
+  "required": [
+    "analista_id",
+    "usuario_id",
+    "usuario_nome",
+    "tipo_reacao"
+  ]
+}

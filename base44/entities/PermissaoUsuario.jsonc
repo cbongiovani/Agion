@@ -1,0 +1,137 @@
+{
+  "name": "PermissaoUsuario",
+  "type": "object",
+  "properties": {
+    "usuario_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio"
+    },
+    "abas_visiveis": {
+      "type": "object",
+      "description": "Abas que o usu\u00e1rio pode visualizar",
+      "properties": {
+        "dashboard": {
+          "type": "boolean",
+          "default": false
+        },
+        "atividades": {
+          "type": "boolean",
+          "default": false
+        },
+        "fechamento_semanal": {
+          "type": "boolean",
+          "default": false
+        },
+        "supervisores": {
+          "type": "boolean",
+          "default": false
+        },
+        "analistas": {
+          "type": "boolean",
+          "default": false
+        },
+        "ranking": {
+          "type": "boolean",
+          "default": true
+        },
+        "quizz_relampago": {
+          "type": "boolean",
+          "default": true
+        },
+        "avaliacoes": {
+          "type": "boolean",
+          "default": false
+        },
+        "certificados": {
+          "type": "boolean",
+          "default": false
+        },
+        "war_room": {
+          "type": "boolean",
+          "default": false
+        },
+        "manual_supervisor": {
+          "type": "boolean",
+          "default": false
+        },
+        "gestao_usuarios": {
+          "type": "boolean",
+          "default": false
+        },
+        "logs": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "permissoes_atividades": {
+      "type": "object",
+      "description": "Permiss\u00f5es para Atividades",
+      "properties": {
+        "visualizar": {
+          "type": "boolean",
+          "default": false
+        },
+        "criar": {
+          "type": "boolean",
+          "default": false
+        },
+        "editar": {
+          "type": "boolean",
+          "default": false
+        },
+        "deletar": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "permissoes_fechamento": {
+      "type": "object",
+      "description": "Permiss\u00f5es para Fechamento Semanal",
+      "properties": {
+        "visualizar": {
+          "type": "boolean",
+          "default": false
+        },
+        "criar": {
+          "type": "boolean",
+          "default": false
+        },
+        "editar": {
+          "type": "boolean",
+          "default": false
+        },
+        "deletar": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "permissoes_warroom": {
+      "type": "object",
+      "description": "Permiss\u00f5es para War Room",
+      "properties": {
+        "visualizar": {
+          "type": "boolean",
+          "default": false
+        },
+        "criar": {
+          "type": "boolean",
+          "default": false
+        },
+        "editar": {
+          "type": "boolean",
+          "default": false
+        },
+        "deletar": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  "required": [
+    "usuario_email"
+  ]
+}

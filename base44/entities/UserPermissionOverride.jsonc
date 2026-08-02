@@ -1,0 +1,65 @@
+{
+  "name": "UserPermissionOverride",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio",
+      "index": true
+    },
+    "resource_key": {
+      "type": "string",
+      "description": "Refer\u00eancia \u00e0 ResourceCatalog.key",
+      "index": true
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "view",
+        "create",
+        "edit",
+        "delete",
+        "approve",
+        "export",
+        "admin"
+      ],
+      "description": "A\u00e7\u00e3o customizada"
+    },
+    "allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a a\u00e7\u00e3o est\u00e1 permitida para este usu\u00e1rio espec\u00edfico"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Motivo da exce\u00e7\u00e3o"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Email de quem criou a exce\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "user_email",
+    "resource_key",
+    "action"
+  ],
+  "indexes": [
+    {
+      "fields": [
+        "user_email"
+      ]
+    },
+    {
+      "fields": [
+        "resource_key"
+      ]
+    },
+    {
+      "fields": [
+        "user_email",
+        "resource_key"
+      ]
+    }
+  ]
+}

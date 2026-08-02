@@ -1,0 +1,34 @@
+{
+  "name": "PlanoAcaoIA",
+  "type": "object",
+  "properties": {
+    "supervisor_id": {
+      "type": "string",
+      "description": "ID do supervisor para quem o plano foi gerado"
+    },
+    "periodo_inicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de in\u00edcio do per\u00edodo analisado"
+    },
+    "periodo_fim": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de fim do per\u00edodo analisado"
+    },
+    "conteudo": {
+      "type": "string",
+      "description": "Conte\u00fado do plano em formato markdown"
+    },
+    "gerado_por": {
+      "type": "string",
+      "description": "Email de quem gerou o plano"
+    }
+  },
+  "required": [
+    "supervisor_id",
+    "periodo_inicio",
+    "periodo_fim",
+    "conteudo"
+  ]
+}

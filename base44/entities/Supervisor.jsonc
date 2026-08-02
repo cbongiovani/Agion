@@ -1,0 +1,22 @@
+{
+  "name": "Supervisor",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do supervisor"
+    },
+    "equipe": {
+      "type": "string",
+      "description": "Nome da equipe"
+    },
+    "usuario_email": {
+      "type": "string",
+      "description": "E-mail do usu\u00e1rio vinculado ao supervisor"
+    }
+  },
+  "required": [
+    "nome",
+    "equipe"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "name": "RolePermission",
+  "type": "object",
+  "properties": {
+    "role_key": {
+      "type": "string",
+      "description": "Refer\u00eancia \u00e0 Role.key",
+      "index": true
+    },
+    "resource_key": {
+      "type": "string",
+      "description": "Refer\u00eancia \u00e0 ResourceCatalog.key",
+      "index": true
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "view",
+        "create",
+        "edit",
+        "delete",
+        "approve",
+        "export",
+        "admin"
+      ],
+      "description": "A\u00e7\u00e3o permitida"
+    },
+    "allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a a\u00e7\u00e3o est\u00e1 permitida para esta fun\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "role_key",
+    "resource_key",
+    "action"
+  ],
+  "indexes": [
+    {
+      "fields": [
+        "role_key"
+      ]
+    },
+    {
+      "fields": [
+        "resource_key"
+      ]
+    },
+    {
+      "fields": [
+        "role_key",
+        "resource_key"
+      ]
+    },
+    {
+      "fields": [
+        "role_key",
+        "action"
+      ]
+    }
+  ]
+}

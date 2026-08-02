@@ -1,0 +1,22 @@
+{
+  "name": "Analista",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do analista"
+    },
+    "supervisor_id": {
+      "type": "string",
+      "description": "ID do supervisor respons\u00e1vel"
+    },
+    "usuario_email": {
+      "type": "string",
+      "description": "E-mail do usu\u00e1rio vinculado ao analista"
+    }
+  },
+  "required": [
+    "nome",
+    "supervisor_id"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "name": "PerguntaQuizz",
+  "type": "object",
+  "properties": {
+    "quizz_id": {
+      "type": "string",
+      "description": "ID do quizz rel\u00e2mpago"
+    },
+    "pergunta": {
+      "type": "string",
+      "description": "Texto da pergunta"
+    },
+    "alternativa_a": {
+      "type": "string",
+      "description": "Alternativa A"
+    },
+    "alternativa_b": {
+      "type": "string",
+      "description": "Alternativa B"
+    },
+    "alternativa_c": {
+      "type": "string",
+      "description": "Alternativa C"
+    },
+    "alternativa_d": {
+      "type": "string",
+      "description": "Alternativa D"
+    },
+    "resposta_correta": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "description": "Alternativa correta"
+    },
+    "ordem": {
+      "type": "number",
+      "description": "Ordem de exibi\u00e7\u00e3o da pergunta"
+    }
+  },
+  "required": [
+    "quizz_id",
+    "pergunta",
+    "alternativa_a",
+    "alternativa_b",
+    "alternativa_c",
+    "alternativa_d",
+    "resposta_correta",
+    "ordem"
+  ]
+}

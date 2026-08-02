@@ -1,0 +1,57 @@
+{
+  "name": "Notificacao",
+  "type": "object",
+  "properties": {
+    "destinatario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio destinat\u00e1rio"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "ranking_subiu",
+        "ranking_caiu",
+        "top3_semanal",
+        "top3_mensal",
+        "acao_corretiva",
+        "reconhecimento",
+        "nova_solicitacao",
+        "novo_usuario",
+        "solicitacao_aprovada",
+        "solicitacao_rejeitada",
+        "nova_atividade",
+        "novo_fechamento",
+        "novo_incidente",
+        "alerta_atividade"
+      ],
+      "description": "Tipo da notifica\u00e7\u00e3o"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo da notifica\u00e7\u00e3o"
+    },
+    "mensagem": {
+      "type": "string",
+      "description": "Mensagem detalhada"
+    },
+    "lida": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a notifica\u00e7\u00e3o foi lida"
+    },
+    "link": {
+      "type": "string",
+      "description": "Link relacionado \u00e0 notifica\u00e7\u00e3o"
+    },
+    "metadados": {
+      "type": "object",
+      "description": "Dados adicionais da notifica\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "destinatario_id",
+    "tipo",
+    "titulo",
+    "mensagem"
+  ]
+}

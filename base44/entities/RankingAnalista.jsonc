@@ -1,0 +1,59 @@
+{
+  "name": "RankingAnalista",
+  "type": "object",
+  "properties": {
+    "analista_id": {
+      "type": "string",
+      "description": "ID do analista"
+    },
+    "ano": {
+      "type": "number",
+      "description": "Ano do ranking"
+    },
+    "mes": {
+      "type": "number",
+      "description": "M\u00eas do ranking (1-12)"
+    },
+    "semana": {
+      "type": "number",
+      "description": "N\u00famero da semana no ano"
+    },
+    "media_semanal": {
+      "type": "number",
+      "description": "M\u00e9dia de notas na semana"
+    },
+    "pontos_semana": {
+      "type": "number",
+      "description": "Pontos conquistados na semana"
+    },
+    "pontos_mes": {
+      "type": "number",
+      "description": "Total de pontos no m\u00eas"
+    },
+    "pontos_total": {
+      "type": "number",
+      "description": "Total de pontos acumulados"
+    },
+    "medalhas_ouro": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de medalhas de ouro"
+    },
+    "medalhas_prata": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de medalhas de prata"
+    },
+    "medalhas_bronze": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de medalhas de bronze"
+    }
+  },
+  "required": [
+    "analista_id",
+    "ano",
+    "mes",
+    "semana"
+  ]
+}
